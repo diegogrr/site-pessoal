@@ -22,6 +22,8 @@ jobs:
     - name: Upload to S3
       run: |
         aws s3 sync . s3://diedu.com.br --delete \
-          --exclude "readme.md" \
+          --exclude "README.md" \
+          --exclude ".github" \
           --exclude ".gitattributes" \
-          --exclude ".gitignore"
+          --exclude ".gitignore" \
+          --acl public-read
