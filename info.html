@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Links do Prof. Diego</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+    :root {
+      --bg-color: #f4f4f4;
+      --text-color: #333;
+      --card-bg: #fff;
+      --btn-bg: #e0e0e0;
+    }
+
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #f0f0f0;
+      --card-bg: #1e1e1e;
+      --btn-bg: #333;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .profile {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .profile img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid var(--btn-bg);
+      margin-bottom: 1rem;
+    }
+
+    .profile h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .links {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .links a {
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      padding: 1rem;
+      text-align: center;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: background 0.3s, transform 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .links a:hover {
+      background-color: var(--btn-bg);
+      transform: scale(1.02);
+    }
+
+    .toggle-theme {
+      margin-top: 2rem;
+      background: none;
+      border: 1px solid var(--btn-bg);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-color);
+      transition: background 0.3s;
+    }
+
+    .toggle-theme:hover {
+      background-color: var(--btn-bg);
+    }
+  </style>
+</head>
+<body>
+  <div class="profile">
+    <img src="img/eu.jpg" alt="Foto de perfil">
+    <h1>Prof. Diego</h1>
+    <p>Links úteis</p>
+  </div>
+
+  <div class="links">
+    <a href="https://docs.google.com/document/d/1p8VTzDjL9Og7MCyFSMj2mZKOX40I5HmdM-VGLMFaF5k/edit?usp=sharing" target="_blank">Oficina de Docker</a>
+    <a href="https://www.youtube.com/channel/UCkuMj9rHltFyhWvHQbRm8Vg" target="_blank">YouTube</a>
+    <a href="https://github.com/diegogrr" target="_blank">GitHub</a>
+    <a href="https://www.linkedin.com/in/diegogrr/" target="_blank">LinkedIn</a>
+  </div>
+
+  <button class="toggle-theme" onclick="toggleTheme()">Alternar tema</button>
+
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+  </script>
+</body>
+</html>
