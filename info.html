@@ -1,122 +1,136 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Links do Prof. Diego</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('dg-theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <style>
-    :root {
-      --bg-color: #f4f4f4;
-      --text-color: #333;
-      --card-bg: #fff;
-      --btn-bg: #e0e0e0;
+    :root{
+      --paper:#f5f4f1; --card:#ffffff; --ink:#16243d; --ink-2:#3a4a66;
+      --text:#242b36; --muted:#64707f; --brass:#9c7c33; --brass-soft:#b79447;
+      --line:#e7e2d7;
+      --shadow:0 1px 2px rgba(22,36,61,.06), 0 8px 24px rgba(22,36,61,.06);
+      --shadow-lift:0 2px 4px rgba(22,36,61,.08), 0 14px 34px rgba(22,36,61,.12);
+      --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+      --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     }
-
-    body.dark {
-      --bg-color: #121212;
-      --text-color: #f0f0f0;
-      --card-bg: #1e1e1e;
-      --btn-bg: #333;
+    @media (prefers-color-scheme: dark){
+      :root{
+        --paper:#0d131e; --card:#151d2b; --ink:#eef1f7; --ink-2:#c7cfdd;
+        --text:#c4cbd8; --muted:#8b96a6; --brass:#c9a94f; --brass-soft:#d8bd6a; --line:#233047;
+        --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.42);
+        --shadow-lift:0 2px 4px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.55);
+      }
     }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
+    :root[data-theme="light"]{
+      --paper:#f5f4f1; --card:#ffffff; --ink:#16243d; --ink-2:#3a4a66;
+      --text:#242b36; --muted:#64707f; --brass:#9c7c33; --brass-soft:#b79447; --line:#e7e2d7;
+      --shadow:0 1px 2px rgba(22,36,61,.06), 0 8px 24px rgba(22,36,61,.06);
+      --shadow-lift:0 2px 4px rgba(22,36,61,.08), 0 14px 34px rgba(22,36,61,.12);
     }
-
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-      min-height: 100vh;
-      transition: background 0.3s, color 0.3s;
+    :root[data-theme="dark"]{
+      --paper:#0d131e; --card:#151d2b; --ink:#eef1f7; --ink-2:#c7cfdd;
+      --text:#c4cbd8; --muted:#8b96a6; --brass:#c9a94f; --brass-soft:#d8bd6a; --line:#233047;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.42);
+      --shadow-lift:0 2px 4px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.55);
     }
-
-    .profile {
-      text-align: center;
-      margin-bottom: 2rem;
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      background:var(--paper);color:var(--text);font-family:var(--sans);
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      padding:3rem 1.25rem;line-height:1.6;-webkit-font-smoothing:antialiased;
     }
-
-    .profile img {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: 3px solid var(--btn-bg);
-      margin-bottom: 1rem;
+    :focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:4px}
+    .profile{text-align:center;margin-bottom:2rem;display:flex;flex-direction:column;align-items:center}
+    .avatar{position:relative;margin-bottom:1.1rem}
+    .avatar::before{content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid var(--brass);opacity:.55}
+    .avatar img{width:118px;height:118px;border-radius:50%;object-fit:cover;border:4px solid var(--card);box-shadow:var(--shadow-lift);background:var(--card)}
+    .eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.16em;font-weight:700;color:var(--brass);margin-bottom:.5rem}
+    .profile h1{font-family:var(--serif);color:var(--ink);font-size:1.6rem;letter-spacing:.01em}
+    .profile p{color:var(--muted);font-size:.92rem;margin-top:.3rem}
+    .links{width:100%;max-width:440px;display:flex;flex-direction:column;gap:.75rem}
+    .links a{
+      display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+      background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;
+      padding:.95rem 1.15rem;text-decoration:none;font-size:1rem;font-weight:600;
+      box-shadow:var(--shadow);transition:transform .18s ease,box-shadow .2s ease,border-color .2s;
     }
-
-    .profile h1 {
-      font-size: 1.5rem;
-      margin-bottom: 0.25rem;
+    .links a:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift);border-color:var(--brass)}
+    .links a .arrow{color:var(--brass);flex:0 0 auto;display:grid;place-items:center}
+    .links a .arrow svg{width:16px;height:16px;transition:transform .2s}
+    .links a:hover .arrow svg{transform:translateX(3px)}
+    .back{
+      margin-top:2rem;display:inline-flex;align-items:center;gap:.5rem;
+      color:var(--muted);text-decoration:none;font-size:.9rem;
     }
-
-    .links {
-      width: 100%;
-      max-width: 500px;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    .back:hover{color:var(--brass)}
+    .back svg{width:15px;height:15px}
+    .theme-toggle{
+      margin-top:1.4rem;background:transparent;border:1px solid var(--line);border-radius:8px;
+      color:var(--ink-2);font-family:var(--sans);font-size:.85rem;padding:.5rem .9rem;cursor:pointer;
+      transition:border-color .2s,color .2s;
     }
-
-    .links a {
-      background-color: var(--card-bg);
-      color: var(--text-color);
-      padding: 1rem;
-      text-align: center;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 1.1rem;
-      transition: background 0.3s, transform 0.2s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    .links a:hover {
-      background-color: var(--btn-bg);
-      transform: scale(1.02);
-    }
-
-    .toggle-theme {
-      margin-top: 2rem;
-      background: none;
-      border: 1px solid var(--btn-bg);
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text-color);
-      transition: background 0.3s;
-    }
-
-    .toggle-theme:hover {
-      background-color: var(--btn-bg);
-    }
+    .theme-toggle:hover{border-color:var(--brass);color:var(--brass)}
+    @media (prefers-reduced-motion:reduce){*{transition:none !important}}
   </style>
 </head>
 <body>
   <div class="profile">
-    <img src="img/sua-foto.jpg" alt="Foto de perfil">
-    <h1>Prof. Diego</h1>
-    <p>Links úteis</p>
+    <span class="avatar"><img src="img/sua-foto.jpg" alt="Foto de Diego Garrido"></span>
+    <p class="eyebrow">Links</p>
+    <h1>Diego Garrido</h1>
+    <p>Professor e Coordenador do curso de ADS</p>
   </div>
 
-  <div class="links">
-    <a href="https://docs.google.com/document/d/1p8VTzDjL9Og7MCyFSMj2mZKOX40I5HmdM-VGLMFaF5k/edit?usp=sharing" target="_blank">Oficina de Docker</a>
-    <a href="https://www.youtube.com/channel/UCkuMj9rHltFyhWvHQbRm8Vg" target="_blank">YouTube</a>
-    <a href="https://github.com/diegogrr" target="_blank">GitHub</a>
-    <a href="https://www.linkedin.com/in/diegogrr/" target="_blank">LinkedIn</a>
-  </div>
+  <nav class="links" aria-label="Links úteis">
+    <a href="https://docs.google.com/document/d/1p8VTzDjL9Og7MCyFSMj2mZKOX40I5HmdM-VGLMFaF5k/edit?usp=sharing" target="_blank" rel="noopener">
+      <span>Oficina de Docker</span>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+    </a>
+    <a href="https://www.youtube.com/channel/UCkuMj9rHltFyhWvHQbRm8Vg" target="_blank" rel="noopener">
+      <span>YouTube</span>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+    </a>
+    <a href="https://github.com/diegogrr" target="_blank" rel="noopener">
+      <span>GitHub</span>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+    </a>
+    <a href="https://www.linkedin.com/in/diegogrr/" target="_blank" rel="noopener">
+      <span>LinkedIn</span>
+      <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+    </a>
+  </nav>
 
-  <button class="toggle-theme" onclick="toggleTheme()">Alternar tema</button>
+  <a class="back" href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Voltar ao site
+  </a>
+
+  <button class="theme-toggle" id="themeToggle" type="button">Alternar tema</button>
 
   <script>
-    function toggleTheme() {
-      document.body.classList.toggle("dark");
-    }
+    (function () {
+      var root = document.documentElement;
+      function isDark() {
+        var a = root.getAttribute('data-theme');
+        if (a) return a === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      document.getElementById('themeToggle').addEventListener('click', function () {
+        var next = isDark() ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('dg-theme', next); } catch (e) {}
+      });
+    })();
   </script>
 </body>
 </html>

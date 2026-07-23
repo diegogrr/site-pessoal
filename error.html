@@ -1,59 +1,80 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Página Indisponível</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('dg-theme');
+          if (t) document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f8f9fa;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
+        :root{
+          --paper:#f5f4f1; --card:#ffffff; --ink:#16243d; --text:#242b36;
+          --muted:#64707f; --brass:#9c7c33; --line:#e7e2d7;
+          --shadow:0 2px 4px rgba(22,36,61,.08), 0 14px 34px rgba(22,36,61,.12);
+          --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+          --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
         }
-        .error-container {
-            max-width: 500px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            background: white;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        @media (prefers-color-scheme: dark){
+          :root{
+            --paper:#0d131e; --card:#151d2b; --ink:#eef1f7; --text:#c4cbd8;
+            --muted:#8b96a6; --brass:#c9a94f; --line:#233047;
+            --shadow:0 2px 4px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.55);
+          }
         }
-        .error-code {
-            font-size: 72px;
-            color: #ff6f61;
-            margin: 0;
+        :root[data-theme="light"]{
+          --paper:#f5f4f1; --card:#ffffff; --ink:#16243d; --text:#242b36;
+          --muted:#64707f; --brass:#9c7c33; --line:#e7e2d7;
+          --shadow:0 2px 4px rgba(22,36,61,.08), 0 14px 34px rgba(22,36,61,.12);
         }
-        .error-message {
-            font-size: 18px;
-            margin: 10px 0 20px 0;
+        :root[data-theme="dark"]{
+          --paper:#0d131e; --card:#151d2b; --ink:#eef1f7; --text:#c4cbd8;
+          --muted:#8b96a6; --brass:#c9a94f; --line:#233047;
+          --shadow:0 2px 4px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.55);
         }
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #0056b3;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:var(--sans);background:var(--paper);color:var(--text);
+            display:flex;justify-content:center;align-items:center;
+            min-height:100vh;padding:1.5rem;text-align:center;-webkit-font-smoothing:antialiased;
         }
-        .btn:hover {
-            background-color: #003f7d;
+        .error-container{
+            max-width:520px;padding:3rem 2.5rem;border:1px solid var(--line);
+            border-radius:14px;background:var(--card);box-shadow:var(--shadow);
         }
+        .eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.16em;font-weight:700;color:var(--brass);margin-bottom:.75rem}
+        .error-code{font-family:var(--serif);font-size:5rem;line-height:1;color:var(--ink);letter-spacing:.02em}
+        .error-message{font-size:1.05rem;color:var(--muted);margin:1rem auto 2rem;max-width:36ch;line-height:1.6}
+        .btn{
+            display:inline-flex;align-items:center;gap:.5rem;
+            padding:.8rem 1.4rem;background:var(--ink);color:#f7f5ef;
+            text-decoration:none;border-radius:8px;font-size:.95rem;font-weight:600;
+            transition:transform .18s ease,box-shadow .2s ease;
+        }
+        @media (prefers-color-scheme: dark){.btn{background:var(--brass);color:#161d2b}}
+        :root[data-theme="dark"] .btn{background:var(--brass);color:#161d2b}
+        :root[data-theme="light"] .btn{background:var(--ink);color:#f7f5ef}
+        .btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+        .btn svg{width:15px;height:15px}
+        :focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:4px}
+        @media (prefers-reduced-motion:reduce){*{transition:none !important}}
     </style>
 </head>
 <body>
     <div class="error-container">
+        <p class="eyebrow">Erro 404</p>
         <h1 class="error-code">404</h1>
-        <p class="error-message">Oops! Parece que a página que você está tentando acessar está indisponível no momento.</p>
-        <a href="index.html" class="btn">Voltar para a página inicial</a>
+        <p class="error-message">A página que você procura está indisponível no momento ou foi movida para outro endereço.</p>
+        <a href="index.html" class="btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          Voltar para a página inicial
+        </a>
     </div>
 </body>
 </html>
