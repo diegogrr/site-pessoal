@@ -224,6 +224,25 @@ section{scroll-margin-top:74px}
 .credly:hover{color:var(--brass)}
 .credly svg{width:14px;height:14px}
 
+/* ===== Selo TOP / segurança ===== */
+.seal-panel{
+  display:flex;align-items:center;gap:clamp(1.4rem,4vw,2.6rem);
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:clamp(1.5rem,3.5vw,2.4rem);box-shadow:var(--shadow);
+}
+.seal-emblem{
+  flex:0 0 auto;width:168px;height:168px;border-radius:14px;
+  display:grid;place-items:center;background:var(--paper);border:1px solid var(--line);
+}
+.seal-emblem img{width:118px;height:auto;filter:drop-shadow(0 3px 6px rgba(22,36,61,.18))}
+.seal-body{min-width:0}
+.seal-lead{color:var(--text);max-width:58ch;margin-bottom:1.3rem}
+.seal-links{display:flex;flex-wrap:wrap;gap:.7rem}
+@media (max-width:640px){
+  .seal-panel{flex-direction:column;text-align:center}
+  .seal-links{justify-content:center}
+}
+
 /* ===== Contato ===== */
 .contact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;max-width:760px}
 .contact-card{
