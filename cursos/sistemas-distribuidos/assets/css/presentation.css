@@ -1,0 +1,105 @@
+/* ============================================================
+   presentation.css — Modo apresentação (uso do docente em aula)
+   Cada seção do tópico vira um "slide" em tela cheia.
+   ============================================================ */
+
+.presentation-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.presentation-layer[hidden] {
+  display: none;
+}
+
+/* ---------- Slide ---------- */
+.slide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* "safe" evita que o início do slide fique inalcançável quando o
+     conteúdo estoura a tela; navegadores antigos mantêm a linha acima */
+  justify-content: safe center;
+  padding: var(--space-7) clamp(var(--space-5), 8vw, 8rem);
+  overflow-y: auto;
+  font-size: 1.35rem; /* texto ampliado para projeção */
+}
+
+/* Placeholders de demo são material da página de leitura, não de projeção */
+.presentation-layer .demo-area {
+  display: none;
+}
+
+/* Aviso fixo no rodapé do slide quando ele não coube inteiro na tela */
+.slide.has-overflow::after {
+  content: "▼ Role — o slide continua";
+  position: sticky;
+  bottom: 0;
+  align-self: center;
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 999px;
+  border: var(--border-width) solid var(--color-border);
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.slide h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  color: var(--color-brand);
+}
+
+.slide h2 {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  margin-bottom: var(--space-5);
+}
+
+.slide li {
+  margin-bottom: var(--space-3);
+}
+
+/* Slide de capa do tópico */
+.slide-cover {
+  text-align: center;
+}
+
+.slide-cover .slide-course-name {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+}
+
+/* ---------- Barra de controle ---------- */
+.presentation-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--border-width) solid var(--color-border);
+  background-color: var(--color-bg-elevated);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.presentation-controls .slide-counter {
+  font-variant-numeric: tabular-nums;
+}
+
+.presentation-controls .controls-hint {
+  display: none;
+}
+
+@media (min-width: 700px) {
+  .presentation-controls .controls-hint {
+    display: inline;
+  }
+}

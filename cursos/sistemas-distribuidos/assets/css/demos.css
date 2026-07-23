@@ -1,0 +1,1492 @@
+/* ============================================================
+   demos.css — Demonstrações interativas
+   Estilos do módulo "caracterizacao-falhas" (Tópico 1) e da
+   área de demo quando montada (deixa de ser placeholder).
+   ============================================================ */
+
+/* Área com demo montada: abandona o visual de placeholder */
+.demo-area.demo-mounted {
+  border-style: solid;
+  text-align: left;
+  color: var(--color-text);
+  padding: var(--space-4);
+}
+
+.demo-cf-head .demo-cf-badge {
+  margin-bottom: var(--space-2);
+}
+
+.demo-cf-title {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-1);
+}
+
+.demo-cf-instructions {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.demo-cf-goal {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-3);
+}
+
+.demo-cf-goal-ok {
+  color: var(--color-success);
+}
+
+/* ---------- Mundo: cliente | rede | servidores ---------- */
+.demo-cf-world {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  min-height: 170px;
+}
+
+.demo-cf-client,
+.demo-cf-server {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  min-width: 150px;
+}
+
+.demo-cf-node-icon { font-size: 1.8rem; }
+.demo-cf-node-name { font-weight: 600; }
+
+.demo-cf-servers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  justify-content: center;
+  position: relative;
+}
+
+.demo-cf-server {
+  flex: 1;
+  cursor: default;
+  font: inherit;
+  color: inherit;
+  transition: border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.demo-cf-server.is-clickable { cursor: pointer; }
+.demo-cf-server.is-clickable:hover { border-color: var(--color-brand); }
+
+.demo-cf-server.is-up .demo-cf-server-state { color: var(--color-success); }
+.demo-cf-server.is-down { opacity: 0.55; }
+.demo-cf-server.is-down .demo-cf-server-state { color: var(--color-danger); }
+.demo-cf-server.is-suspected { border-color: var(--color-warning); }
+.demo-cf-server.is-suspected .demo-cf-server-state { color: var(--color-warning); }
+
+.demo-cf-server-state,
+.demo-cf-server-dups {
+  font-size: var(--font-size-xs);
+}
+
+.demo-cf-server-dups { color: var(--color-text-muted); }
+
+/* Etapa 3: servidores encobertos (estado oculto do aluno) */
+.demo-cf-servers.is-hidden .demo-cf-server {
+  visibility: hidden;
+}
+
+.demo-cf-servers.is-hidden::after {
+  content: "🖥️ ?";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Rede e mensagens ---------- */
+.demo-cf-net {
+  flex: 1;
+  position: relative;
+  border-radius: var(--radius-md);
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0, transparent 14px,
+      var(--color-border) 14px, var(--color-border) 15px);
+  opacity: 0.9;
+  overflow: hidden;
+  min-width: 120px;
+}
+
+.demo-cf-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  left: 4px;
+  transition-property: left, opacity, transform;
+  transition-timing-function: linear;
+}
+
+.demo-cf-dot.is-req { background-color: var(--color-brand); }
+.demo-cf-dot.is-res { background-color: var(--color-success); }
+
+.demo-cf-dot.pos-client { left: 4px; }
+.demo-cf-dot.pos-server { left: calc(100% - 16px); }
+.demo-cf-dot.pos-mid { left: 48%; }
+
+.demo-cf-dot.is-lost {
+  opacity: 0;
+  transform: translateY(14px);
+  transition-duration: 400ms;
+}
+
+/* Etapa 3: névoa — o aluno não vê o destino das mensagens */
+.demo-cf-net.is-foggy .demo-cf-dot { visibility: hidden; }
+
+.demo-cf-net.is-foggy::after {
+  content: "❓ rede encoberta";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-sunken);
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Controles ---------- */
+.demo-cf-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.demo-cf-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.demo-cf-controls output {
+  font-variant-numeric: tabular-nums;
+  min-width: 4.5ch;
+}
+
+/* ---------- Etapa 3: desafio ---------- */
+.demo-cf-challenge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.demo-cf-challenge[hidden] { display: none; }
+
+.demo-cf-score { font-variant-numeric: tabular-nums; }
+
+.demo-cf-guesses {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.demo-cf-guesses[hidden] { display: none; }
+
+.demo-cf-xray {
+  flex-basis: 100%;
+  border: var(--border-width) solid var(--color-brand);
+  border-radius: var(--radius-md);
+  background-color: var(--color-highlight);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.demo-cf-xray ul { margin: var(--space-2) 0; }
+
+/* ---------- Métricas ---------- */
+.demo-cf-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.demo-cf-metrics > div {
+  flex: 1;
+  min-width: 110px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+}
+
+.demo-cf-metrics dt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-cf-metrics dd {
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Log (visão do cliente) ---------- */
+.demo-cf-log-wrap { margin-bottom: var(--space-3); }
+
+.demo-cf-log-title {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-1);
+}
+
+.demo-cf-log {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  max-height: 180px;
+  overflow-y: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-code-bg);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  line-height: 1.9;
+}
+
+.demo-cf-log-time { color: var(--color-text-muted); }
+
+/* ============================================================
+   Demo "Arquiteto de Sistemas" (modelos-arquitetura, Tópico 2)
+   Reaproveita a base .demo-cf-* acima; abaixo, só o específico.
+   ============================================================ */
+
+.demo-ma-userrow {
+  margin-bottom: var(--space-3);
+}
+
+.demo-ma-userrow label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.demo-ma-userrow input[type="range"] { flex: 1; }
+
+.demo-ma-userrow output {
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  font-weight: 600;
+}
+
+.demo-ma-world {
+  display: flex;
+  gap: var(--space-4);
+  align-items: stretch;
+  margin-bottom: var(--space-1);
+}
+
+.demo-ma-bars {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.demo-ma-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.demo-ma-bar-label { min-width: 7.5em; }
+
+.demo-ma-bar-track {
+  flex: 1;
+  height: 14px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 999px;
+  background-color: var(--color-bg-sunken);
+  overflow: hidden;
+}
+
+.demo-ma-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--transition-base);
+}
+
+.demo-ma-bar-fill.is-ok   { background-color: var(--color-success); }
+.demo-ma-bar-fill.is-warn { background-color: var(--color-warning); }
+.demo-ma-bar-fill.is-sat  { background-color: var(--color-danger); }
+
+.demo-ma-bar-value {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-ma-bar-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-ma-chart {
+  flex: 1;
+  min-width: 220px;
+  height: 130px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+}
+
+.demo-ma-chart-ref {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+
+.demo-ma-chart-cur {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.5;
+}
+
+.demo-ma-chart-target {
+  stroke: var(--color-warning);
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+}
+
+.demo-ma-chart-dot { fill: var(--color-brand); }
+
+.demo-ma-chart-caption {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.demo-ma-leg-ref    { opacity: 0.7; }
+.demo-ma-leg-cur    { color: var(--color-brand); }
+.demo-ma-leg-target { color: var(--color-warning); }
+
+.demo-ma-stale,
+.demo-ma-hops,
+.demo-ma-churn {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.demo-ma-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.demo-ma-tiers[hidden] { display: none; }
+
+.demo-ma-tier {
+  flex: 1;
+  min-width: 240px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.demo-ma-tier-path,
+.demo-ma-tier-badge {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.demo-ma-tier-result { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .demo-ma-world { flex-direction: column; }
+}
+
+/* Botões inativos da demo precisam parecer inativos */
+.demo-cf .btn:disabled,
+.demo-cf .btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Navegação de etapas ---------- */
+.demo-cf-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.demo-cf-nav-mid {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.demo-cf-stage-counter {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-cf-reset {
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .demo-cf-world { flex-direction: column; }
+  .demo-cf-net { min-height: 90px; }
+}
+
+
+/* ============================================================
+   Demo do Tópico 3 — "A Viagem do Pacote" (demo-cr-*)
+   Reaproveita a base demo-cf-* (cabeçalho, métricas, log, nav).
+   ============================================================ */
+
+.demo-cr-stage-area { margin-bottom: var(--space-3); }
+
+/* ---- Etapa 1: empacotar ---- */
+
+.demo-cr-pack {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.demo-cr-layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 220px;
+}
+
+.demo-cr-layerbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.demo-cr-layerbtn span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-cr-envelope {
+  flex: 1;
+  min-width: 260px;
+  min-height: 160px;
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background-color: var(--color-bg-sunken);
+}
+
+.demo-cr-envelope-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin: var(--space-5) 0;
+}
+
+.demo-cr-envelope.is-shake { animation: demo-cr-shake 0.3s; }
+
+@keyframes demo-cr-shake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.demo-cr-env {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.demo-cr-env-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--space-1);
+}
+
+.demo-cr-env-msg { border-color: var(--color-success); }
+.demo-cr-env-tcp { border-color: var(--color-brand); }
+.demo-cr-env-ip  { border-color: var(--color-warning); }
+.demo-cr-env-eth { border-color: var(--color-danger); }
+
+/* ---- Etapa 2: Ethernet local ---- */
+
+.demo-cr-lanview-title {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.demo-cr-stations {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  margin-bottom: var(--space-2);
+}
+
+.demo-cr-station {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  font-size: var(--font-size-xs);
+  min-width: 10em;
+}
+
+.demo-cr-station-icon { font-size: 1.5rem; }
+.demo-cr-station-mac { color: var(--color-text-muted); }
+
+.demo-cr-station-note {
+  min-height: 1.2em;
+  color: var(--color-text-muted);
+}
+
+.demo-cr-station.is-flash { border-color: var(--color-warning); }
+.demo-cr-station.is-target { border-color: var(--color-success); }
+.demo-cr-station.is-target .demo-cr-station-note { color: var(--color-success); }
+
+.demo-cr-arpcache { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.demo-cr-sends,
+.demo-cr-modes-done {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- SVG da inter-rede (etapas 3–5) ---- */
+
+.demo-cr-svg {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+  margin: 0 auto var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+}
+
+.demo-cr-link {
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+}
+
+.demo-cr-link.is-down {
+  stroke: var(--color-danger);
+  stroke-dasharray: 5 4;
+}
+
+.demo-cr-link.is-stub {
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.demo-cr-linklabel,
+.demo-cr-lanlabel,
+.demo-cr-cloud {
+  font-size: 9px;
+  fill: var(--color-text-muted);
+}
+
+.demo-cr-lanlabel,
+.demo-cr-nodelabel { text-anchor: middle; }
+
+.demo-cr-node {
+  fill: var(--color-bg);
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+
+.demo-cr-node.is-here { stroke: var(--color-brand); stroke-width: 3; }
+
+.demo-cr-nodelabel {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--color-text);
+}
+
+.demo-cr-lan {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-dasharray: 3 3;
+}
+
+.demo-cr-packet { fill: var(--color-brand); }
+
+.demo-cr-round { font-size: var(--font-size-sm); margin-bottom: var(--space-2); }
+
+/* ---- Tabelas de roteamento / vetores ---- */
+
+.demo-cr-table {
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+  margin: 0 auto var(--space-2);
+}
+
+.demo-cr-table caption {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.demo-cr-table th,
+.demo-cr-table td {
+  border: var(--border-width) solid var(--color-border);
+  padding: 2px var(--space-2);
+  text-align: left;
+}
+
+.demo-cr-table th { background-color: var(--color-bg-sunken); }
+
+/* ---- Etapa 5: recepção ---- */
+
+.demo-cr-rx {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.demo-cr-slots {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.demo-cr-slot {
+  width: 2.2em;
+  height: 2.2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-cr-slot.is-buf { border-style: solid; border-color: var(--color-warning); }
+.demo-cr-slot.is-rx  { border-style: solid; border-color: var(--color-success); }
+.demo-cr-slot.is-dup { border-style: double; border-color: var(--color-danger); }
+
+.demo-cr-apptext { margin: 0; }
+
+/* ============================================================
+   Demo do Tópico 4 — "O Middleware é Você" (demo-sm-*)
+   Reaproveita a base demo-cf-* (cabeçalho, métricas, log, nav).
+   ============================================================ */
+
+.demo-sm-stage-area { margin-bottom: var(--space-3); }
+
+/* ---- Mundo: máquinas/processos lado a lado ---- */
+
+.demo-sm-world {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: stretch;
+  margin-bottom: var(--space-2);
+}
+
+.demo-sm-machine {
+  flex: 1;
+  min-width: 220px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  padding: var(--space-3);
+}
+
+.demo-sm-machine-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.demo-sm-arch {
+  display: block;
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-sm-proc {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.demo-sm-proc span {
+  display: block;
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-sm-port {
+  border: 2px dashed var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.demo-sm-port[data-bound="true"] {
+  border-style: solid;
+  border-color: var(--color-success);
+}
+
+.demo-sm-inbox { margin-top: var(--space-2); font-size: var(--font-size-xs); }
+.demo-sm-inbox p { color: var(--color-text-muted); margin-bottom: var(--space-1); }
+.demo-sm-inbox ul { list-style: none; padding: 0; margin: 0; }
+.demo-sm-inbox li { padding: 2px 0; }
+
+.demo-sm-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.demo-sm-big { font-size: var(--font-size-lg); margin: var(--space-1) 0; }
+
+/* ---- Etapa 2: estados dos processos ---- */
+
+.demo-sm-proc2 { transition: border-color var(--transition-fast), opacity var(--transition-fast); }
+.demo-sm-proc2[data-state="recv"] { border-color: var(--color-warning); }
+.demo-sm-proc2[data-state="send"] { border-color: var(--color-brand); }
+.demo-sm-proc2[data-state="dead"] { border-color: var(--color-danger); opacity: 0.7; }
+
+.demo-sm-proc2-state { font-size: var(--font-size-sm); }
+.demo-sm-proc2[data-state="recv"] .demo-sm-proc2-state,
+.demo-sm-proc2[data-state="send"] .demo-sm-proc2-state { font-style: italic; }
+.demo-sm-proc2[data-state="dead"] .demo-sm-proc2-state { color: var(--color-danger); }
+
+.demo-sm-status { font-size: var(--font-size-sm); margin-bottom: var(--space-2); }
+.demo-sm-bad { color: var(--color-danger); }
+
+.demo-sm-exp {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---- Etapa 3: structs, bytes e tamanhos ---- */
+
+.demo-sm-struct { border-collapse: collapse; font-size: var(--font-size-sm); width: 100%; }
+.demo-sm-struct caption {
+  text-align: left;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+.demo-sm-struct td {
+  border: var(--border-width) solid var(--color-border);
+  padding: var(--space-1) var(--space-2);
+}
+.demo-sm-struct td:first-child { color: var(--color-text-muted); width: 30%; }
+
+.demo-sm-struct.is-bad td:last-child { color: var(--color-danger); font-weight: 600; }
+.demo-sm-struct.is-ok td:last-child { color: var(--color-success); }
+.demo-sm-struct[data-swapped="true"] td:last-child { color: var(--color-danger); }
+
+.demo-sm-bytes {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs);
+  background-color: var(--color-bg-sunken);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  overflow-x: auto;
+  margin-bottom: var(--space-2);
+  white-space: pre;
+}
+
+.demo-sm-sizes { font-size: var(--font-size-sm); margin-bottom: var(--space-2); }
+
+/* ---- Etapas 4 e 5: divergência ---- */
+
+.demo-sm-diverge.is-ok { color: var(--color-success); }
+.demo-sm-diverge.is-bad { color: var(--color-danger); font-weight: 600; }
+
+.demo-sm-rep { text-align: center; }
+.demo-sm-rep .demo-sm-big strong { font-size: 1.6em; }
+
+/* ============================================================
+   Demo do Tópico 5 — "A Chamada Invisível" (demo-rf-*)
+   Reaproveita a base demo-cf-* (cabeçalho, métricas, log, nav,
+   desafio/aposta com raio-X).
+   ============================================================ */
+
+.demo-rf-stage-area { margin-bottom: var(--space-3); }
+
+/* ---- Etapa 1: código do cliente e linha de produção ---- */
+
+.demo-rf-code {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  background-color: var(--color-code-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  white-space: pre-wrap;
+}
+
+.demo-rf-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.demo-rf-endpoint { font-size: var(--font-size-sm); font-weight: 600; }
+
+.demo-rf-station {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  min-width: 9.5em;
+  text-align: center;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.demo-rf-station[data-on="true"] {
+  border-style: solid;
+  color: var(--color-text);
+}
+
+.demo-rf-station.is-active {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 2px var(--color-highlight);
+}
+
+.demo-rf-station-role {
+  display: block;
+  font-size: 0.92em;
+  color: var(--color-text-muted);
+}
+
+.demo-rf-arrow { color: var(--color-text-muted); }
+
+/* ---- Mundo: máquinas lado a lado (etapas 2–5) ---- */
+
+.demo-rf-world {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: stretch;
+  margin-bottom: var(--space-2);
+}
+
+.demo-rf-machine {
+  flex: 1;
+  min-width: 220px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  padding: var(--space-3);
+}
+
+.demo-rf-machine[data-dead="true"] { opacity: 0.55; }
+
+.demo-rf-machine-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.demo-rf-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.demo-rf-big { font-size: var(--font-size-lg); margin: var(--space-1) 0; }
+
+.demo-rf-status { font-size: var(--font-size-sm); margin-bottom: var(--space-2); }
+
+.demo-rf-diverge.is-ok { color: var(--color-success); }
+.demo-rf-diverge.is-bad { color: var(--color-danger); font-weight: 600; }
+
+/* ---- Etapa 3: servidor encoberto até a aposta ---- */
+
+.demo-rf-covered { position: relative; }
+.demo-rf-covered > * { visibility: hidden; }
+
+.demo-rf-covered::after {
+  content: "🖥️ ? (encoberto até a aposta)";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* ---- Etapas 2 e 5: controles compostos ---- */
+
+.demo-rf-semrow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.demo-rf-leaselabel { font-size: var(--font-size-sm); }
+
+.demo-rf-holders {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+}
+
+.demo-rf-holders li { padding: 1px 0; }
+
+@media (max-width: 640px) {
+  .demo-rf-world { flex-direction: column; }
+}
+
+/* ============================================================
+   Demo do Tópico 6 — "A Sala de Máquinas" (demo-vz-*)
+   Reaproveita a base demo-cf-* (cabeçalho, métricas, log, nav).
+   ============================================================ */
+
+.demo-vz-stage-area { margin-bottom: var(--space-3); }
+
+.demo-vz-server,
+.demo-vz-cow,
+.demo-vz-lrpc,
+.demo-vz-rack {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.demo-vz-server-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.demo-vz-server-title span {
+  display: block;
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-vz-marks {
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-1);
+}
+
+.demo-vz-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.demo-vz-cpurow {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+/* ---- Etapa 2: escada de custos ---- */
+
+.demo-vz-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.demo-vz-rung {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  cursor: pointer;
+}
+
+.demo-vz-rung:hover:not(:disabled) { border-color: var(--color-brand); }
+
+.demo-vz-rung.is-placed {
+  border-style: solid;
+  border-color: var(--color-success);
+  cursor: default;
+}
+
+.demo-vz-cost {
+  float: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.demo-vz-xray2 {
+  border: var(--border-width) solid var(--color-brand);
+  border-radius: var(--radius-md);
+  background-color: var(--color-highlight);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-2);
+}
+
+.demo-vz-xray2 ul { margin: var(--space-1) 0 0; }
+
+.demo-vz-exp { font-size: var(--font-size-sm); }
+
+/* ---- Etapa 3: páginas do copy-on-write ---- */
+
+.demo-vz-frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.demo-vz-frame {
+  font: inherit;
+  color: inherit;
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  cursor: pointer;
+  text-align: center;
+}
+
+.demo-vz-frame span {
+  display: block;
+  color: var(--color-text-muted);
+}
+
+.demo-vz-frame[data-state="compartilhado"] {
+  border-style: solid;
+  border-color: var(--color-warning);
+}
+
+.demo-vz-frame[data-state="escrevendo"] { border-color: var(--color-danger); }
+
+.demo-vz-frame[data-state="copiado"] {
+  border-style: solid;
+  border-color: var(--color-success);
+  cursor: default;
+}
+
+/* ---- Etapa 4: anéis de privilégio ---- */
+
+.demo-vz-rings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.demo-vz-ring {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.demo-vz-ring[data-ring="0"] { border-color: var(--color-brand); }
+.demo-vz-ring[data-ring="1"] { margin-left: var(--space-4); }
+.demo-vz-ring[data-ring="3"] {
+  margin-left: var(--space-6, 3rem);
+  color: var(--color-text-muted);
+}
+
+.demo-vz-ring span {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- Etapa 5: racks ---- */
+
+.demo-vz-racks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.demo-vz-racks .demo-vz-rack { flex: 1; min-width: 250px; margin-bottom: 0; }
+
+.demo-vz-slotrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 2.2em;
+  font-size: var(--font-size-xs);
+}
+
+.demo-vz-slot {
+  border: var(--border-width) solid var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  background-color: var(--color-bg);
+}
+
+.demo-vz-slot[data-kind="vm"] { border-width: 2px; }
+
+.demo-vz-slot[data-down="true"] {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .demo-vz-racks { flex-direction: column; }
+}
+
+/* ============================================================
+   Demo do Tópico 7 — "Mallory na Linha" (demo-sg-*)
+   Reaproveita a base demo-cf-* (cabeçalho, controles, métricas,
+   log, nav, summary). Abaixo, só o específico: o palco da rede
+   com o posto de escuta, a bancada RSA/fatorador, o cartório de
+   assinaturas e a linha de montagem do handshake.
+   ============================================================ */
+
+.demo-sg-stage-area { margin-bottom: var(--space-3); }
+
+.demo-sg-server-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+/* ---- Palco da rede: Alice | fio (+ Eve) | Bob ---- */
+.demo-sg-net {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  min-height: 150px;
+}
+
+.demo-sg-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  min-width: 92px;
+}
+
+.demo-sg-face { font-size: 1.8rem; }
+.demo-sg-name { font-weight: 600; font-size: var(--font-size-sm); }
+
+.demo-sg-wire {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-width: 140px;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0, transparent 12px,
+      var(--color-border) 12px, var(--color-border) 13px) center / 100% 2px no-repeat;
+}
+
+.demo-sg-wire-msg {
+  max-width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--color-brand);
+  border-radius: var(--radius-pill, 999px);
+  background-color: var(--color-bg);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.demo-sg-wire-msg.is-cipher {
+  border-color: var(--color-success);
+  font-family: var(--font-family-mono);
+  letter-spacing: 2px;
+}
+
+.demo-sg-tap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  max-width: 100%;
+}
+
+.demo-sg-tap.is-reading {
+  border-style: solid;
+  border-color: var(--color-danger);
+}
+
+.demo-sg-tap.is-blind {
+  opacity: 0.6;
+  border-color: var(--color-success);
+}
+
+.demo-sg-tap-label { color: var(--color-text-muted); }
+.demo-sg-tap.is-reading .demo-sg-tap-label { color: var(--color-text); }
+
+/* ---- Caixa de entrada de Bob (etapa 1) ---- */
+.demo-sg-inbox {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background-color: var(--color-bg-sunken);
+}
+
+.demo-sg-inbox-title { font-size: var(--font-size-sm); font-weight: 600; }
+
+.demo-sg-inbox ul { list-style: none; margin: var(--space-1) 0 0; padding: 0; }
+
+.demo-sg-inbox li {
+  font-size: var(--font-size-sm);
+  padding: 2px 0;
+}
+
+.demo-sg-inbox li[data-forged="true"] { color: var(--color-danger); }
+
+.demo-sg-tag {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ---- Rachaduras (etapa 2) ---- */
+.demo-sg-cracks {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background-color: var(--color-bg-sunken);
+}
+
+.demo-sg-cracks-title { font-size: var(--font-size-sm); font-weight: 600; }
+.demo-sg-cracks ul { list-style: none; margin: var(--space-1) 0 0; padding: 0; }
+
+.demo-sg-cracks li {
+  font-size: var(--font-size-sm);
+  padding: 2px 0;
+}
+
+.demo-sg-cracks li[data-open="true"] { color: var(--color-danger); }
+.demo-sg-cracks li[data-open="false"] { color: var(--color-success); }
+
+/* ---- Bancada RSA e fatorador (etapa 3) ---- */
+.demo-sg-rsa,
+.demo-sg-factor,
+.demo-sg-mitm,
+.demo-sg-sign,
+.demo-sg-handshake {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.demo-sg-rsa-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.demo-sg-rsa-grid > div {
+  flex: 1;
+  min-width: 90px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+  background-color: var(--color-bg);
+}
+
+.demo-sg-rsa-grid span {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-sg-rsa-grid strong { font-variant-numeric: tabular-nums; }
+
+.demo-sg-mural {
+  font-size: var(--font-size-sm);
+  padding: var(--space-2);
+  border-left: 3px solid var(--color-brand);
+  background-color: var(--color-highlight);
+  margin-bottom: var(--space-2);
+}
+
+.demo-sg-rsa-run p { font-size: var(--font-size-sm); margin: 2px 0; }
+
+.demo-sg-est {
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-1);
+}
+
+.demo-sg-est[data-hard="true"] strong { color: var(--color-danger); }
+.demo-sg-est[data-hard="false"] strong { color: var(--color-warning); }
+
+.demo-sg-cost {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.demo-sg-bits { width: min(320px, 60%); vertical-align: middle; }
+
+/* ---- Homem no meio e cartório (etapa 4) ---- */
+.demo-sg-mitm p,
+.demo-sg-sign p { font-size: var(--font-size-sm); margin: var(--space-1) 0; }
+
+.demo-sg-mitm[data-blocked="true"] { border-color: var(--color-success); }
+.demo-sg-mitm[data-blocked="false"][data-cert="false"] p[data-mitm="true"] {
+  color: var(--color-danger);
+}
+
+.demo-sg-doc { font-style: italic; }
+
+.demo-sg-verify[data-valid="true"] { color: var(--color-success); }
+.demo-sg-verify[data-valid="false"] { color: var(--color-danger); }
+
+/* ---- Linha de montagem do handshake (etapa 5) ---- */
+.demo-sg-assembly {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  counter-reset: none;
+}
+
+.demo-sg-piece {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-success);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-1);
+}
+
+.demo-sg-piece-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background-color: var(--color-success);
+  color: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.demo-sg-empty { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+.demo-sg-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.demo-sg-tray .demo-sg-piece-btn { text-align: left; }
+
+.demo-sg-lock {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-success);
+  border-radius: var(--radius-md);
+  background-color: var(--color-highlight);
+  font-size: var(--font-size-sm);
+}
+
+/* ---- Painel-síntese ---- */
+.demo-sg-synth {
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-sm);
+}
+
+.demo-sg-honesty {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  border-top: var(--border-width) solid var(--color-border);
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .demo-sg-net { flex-direction: column; }
+  .demo-sg-wire { min-height: 90px; }
+}

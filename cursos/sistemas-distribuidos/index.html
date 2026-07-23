@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Plataforma de ensino da disciplina Sistemas Distribuídos (SLTSIDO) — IFSP Campus Salto">
+  <title>Sistemas Distribuídos — Plataforma de Ensino</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+
+  <!-- ===== Folhas de estilo (ordem importa: tokens primeiro) ===== -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/demos.css">
+  <link rel="stylesheet" href="assets/css/presentation.css">
+</head>
+<body>
+  <!-- Cabeçalho global (renderizado por ui/layout.js) -->
+  <header id="app-header" class="app-header" role="banner"></header>
+
+  <div class="app-shell">
+    <!-- Navegação lateral com a trilha de tópicos (renderizada por ui/layout.js) -->
+    <nav id="app-sidebar" class="app-sidebar" role="navigation" aria-label="Trilha de tópicos"></nav>
+
+    <!-- Área principal: as views (home, tópico, glossário, sobre) são montadas aqui -->
+    <main id="app-view" class="app-view" role="main" tabindex="-1"></main>
+  </div>
+
+  <!-- Rodapé global (renderizado por ui/layout.js) -->
+  <footer id="app-footer" class="app-footer" role="contentinfo"></footer>
+
+  <!-- Camada do modo apresentação (preenchida por ui/presentation.js quando ativado) -->
+  <div id="presentation-layer" class="presentation-layer" hidden aria-hidden="true"></div>
+
+  <!-- ===== Scripts (ordem importa) ===== -->
+  <!-- Núcleo -->
+  <script src="assets/js/core/store.js"></script>
+  <script src="assets/js/core/loader.js"></script>
+  <script src="assets/js/core/router.js"></script>
+
+  <!-- Manifesto do curso (lista de tópicos e metadados) -->
+  <script src="content/course.js"></script>
+
+  <!-- Interface -->
+  <script src="assets/js/ui/theme.js"></script>
+  <script src="assets/js/ui/progress.js"></script>
+  <script src="assets/js/ui/layout.js"></script>
+  <script src="assets/js/ui/quiz.js"></script>
+  <script src="assets/js/ui/reading.js"></script>
+  <script src="assets/js/ui/presentation.js"></script>
+
+  <!-- Demonstrações interativas (registram-se em SD.demos) -->
+  <script src="assets/js/demos/caracterizacao-falhas.js"></script>
+  <script src="assets/js/demos/modelos-arquitetura.js"></script>
+  <script src="assets/js/demos/camadas-rede.js"></script>
+  <script src="assets/js/demos/sockets-mensagens.js"></script>
+  <script src="assets/js/demos/rpc-fluxo.js"></script>
+  <script src="assets/js/demos/virtualizacao.js"></script>
+  <script src="assets/js/demos/criptografia-basica.js"></script>
+
+  <!-- Views -->
+  <script src="assets/js/views/home.js"></script>
+  <script src="assets/js/views/topic.js"></script>
+  <script src="assets/js/views/glossary.js"></script>
+  <script src="assets/js/views/about.js"></script>
+
+  <!-- Inicialização -->
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

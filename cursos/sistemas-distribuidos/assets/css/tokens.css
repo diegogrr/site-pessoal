@@ -1,0 +1,123 @@
+/* ============================================================
+   tokens.css — Design tokens da plataforma
+   ------------------------------------------------------------
+   ÚNICO lugar para alterar a identidade visual do site.
+   Os demais arquivos CSS consomem apenas estas variáveis.
+   Temas: [data-theme="light"] (padrão) e [data-theme="dark"].
+
+   Direção "console de estudos": marca cobalto-violeta (íris) +
+   teal-jóia para progresso; monoespaçada como face de assinatura
+   (eyebrows, números de seção, metadados). Sem dependências
+   externas — tudo roda a partir do disco.
+   ============================================================ */
+
+:root {
+  /* ---- Marca / paleta base ---- */
+  --color-brand:        #4b57d6;  /* íris (cobalto-violeta) */
+  --color-brand-strong: #3742ab;
+  --color-brand-soft:   #e9ebfb;  /* sobrescrito por tema */
+  --color-accent:       #12a594;  /* teal-jóia: progresso/concluído */
+  --color-accent-soft:  #d8f2ee;  /* sobrescrito por tema */
+
+  /* ---- Feedback ---- */
+  --color-success: #12a594;  /* positivo = teal, unifica com acento */
+  --color-warning: #c9781f;  /* âmbar: atenção/custo */
+  --color-danger:  #c8503f;  /* argila: falácias/perigo */
+
+  /* ---- Tipografia ---- */
+  --font-family-base: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
+  --font-family-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-size-xs:   0.75rem;
+  --font-size-sm:   0.875rem;
+  --font-size-md:   1rem;
+  --font-size-lg:   1.2rem;
+  --font-size-xl:   1.55rem;
+  --font-size-xxl:  2.25rem;
+  --line-height-base: 1.7;
+  --tracking-tight: -0.02em;
+  --tracking-label: 0.14em;
+
+  /* ---- Espaçamento ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* ---- Forma ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+
+  /* ---- Sombras ---- */
+  --shadow-sm: 0 1px 2px rgba(20, 30, 50, 0.06), 0 1px 3px rgba(20, 30, 50, 0.05);
+  --shadow-md: 0 6px 20px rgba(24, 34, 58, 0.10);
+  --shadow-lg: 0 18px 48px rgba(24, 34, 58, 0.16);
+
+  /* ---- Layout ---- */
+  --sidebar-width: 264px;
+  --toc-width: 216px;
+  --header-height: 60px;
+  --content-max-width: 1100px;  /* home, glossário, sobre */
+  --reading-max: 46rem;         /* medida de leitura ~68 caracteres */
+  --transition-fast: 150ms ease;
+  --transition-base: 220ms cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ============================================================
+   Tema CLARO (padrão)
+   ============================================================ */
+[data-theme="light"] {
+  --color-bg:            #eaeef4;
+  --color-bg-elevated:   #ffffff;
+  --color-bg-sunken:     #f3f6fa;
+  --color-text:          #1a2130;
+  --color-text-muted:    #56657b;
+  --color-border:        #dbe2ec;
+  --color-line-soft:     #e7edf4;
+  --color-link:          var(--color-brand);
+  --color-header-bg:     rgba(255, 255, 255, 0.82);
+  --color-header-text:   #1a2130;
+  --color-sidebar-bg:    #ffffff;
+  --color-code-bg:       #f0f3f8;
+  --color-highlight:     #e9ebfb;
+
+  --color-brand-soft:    #e9ebfb;
+  --color-accent-soft:   #d8f2ee;
+  --color-warn-soft:     #f9ead2;
+  --color-danger-soft:   #f7e2dd;
+  --color-glow:          rgba(75, 87, 214, 0.14);
+}
+
+/* ============================================================
+   Tema ESCURO
+   ============================================================ */
+[data-theme="dark"] {
+  --color-bg:            #0e1320;
+  --color-bg-elevated:   #161d2c;
+  --color-bg-sunken:     #101626;
+  --color-text:          #e7edf5;
+  --color-text-muted:    #a7b6c9;
+  --color-border:        #263247;
+  --color-line-soft:     #1e293b;
+  --color-link:          #9aa4f5;
+  --color-header-bg:     rgba(16, 22, 38, 0.82);
+  --color-header-text:   #e7edf5;
+  --color-sidebar-bg:    #161d2c;
+  --color-code-bg:       #0c1220;
+  --color-highlight:     #1e2447;
+
+  --color-brand-soft:    #1e2447;
+  --color-accent-soft:   #0e2f30;
+  --color-warn-soft:     #34260f;
+  --color-danger-soft:   #331a16;
+  --color-glow:          rgba(154, 164, 245, 0.20);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.55);
+}
