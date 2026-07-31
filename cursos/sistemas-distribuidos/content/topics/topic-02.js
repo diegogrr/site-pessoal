@@ -134,15 +134,17 @@ SD.content["02"] = {
         "e segurança. Estratégias recorrentes: <strong>vários servidores</strong> (dados " +
         "particionados, como na Web, ou replicados, como no NIS); <strong>cache</strong> " +
         "(cópias próximas do cliente: navegadores e servidores proxy); <strong>código " +
-        "móvel</strong> (applets: o código vai até o cliente, boa resposta interativa, " +
-        "modelo <em>push</em>); e <strong>agentes móveis</strong> (código + dados " +
-        "visitando máquinas: aplicabilidade limitada por segurança).</p>" +
-        /* Área reservada para demonstração interativa futura. */
+        "móvel</strong> (applets: o navegador baixa o código e o executa localmente, com " +
+        "boa resposta interativa; depois de carregado, o applet pode receber atualizações " +
+        "por iniciativa do servidor, o modelo <em>push</em>); e <strong>agentes " +
+        "móveis</strong> (código + dados visitando máquinas: aplicabilidade limitada por " +
+        "segurança).</p>" +
+        /* A demo é montada aqui por views/topic.js; o conteúdo abaixo só aparece se o
+           módulo da demonstração não carregar. */
         '<div class="demo-area" data-demo="modelos-arquitetura">' +
         '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para um diagrama interativo de arquiteturas " +
-        "(cliente-servidor, peer-to-peer, multicamadas).</p>" +
+        "<p><strong>A demonstração interativa não pôde ser carregada</strong></p>" +
+        "<p>Recarregue a página para tentar de novo.</p>" +
         "</div>",
       slides: [
         {
@@ -185,7 +187,7 @@ SD.content["02"] = {
             "<ul>" +
             "<li><strong>Vários servidores</strong>: particionar (Web) ou replicar (NIS)</li>" +
             "<li><strong>Cache e proxy</strong>: cópias perto do cliente</li>" +
-            "<li><strong>Código móvel</strong>: applets, modelo push</li>" +
+            "<li><strong>Código móvel</strong>: applets; atualizações depois, no modelo push</li>" +
             "<li><strong>Agentes móveis</strong>: código viajante, uso limitado</li>" +
             "</ul>"
         }
@@ -218,10 +220,10 @@ SD.content["02"] = {
         "cliente-servidor da Web interativa: JavaScript no navegador pede dados " +
         "diretamente ao servidor e atualiza só parte da página (Google Maps é o exemplo " +
         "clássico).</p>" +
-        "<h3>Clientes magros e outros padrões</h3>" +
+        "<h3>Thin client e outros padrões</h3>" +
         "<p>A tendência de tirar complexidade do equipamento do usuário leva ao " +
-        "<strong>cliente magro</strong> (thin client): interface local, execução remota" +
-        ": a Computação de Rede Virtual (VNC) transmite eventos de teclado/vídeo/mouse; " +
+        "<strong>thin client</strong>: interface local, execução remota. " +
+        "A Computação de Rede Virtual (VNC) transmite eventos de teclado/vídeo/mouse; " +
         "funciona em qualquer aparelho, mas sofre em atividades gráficas muito " +
         "interativas. Outros padrões recorrentes: <strong>proxy</strong> (representante " +
         "local do objeto remoto, com a mesma interface: base da transparência em " +
@@ -266,10 +268,10 @@ SD.content["02"] = {
             "</ul>"
         },
         {
-          title: "Clientes magros e padrões recorrentes",
+          title: "Thin client e padrões recorrentes",
           html:
             "<ul>" +
-            "<li><strong>Cliente magro</strong>: interface local, execução remota (VNC)</li>" +
+            "<li><strong>Thin client</strong>: interface local, execução remota (VNC)</li>" +
             "<li><strong>Proxy</strong>: representante local do objeto remoto (RPC/RMI)</li>" +
             "<li><strong>Brokerage</strong>: provedor · solicitante · corretor</li>" +
             "<li><strong>Reflexão</strong>: o sistema inspeciona e adapta a si mesmo</li>" +
@@ -323,7 +325,9 @@ SD.content["02"] = {
         "<li><strong>Falhas por omissão</strong>: algo deixa de ser feito. De processo: " +
         "o <em>colapso</em> (para e fica parado); se outros podem detectar com certeza, " +
         "é <em>parada por falha</em> (fail-stop): só possível em sistema síncrono. De " +
-        "canal: perda de mensagens (por omissão de envio, de recepção ou de canal).</li>" +
+        "comunicação: perda de mensagens, que pode ocorrer no processo emissor (omissão " +
+        "de envio), no processo receptor (omissão de recepção) ou no meio de comunicação " +
+        "(omissão de canal).</li>" +
         "<li><strong>Falhas arbitrárias (bizantinas)</strong>: a pior semântica: " +
         "qualquer comportamento, inclusive responder errado ou omitir passos " +
         "seletivamente. Em canais são raras (somas de verificação e números de " +
@@ -524,7 +528,7 @@ SD.content["02"] = {
       term: "Sistema distribuído síncrono",
       definition:
         "Sistema em que o tempo de execução de cada etapa, o atraso das mensagens e o " +
-        "desvio dos relógios têm limites conhecidos: permitindo detectar falhas por " +
+        "desvio dos relógios têm limites conhecidos, o que permite detectar falhas por " +
         "timeout."
     },
     {

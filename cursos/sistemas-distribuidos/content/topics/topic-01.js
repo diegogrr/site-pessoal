@@ -32,8 +32,8 @@ SD.content["01"] = {
         "dois extremos.</p>" +
         '<div class="callout">' +
         '<p class="callout-title">💡 Ideia central</p>' +
-        "<p>A única forma de comunicação é a troca de mensagens pela rede. Todas as " +
-        "características marcantes dos sistemas distribuídos (e todos os seus desafios) " +
+        "<p>A única forma de comunicação é a troca de mensagens pela rede. As três " +
+        "consequências que caracterizam esses sistemas, e boa parte dos seus desafios, " +
         "decorrem dessa restrição.</p>" +
         "</div>" +
         "<p>Dessa definição seguem três consequências importantes:</p>" +
@@ -87,7 +87,8 @@ SD.content["01"] = {
             "<ul>" +
             "<li>Na mesma sala ou em continentes diferentes</li>" +
             "<li>Motivação central: <strong>compartilhar recursos</strong></li>" +
-            "<li>Tudo (características e desafios) decorre da restrição às mensagens</li>" +
+            "<li>As três consequências (e boa parte dos desafios) decorrem da restrição " +
+            "às mensagens</li>" +
             "</ul>"
         },
         {
@@ -212,7 +213,7 @@ SD.content["01"] = {
         "bem definido de operações (ler, escrever, imprimir…). Um " +
         "<strong>servidor</strong> é um processo que aceita pedidos e responde; os " +
         "processos que pedem são os <strong>clientes</strong>, e a interação completa " +
-        "pedido-resposta é uma <em>requisição remota</em>. O mesmo processo pode ser " +
+        "pedido-resposta é uma <em>invocação remota</em>. O mesmo processo pode ser " +
         "cliente e servidor: os termos designam papéis em um pedido, não máquinas.</p>" +
         "<h3>Transparência</h3>" +
         "<p><strong>Transparência</strong> é ocultar do usuário e do programador a " +
@@ -316,9 +317,10 @@ SD.content["01"] = {
         "físicos (idealmente proporcional ao número de usuários), controlar a perda de " +
         "desempenho ao crescer (estruturas hierárquicas escalam melhor que lineares), " +
         "impedir que recursos de software se esgotem (o endereço IP de 32 bits é o " +
-        "exemplo canônico) e evitar gargalos centralizados: o DNS só escala porque " +
-        "particiona a tabela de nomes entre servidores administrados localmente. Cache e " +
-        "replicação são as técnicas de apoio onipresentes.</li>" +
+        "exemplo canônico) e evitar gargalos centralizados: o DNS escala porque " +
+        "particiona a tabela de nomes entre servidores administrados localmente e porque " +
+        "as respostas ficam em cache por toda a Internet. Cache e replicação são as " +
+        "técnicas de apoio onipresentes.</li>" +
         "<li><strong>Tratamento de falhas:</strong> como as falhas são parciais, o " +
         "sistema precisa combinar <em>detecção</em> (somas de verificação), " +
         "<em>mascaramento</em> (retransmissão, gravação redundante), " +
@@ -545,11 +547,14 @@ SD.content["01"] = {
         "papéis em um pedido: o mesmo processo pode exercer os dois."
     },
     {
-      term: "Computação ubíqua (pervasiva)",
+      term: "Computação ubíqua",
       definition:
         "Uso de muitos dispositivos computacionais pequenos e baratos entranhados no " +
         "ambiente físico dos usuários, com acesso a serviços disponível em qualquer " +
-        "lugar e interação pouco intrusiva."
+        "lugar e interação pouco intrusiva. Cuidado com a variação de vocabulário entre " +
+        "as fontes: em van Steen e Tanenbaum, seguidos por este tópico, a computação " +
+        "ubíqua é um subtipo de sistema pervasivo, ao lado dos sistemas móveis e das " +
+        "redes de sensores; em Coulouris, ubíquo e pervasivo aparecem como sinônimos."
     },
     {
       term: "Qualidade de serviço (QoS)",
