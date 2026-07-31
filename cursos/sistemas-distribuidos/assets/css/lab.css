@@ -1,0 +1,571 @@
+/* ============================================================
+   lab.css — Roteiros de prática (páginas de app/labs/)
+   ------------------------------------------------------------
+   As páginas de prática são autônomas (fora do SPA), mas
+   compartilham a identidade: consomem tokens.css, base.css e
+   components.css (.callout, .badge, .btn, .chip) e acrescentam
+   só o que é específico de roteiro: passos numerados, blocos de
+   comando com botão copiar, variáveis substituíveis, abas de
+   sistema operacional, checkpoints e tabela de resultados.
+   ============================================================ */
+
+/* ---------- Barra superior fixa ---------- */
+.lab-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background-color: var(--color-header-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.lab-topbar .voltar {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.lab-topbar .titulo {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lab-topbar .espaco { flex: 1; }
+
+.lab-topbar .contador {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ---------- Contêiner de leitura ---------- */
+.lab-wrap {
+  max-width: 54rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) var(--space-7);
+}
+
+/* ---------- Abertura ---------- */
+.lab-hero {
+  border-bottom: var(--border-width) solid var(--color-border);
+  padding-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.lab-hero h1 {
+  margin-top: var(--space-2);
+  font-size: clamp(1.9rem, 5vw, var(--font-size-xxl));
+}
+
+.lab-lead {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  max-width: var(--reading-max);
+}
+
+.lab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+
+/* Sumário compacto dos passos */
+.lab-sumario {
+  background-color: var(--color-bg-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.lab-sumario p.titulo {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.lab-sumario ol {
+  margin: 0;
+  padding-left: var(--space-5);
+  columns: 2;
+  column-gap: var(--space-6);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .lab-sumario ol { columns: 1; }
+}
+
+/* ---------- Passos ---------- */
+.lab-step {
+  border-top: var(--border-width) solid var(--color-line-soft);
+  padding-top: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.lab-step > h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  scroll-margin-top: 5rem;
+}
+
+.step-num {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-brand);
+  background-color: var(--color-brand-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.55em;
+  flex: none;
+}
+
+.step-num.is-accent {
+  color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+}
+
+.step-time {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: 400;
+  margin-left: auto;
+  flex: none;
+}
+
+.lab-step ol,
+.lab-step ul { max-width: var(--reading-max); }
+
+.lab-step li { margin-bottom: var(--space-2); }
+
+/* ---------- Bloco de comando ---------- */
+.cmd {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: var(--space-4) 0;
+  background-color: var(--color-code-bg);
+}
+
+.cmd-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-bg-sunken);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.cmd-head .onde {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.cmd-head .espaco { flex: 1; }
+
+.btn-copiar {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 650;
+  color: var(--color-link);
+  background-color: transparent;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.6rem;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-copiar:hover { background-color: var(--color-brand-soft); }
+.btn-copiar.copiado { color: var(--color-success); border-color: var(--color-success); }
+
+.cmd pre {
+  margin: 0;
+  border-radius: 0;
+  background-color: transparent;
+  line-height: 1.6;
+}
+
+/* Saída esperada do comando: recuada e sem peso de código executável */
+.saida {
+  border-left: 3px solid var(--color-border);
+  background-color: var(--color-bg-sunken);
+  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  white-space: pre;
+  overflow-x: auto;
+  padding: var(--space-3) var(--space-4);
+  margin: 0 0 var(--space-4);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* ---------- Variáveis substituíveis (IPs da ficha) ---------- */
+.var {
+  background-color: var(--color-brand-soft);
+  color: var(--color-link);
+  border-radius: 4px;
+  padding: 0 0.25em;
+  font-weight: 650;
+}
+
+.var.preenchida {
+  background-color: var(--color-accent-soft);
+  color: var(--color-success);
+}
+
+/* ---------- Ficha do ambiente ---------- */
+.ficha {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+  background-color: var(--color-bg-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-4) 0;
+}
+
+.ficha label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.ficha input,
+.lab-tabela input {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-bg-sunken);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ficha input:focus,
+.lab-tabela input:focus {
+  border-color: var(--color-brand);
+  outline: none;
+}
+
+/* ---------- Abas de sistema operacional ---------- */
+.os-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background-color: var(--color-bg-sunken);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  margin-bottom: var(--space-3);
+}
+
+.os-switch button {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 650;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 0.25rem 0.85rem;
+}
+
+.os-switch button[aria-pressed="true"] {
+  background-color: var(--color-brand);
+  color: #fff;
+}
+
+body[data-os="win"]  .so-unix,
+body[data-os="unix"] .so-win { display: none; }
+
+/* ---------- Notas de aprofundamento ----------
+   O termo segue sendo texto da frase: o botão só acrescenta o
+   sublinhado, o marcador e o cursor. A nota abre abaixo do
+   parágrafo, mais discreta do que um .callout, porque ela é
+   leitura opcional e não faz parte do fluxo da prática. */
+.nota-termo {
+  font: inherit;
+  color: var(--color-link);
+  background: none;
+  border: none;
+  border-bottom: 1px dashed currentColor;
+  border-radius: 3px;
+  padding: 0 0.1em;
+  cursor: pointer;
+}
+
+.nota-termo::after {
+  content: "ⓘ";
+  font-size: 0.85em;
+  margin-left: 0.2em;
+}
+
+.nota-termo[aria-expanded="true"] {
+  background-color: var(--color-brand-soft);
+  border-bottom-style: solid;
+}
+
+/* Sem content/notas.js a página não fica com um botão inerte. */
+.nota-termo[disabled] {
+  color: inherit;
+  border-bottom: none;
+  cursor: text;
+}
+
+.nota-termo[disabled]::after { content: ""; }
+
+.nota-corpo {
+  border-left: 3px solid var(--color-brand);
+  background-color: var(--color-bg-elevated);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  max-width: var(--reading-max);
+}
+
+.nota-corpo > :last-child { margin-bottom: 0; }
+
+.nota-corpo ol,
+.nota-corpo ul {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+}
+
+.nota-corpo li { margin-bottom: var(--space-1); }
+
+/* Tabela dentro de uma nota (ex.: as subtrações dos tempos do curl).
+   Estilo pelo elemento, não por classe: content/notas.js guarda texto,
+   não apresentação, e a mesma nota pode ser exibida por outra página. */
+.nota-corpo table {
+  /* display:block deixa a própria tabela rolar em tela estreita, em vez de
+     empurrar a página inteira (as colunas de número não podem quebrar). */
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.nota-corpo th,
+.nota-corpo td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-line-soft);
+}
+
+.nota-corpo th {
+  font-family: var(--font-family-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom-color: var(--color-border);
+}
+
+/* Conta e resultado em monoespaçada: número alinhado é número comparável. */
+.nota-corpo td + td { font-family: var(--font-family-mono); white-space: nowrap; }
+
+/* Figura da nota: a imagem acompanha a largura da caixa, com os
+   atributos width/height servindo só de proporção (sem salto de layout). */
+.nota-figura { margin: 0 0 var(--space-3); }
+
+.nota-figura img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+}
+
+.nota-figura figcaption {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.nota-cabeca {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.nota-cabeca span { flex: 1; }
+
+.nota-fechar {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-link);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex: none;
+}
+
+.nota-leia {
+  border-top: var(--border-width) solid var(--color-line-soft);
+  padding-top: var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Checkpoint ---------- */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background-color: var(--color-bg-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-5) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.check input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.2rem;
+  accent-color: var(--color-accent);
+  flex: none;
+}
+
+.check label { cursor: pointer; }
+.check strong { color: var(--color-accent); }
+.check.marcado { background-color: var(--color-accent-soft); }
+
+/* ---------- Tabelas (resultados, sintomas, tropeços) ---------- */
+.lab-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  margin: var(--space-4) 0;
+}
+
+.lab-tabela th,
+.lab-tabela td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-line-soft);
+}
+
+.lab-tabela th {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom-color: var(--color-border);
+}
+
+.lab-tabela td code { font-size: 0.8rem; }
+.lab-tabela .ref { color: var(--color-text-muted); font-family: var(--font-family-mono); font-size: var(--font-size-xs); }
+/* Nome de campo ou de comando não pode quebrar no meio (ex.: "us-east-1"). */
+.lab-tabela .ref code { white-space: nowrap; font-size: inherit; }
+.lab-tabela td .ref { display: block; margin-top: var(--space-1); line-height: 1.5; }
+
+.tabela-rolavel { overflow-x: auto; }
+
+/* ---------- Aviso do questionário ---------- */
+.moodle-note {
+  border: var(--border-width) dashed var(--color-brand);
+  border-radius: var(--radius-md);
+  background-color: var(--color-brand-soft);
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-6) 0;
+}
+
+.moodle-note p { margin-bottom: 0; }
+
+/* ---------- Rodapé ---------- */
+.lab-foot {
+  border-top: var(--border-width) solid var(--color-border);
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+/* ---------- Detalhes recolhíveis (script longo) ---------- */
+details.dobra {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-4) 0;
+  background-color: var(--color-bg-elevated);
+}
+
+details.dobra > summary {
+  cursor: pointer;
+  font-weight: 650;
+  font-size: var(--font-size-sm);
+}
+
+details.dobra[open] > summary { margin-bottom: var(--space-3); }
+
+/* ---------- Impressão ---------- */
+@media print {
+  .lab-topbar,
+  .btn-copiar,
+  .nota-fechar,
+  .os-switch { display: none; }
+  body[data-os] .so-unix,
+  body[data-os] .so-win { display: block; }
+  /* No papel não há o que clicar: as notas saem todas abertas. */
+  .nota-corpo[hidden] { display: block !important; }
+  .nota-termo { color: inherit; }
+  .nota-termo::after { content: ""; }
+  .lab-wrap { max-width: none; padding: 0; }
+  .lab-step { break-inside: avoid; }
+  .cmd { break-inside: avoid; }
+}
+
+/* ---------- Reduzir movimento ---------- */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

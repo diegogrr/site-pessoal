@@ -85,6 +85,27 @@ SD.views.topic = function (params) {
     var toc = sections.map(function (section, i) {
       return { id: "secao-" + (i + 1), label: chapter + "." + (i + 1) + " " + section.title };
     });
+
+    /* ---- Cartão da prática na AWS (content.lab é opcional) ---- */
+    var labHtml = "";
+    if (content.lab && content.lab.href) {
+      var lab = content.lab;
+      var labMeta = ["Roteiro guiado"]
+        .concat(lab.duration ? [lab.duration] : [])
+        .concat(lab.environment ? [lab.environment] : [])
+        .join(" · ");
+      labHtml =
+        '<section class="topic-section" id="pratica">' +
+        '<h2><span class="section-number is-accent">▶</span><span>Prática na AWS</span></h2>' +
+        '<a class="lab-card" href="' + lab.href + '" target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">' + labMeta + "</span>" +
+        '<span class="lab-card-title">' + lab.title + "</span>" +
+        '<span class="lab-card-summary">' + (lab.summary || "") + "</span>" +
+        '<span class="lab-card-cta">Abrir o roteiro ↗</span>' +
+        "</a></section>";
+      toc.push({ id: "pratica", label: "Prática na AWS" });
+    }
+
     toc.push({ id: "quiz", label: "Autoavaliação" });
 
     /* ---- Glossário do tópico ---- */
@@ -148,6 +169,7 @@ SD.views.topic = function (params) {
       "</header>" +
 
       sectionsHtml +
+      labHtml +
 
       '<section class="topic-section" id="quiz">' +
       '<h2><span class="section-number is-accent">✎</span><span>Autoavaliação</span></h2>' +
