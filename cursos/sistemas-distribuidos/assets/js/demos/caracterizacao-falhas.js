@@ -12,6 +12,13 @@
    A animação mostra a rede — exceto na etapa 3, coberta por
    "névoa" até o aluno apostar.
 
+   Etapa 3: a indistinguibilidade vem do PRAZO de decisão
+   (ROUND_DEADLINE), não do silêncio. Sem ele, esperar o
+   suficiente revelaria o cenário lento e desmentiria o raio-X.
+   Pedidos são carimbados com o roundId e marcados como
+   abandonados no fim da rodada, para resposta atrasada não virar
+   evidência da rodada seguinte.
+
    Teste determinístico (Playwright): ?demo-seed=<int> fixa o
    gerador pseudoaleatório; ?demo-fast=1 acelera o tempo (15%).
    Namespace: SD.demos["caracterizacao-falhas"]
@@ -27,6 +34,10 @@ SD.demos["caracterizacao-falhas"] = (function () {
   var MAX_SERVERS = 3;
   var BASE_LATENCY = 600; // ms por perna (ida OU volta), com jitter
   var SERVER_NAMES = ["A", "B", "C"];
+  /* Etapa 3: prazo para decidir, contado a partir do 1º pedido da rodada.
+     É o que produz a indistinguibilidade: sem prazo, esperar o suficiente
+     revelaria o cenário "rede lenta" (ida e volta de 6 a 18 s). */
+  var ROUND_DEADLINE = 6000;
 
   /* ---- PRNG com semente (mulberry32) para testes reproduzíveis ---- */
   function mulberry32(a) {
@@ -55,9 +66,18 @@ SD.demos["caracterizacao-falhas"] = (function () {
       timeouts: 0,
       duplicates: 0,
       stage2drops: 0,
+      stageSent: 0,          // disponibilidade é da etapa corrente, não acumulada
+      stageResponses: 0,
+      stage5Before: null,    // disponibilidade no instante em que o aluno derrubou o 1º nó
       requests: {},
       servers: [newServer(0)],
-      challenge: { active: false, scenario: null, rounds: 0, hits: 0, events: [] },
+      challenge: {
+        active: false, scenario: null, rounds: 0, hits: 0, events: [],
+        roundId: 0,          // carimba cada pedido: resposta de rodada velha não vale
+        deadline: null,      // timer do prazo de decisão
+        ticker: null,        // contagem regressiva na tela
+        expired: false
+      },
       stage5kill: false      // já derrubou servidor tendo réplica no ar
     };
 
@@ -88,6 +108,7 @@ SD.demos["caracterizacao-falhas"] = (function () {
       '  <div class="demo-cf-challenge" hidden>' +
       '    <button type="button" class="btn demo-cf-round">🎲 Nova rodada</button>' +
       '    <span class="demo-cf-score">Rodadas: 0 · Acertos: 0</span>' +
+      '    <span class="demo-cf-prazo" aria-live="polite"></span>' +
       '    <div class="demo-cf-guesses" hidden>' +
       '      <span>O que está acontecendo?</span>' +
       '      <button type="button" class="btn btn-secondary" data-guess="down">Servidor caiu</button>' +
@@ -100,16 +121,16 @@ SD.demos["caracterizacao-falhas"] = (function () {
       '    <div><dt>Enviados</dt><dd data-metric="sent">0</dd></div>' +
       '    <div><dt>Respostas</dt><dd data-metric="responses">0</dd></div>' +
       '    <div><dt>Timeouts</dt><dd data-metric="timeouts">0</dd></div>' +
-      '    <div><dt>Disponibilidade</dt><dd data-metric="availability">—</dd></div>' +
+      '    <div><dt>Disponibilidade (nesta etapa)</dt><dd data-metric="availability">n/d</dd></div>' +
       '  </dl>' +
       '  <div class="demo-cf-summary callout" hidden>' +
       '    <p class="callout-title">🎓 O que você acabou de viver</p>' +
       '    <p><strong>Falha parcial</strong>: partes caem, o resto segue. ' +
-      '    <strong>Suspeita × detecção</strong>: o timeout não prova nada — só levanta suspeita. ' +
+      '    <strong>Suspeita × detecção</strong>: o timeout não prova nada, só levanta suspeita. ' +
       '    <strong>Mascaramento</strong>: retransmitir esconde perdas, ao custo de duplicatas. ' +
       '    <strong>Redundância</strong>: réplicas mantêm a <strong>disponibilidade</strong> ' +
-      '    quando um servidor morre. E as falácias nº 1 e nº 5 — "a rede é confiável", ' +
-      '    "a latência é zero" — são falsas.</p>' +
+      '    quando um servidor morre. E as falácias "a rede é confiável" e "a latência é ' +
+      '    zero" são falsas.</p>' +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
       '    <p class="demo-cf-log-title">O que o <strong>cliente</strong> vê:</p>' +
@@ -136,6 +157,7 @@ SD.demos["caracterizacao-falhas"] = (function () {
       challenge: container.querySelector(".demo-cf-challenge"),
       round: container.querySelector(".demo-cf-round"),
       score: container.querySelector(".demo-cf-score"),
+      prazo: container.querySelector(".demo-cf-prazo"),
       guesses: container.querySelector(".demo-cf-guesses"),
       xray: container.querySelector(".demo-cf-xray"),
       metrics: container.querySelector(".demo-cf-metrics"),
@@ -150,7 +172,7 @@ SD.demos["caracterizacao-falhas"] = (function () {
 
     var STAGES = [
       {
-        title: "Etapa 1 — Mundo perfeito",
+        title: "Etapa 1: Mundo perfeito",
         instructions: "A rede entrega tudo, com latência baixa. Envie pedidos e observe o " +
           "ciclo completo: pedido vai (azul), resposta volta (verde).",
         goalText: "Meta: receber 3 respostas.",
@@ -158,24 +180,25 @@ SD.demos["caracterizacao-falhas"] = (function () {
         goalMet: function () { return state.responses >= 3; }
       },
       {
-        title: "Etapa 2 — A rede perde mensagens",
-        instructions: "Agora parte das mensagens some no caminho — sem aviso, sem erro. " +
-          "Repare no log: “sem resposta” não diz SE nem ONDE algo falhou " +
-          "(ida? volta? servidor?).",
+        title: "Etapa 2: A rede perde mensagens",
+        instructions: "Agora parte das mensagens some no caminho, sem aviso e sem erro. " +
+          "Repare no log: ele simplesmente para. Nenhuma linha nova, nenhum erro, nenhum " +
+          "aviso, e isso não diz SE nem ONDE algo falhou (ida? volta? servidor?).",
         goalText: "Meta: presenciar ao menos 1 mensagem perdida.",
         setup: function () { if (state.lossRate === 0) state.lossRate = 0.3; state.retry = false; },
         goalMet: function () { return state.stage2drops >= 1; }
       },
       {
-        title: "Etapa 3 — Caiu ou está lenta?",
+        title: "Etapa 3: Caiu ou está lenta?",
         instructions: "Sorteie uma rodada: a rede fica encoberta e algo (oculto) acontece. " +
-          "Envie pedidos, observe apenas o que o cliente vê e aposte. Depois o raio-X revela.",
+          "Envie pedidos, observe apenas o que o cliente vê e aposte antes do prazo acabar. " +
+          "Esse prazo é o seu timeout: quem decide, decide sem esperar para sempre.",
         goalText: "Meta: completar 3 rodadas de aposta.",
         setup: function () { state.retry = false; endRound(); },
         goalMet: function () { return state.challenge.rounds >= 3; }
       },
       {
-        title: "Etapa 4 — Timeout e retransmissão",
+        title: "Etapa 4: Timeout e retransmissão",
         instructions: "Sem detecção possível, resta suspeitar: espere um prazo (timeout) e " +
           "reenvie. Use um timeout curto e veja o efeito colateral no servidor: " +
           "pedidos duplicados.",
@@ -188,9 +211,10 @@ SD.demos["caracterizacao-falhas"] = (function () {
         goalMet: function () { return state.duplicates >= 1; }
       },
       {
-        title: "Etapa 5 — Redundância",
+        title: "Etapa 5: Redundância",
         instructions: "Adicione réplicas e derrube servidores clicando neles. Com uma " +
-          "réplica no ar, o serviço sobrevive à falha parcial — acompanhe a disponibilidade.",
+          "réplica no ar, o serviço sobrevive à falha parcial: acompanhe a disponibilidade, " +
+          "que passa a mostrar o antes e o depois da queda.",
         goalText: "Meta: derrubar um servidor tendo réplica no ar e ainda receber resposta.",
         setup: function () {
           state.retry = true;
@@ -212,6 +236,11 @@ SD.demos["caracterizacao-falhas"] = (function () {
       li.innerHTML = '<span class="demo-cf-log-time">+' + t + "s</span> " + text;
       els.log.insertBefore(li, els.log.firstChild);
       while (els.log.children.length > 40) els.log.removeChild(els.log.lastChild);
+    }
+
+    /* Tempo como o aluno o percebe: desconta a aceleração dos testes. */
+    function segundos(ms) {
+      return (ms / timeScale / 1000).toFixed(1) + " s";
     }
 
     function currentLoss() {
@@ -250,7 +279,7 @@ SD.demos["caracterizacao-falhas"] = (function () {
       if (state.challenge.active) {
         state.challenge.events.push(
           label + (kind === "req" ? " (ida)" : " (volta)") + ": " +
-          (lost ? "perdida na rede" : "entregue")
+          (lost ? "perdida na rede" : "entregue em " + segundos(duration))
         );
       }
       if (lost) {
@@ -285,9 +314,16 @@ SD.demos["caracterizacao-falhas"] = (function () {
 
     function sendRequest() {
       state.sent++;
-      var req = { id: state.sent, attempts: 0, done: false, gaveUp: false, t0: now(), timer: null };
+      state.stageSent++;
+      var req = {
+        id: state.sent, attempts: 0, done: false, gaveUp: false, abandoned: false,
+        round: state.challenge.active ? state.challenge.roundId : 0,
+        stage: state.stage,  // a resposta conta para a etapa que fez o pedido
+        t0: now(), timer: null
+      };
       state.requests[req.id] = req;
       attempt(req);
+      if (state.challenge.active) { startDeadline(); habilitaPalpites(true); }
       updateMetrics();
     }
 
@@ -306,7 +342,7 @@ SD.demos["caracterizacao-falhas"] = (function () {
         req.timer = setTimeout(function () {
           if (req.done || req.gaveUp) return;
           state.timeouts++;
-          log("⏱ timeout do pedido nº" + req.id + " — suspeita de falha no servidor " +
+          log("⏱ timeout do pedido nº" + req.id + ": suspeita de falha no servidor " +
             SERVER_NAMES[server.index]);
           server.suspected = true;
           renderServers();
@@ -322,7 +358,18 @@ SD.demos["caracterizacao-falhas"] = (function () {
     }
 
     function serverReceive(req, server) {
-      if (!server.up) return; // servidor fora: a mensagem morre em silêncio
+      if (!server.up) {
+        /* Servidor fora: a mensagem morre em silêncio. O cliente não fica
+           sabendo, mas o raio-X precisa contar, senão o aluno lê "entregue"
+           e conclui que o pedido foi atendido. */
+        if (state.challenge.active && req.round === state.challenge.roundId) {
+          state.challenge.events.push(
+            "pedido nº" + req.id + ": chegou ao servidor, que estava fora do ar. " +
+            "Descartado em silêncio, sem nenhum aviso de volta"
+          );
+        }
+        return;
+      }
       server.seen[req.id] = (server.seen[req.id] || 0) + 1;
       if (server.seen[req.id] > 1) {
         server.dups++;
@@ -336,8 +383,17 @@ SD.demos["caracterizacao-falhas"] = (function () {
     }
 
     function clientReceive(req, server) {
+      if (req.abandoned) {
+        /* Chegou depois do fim da rodada. Não pode entrar como evidência: no
+           jogo da etapa 3 o log é a única fonte, e uma resposta atrasada da
+           rodada anterior seria lida como prova da rodada atual. */
+        log("(resposta do pedido nº" + req.id + " chegou em " + segundos(now() - req.t0) +
+          ", depois do prazo daquela rodada: ignorada, ela não estava na sua mão " +
+          "na hora de decidir)");
+        return;
+      }
       if (req.gaveUp) {
-        log("(resposta tardia do pedido nº" + req.id + " descartada — o cliente já desistiu)");
+        log("(resposta tardia do pedido nº" + req.id + " descartada: o cliente já desistiu)");
         return;
       }
       if (req.done) {
@@ -347,6 +403,10 @@ SD.demos["caracterizacao-falhas"] = (function () {
       req.done = true;
       if (req.timer) clearTimeout(req.timer);
       state.responses++;
+      /* Sem esta guarda, uma resposta de pedido feito na etapa anterior, que
+         chega depois da troca, contaria num denominador que não a incluiu, e a
+         disponibilidade passaria de 100%. */
+      if (req.stage === state.stage) state.stageResponses++;
       server.suspected = false;
       log("← resposta do pedido nº" + req.id + " recebida (" +
         Math.round((now() - req.t0) / timeScale) + " ms)");
@@ -364,7 +424,9 @@ SD.demos["caracterizacao-falhas"] = (function () {
     function startRound() {
       var draws = ["down", "slow", "loss"];
       var c = state.challenge;
+      clearDeadline();
       c.active = true;
+      c.roundId++;
       c.scenario = draws[Math.floor(rand() * draws.length)];
       c.events = [];
       state.servers[0].up = c.scenario !== "down";
@@ -372,10 +434,55 @@ SD.demos["caracterizacao-falhas"] = (function () {
       els.servers.classList.add("is-hidden");
       els.round.disabled = true;
       els.guesses.hidden = false;
+      /* Apostar sem ter enviado nada cumpriria a meta sem viver a ambiguidade
+         que a etapa existe para provocar: só libera depois do 1º pedido. */
+      habilitaPalpites(false);
       els.xray.hidden = true;
       els.send.disabled = false;
       renderServers();
-      log("— 🎲 nova rodada: algo (oculto) aconteceu na rede ou no servidor —");
+      log("🎲 nova rodada: algo (oculto) aconteceu na rede ou no servidor");
+    }
+
+    function habilitaPalpites(ligado) {
+      var botoes = els.guesses.querySelectorAll("[data-guess]");
+      for (var i = 0; i < botoes.length; i++) botoes[i].disabled = !ligado;
+    }
+
+    /* ---- Prazo de decisão ----
+       Sem prazo, o cenário "rede lenta" (ida e volta de 6 a 18 s) seria
+       distinguível por pura paciência, e a demo desmentiria o próprio
+       raio-X. O prazo é o timeout: quem observa de fora decide com o que
+       chegou até uma hora marcada, não com o que existe no mundo. */
+    function startDeadline() {
+      var c = state.challenge;
+      if (c.deadline || c.expired) return;
+      var fim = now() + ROUND_DEADLINE * timeScale;
+      renderPrazo(fim);
+      c.ticker = setInterval(function () { renderPrazo(fim); }, 200);
+      c.deadline = setTimeout(function () {
+        c.expired = true;
+        c.deadline = null;
+        if (c.ticker) { clearInterval(c.ticker); c.ticker = null; }
+        els.send.disabled = true;
+        els.prazo.textContent = "prazo encerrado: aposte";
+        els.prazo.classList.add("is-over");
+        log("⏳ prazo de decisão encerrado: aposte com o que você viu, não com o que " +
+          "ainda pode chegar");
+      }, ROUND_DEADLINE * timeScale);
+    }
+
+    function renderPrazo(fim) {
+      var resta = Math.max(0, fim - now()) / timeScale / 1000;
+      els.prazo.textContent = "prazo para decidir: " + resta.toFixed(1) + " s";
+    }
+
+    function clearDeadline() {
+      var c = state.challenge;
+      if (c.deadline) { clearTimeout(c.deadline); c.deadline = null; }
+      if (c.ticker) { clearInterval(c.ticker); c.ticker = null; }
+      c.expired = false;
+      els.prazo.textContent = "";
+      els.prazo.classList.remove("is-over");
     }
 
     function guess(choice) {
@@ -383,20 +490,29 @@ SD.demos["caracterizacao-falhas"] = (function () {
       if (!c.active) return;
       var names = { down: "servidor caiu", slow: "rede lenta", loss: "mensagens sendo perdidas" };
       var right = choice === c.scenario;
+      Object.keys(state.requests).forEach(function (id) {
+        var r = state.requests[id];
+        if (r.round === c.roundId && !r.done) {
+          c.events.push("pedido nº" + r.id + ": o cliente ainda esperava resposta quando " +
+            "você decidiu, e continuaria esperando sem saber por quê");
+        }
+      });
       c.rounds++;
       if (right) c.hits++;
       els.net.classList.remove("is-foggy");
       els.servers.classList.remove("is-hidden");
       els.xray.hidden = false;
       els.xray.innerHTML =
-        "<p><strong>Raio-X da rodada:</strong> cenário real — <strong>" +
-        names[c.scenario] + "</strong>. Seu palpite: " + names[choice] + " — " +
-        (right ? "✅ acerto." : "❌ erro.") + "</p>" +
+        "<p><strong>Raio-X da rodada:</strong> cenário real: <strong>" +
+        names[c.scenario] + "</strong>. Seu palpite: " + names[choice] + " (" +
+        (right ? "✅ acerto" : "❌ erro") + ").</p>" +
         (c.events.length
           ? "<ul>" + c.events.map(function (e) { return "<li>" + e + "</li>"; }).join("") + "</ul>"
           : "<p>(nenhuma mensagem foi enviada nesta rodada)</p>") +
-        "<p>Sem abrir o raio-X, as três situações são <strong>indistinguíveis</strong> " +
-        "para o cliente — é por isso que falha se <em>suspeita</em>, não se detecta.</p>";
+        "<p><strong>Dentro do prazo que você teve para decidir</strong>, as três situações " +
+        "são <strong>indistinguíveis</strong> para o cliente: é por isso que uma falha se " +
+        "<em>suspeita</em>, não se detecta. Esperar mais revelaria o cenário lento, e é " +
+        "justamente isso que ninguém pode fazer para sempre.</p>";
       els.score.textContent = "Rodadas: " + c.rounds + " · Acertos: " + c.hits;
       endRound();
       updateNav();
@@ -404,6 +520,16 @@ SD.demos["caracterizacao-falhas"] = (function () {
 
     function endRound() {
       var c = state.challenge;
+      /* Pedidos que ficaram em voo pertencem a uma rodada encerrada: marcados
+         aqui, eles não voltam como evidência da rodada seguinte. */
+      Object.keys(state.requests).forEach(function (id) {
+        var r = state.requests[id];
+        if (r.round && r.round === c.roundId && !r.done) {
+          r.abandoned = true;
+          if (r.timer) { clearTimeout(r.timer); r.timer = null; }
+        }
+      });
+      clearDeadline();
       c.active = false;
       c.scenario = null;
       state.servers.forEach(function (s) { s.up = true; s.suspected = false; });
@@ -411,6 +537,10 @@ SD.demos["caracterizacao-falhas"] = (function () {
       els.servers.classList.remove("is-hidden");
       els.round.disabled = false;
       els.guesses.hidden = true;
+      habilitaPalpites(false);
+      /* Fora de rodada não se envia nada na etapa 3: pedidos soltos entrariam
+         no log sem pertencer a rodada nenhuma e seriam lidos como evidência. */
+      if (state.stage === 3) els.send.disabled = true;
       renderServers();
     }
 
@@ -487,9 +617,22 @@ SD.demos["caracterizacao-falhas"] = (function () {
       els.metrics.querySelector('[data-metric="sent"]').textContent = state.sent;
       els.metrics.querySelector('[data-metric="responses"]').textContent = state.responses;
       els.metrics.querySelector('[data-metric="timeouts"]').textContent = state.timeouts;
-      els.metrics.querySelector('[data-metric="availability"]').textContent =
-        state.sent ? Math.round((state.responses / state.sent) * 100) + "%" : "—";
+      els.metrics.querySelector('[data-metric="availability"]').textContent = disponibilidade();
       updateNav();
+    }
+
+    /* Disponibilidade da ETAPA corrente: acumulada desde a montagem, ela
+       carregaria as perdas das etapas anteriores e ficaria quase imóvel na
+       etapa 5, escondendo o efeito da réplica. Na etapa 5 mostra também o
+       valor de antes da primeira queda, para o ganho aparecer lado a lado. */
+    function disponibilidade() {
+      var agora = state.stageSent
+        ? Math.round((state.stageResponses / state.stageSent) * 100) + "%"
+        : "n/d";
+      if (state.stage === 5 && state.stage5Before !== null) {
+        return state.stage5Before + " → " + agora;
+      }
+      return agora;
     }
 
     function updateNav() {
@@ -499,12 +642,17 @@ SD.demos["caracterizacao-falhas"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
     }
 
     function gotoStage(stageNumber) {
+      if (state.challenge.active) endRound();
+      clearDeadline();
       state.stage = stageNumber;
+      state.stageSent = 0;
+      state.stageResponses = 0;
+      state.stage5Before = null;
       var st = STAGES[stageNumber - 1];
       st.setup();
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
@@ -514,7 +662,7 @@ SD.demos["caracterizacao-falhas"] = (function () {
       renderServers();
       renderControls();
       updateMetrics();
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
     }
 
     /* ================= Eventos ================= */
@@ -543,10 +691,20 @@ SD.demos["caracterizacao-falhas"] = (function () {
       var s = state.servers[parseInt(b.getAttribute("data-server"), 10)];
       s.up = !s.up;
       s.suspected = false;
+      /* Primeira queda da etapa 5: guarda o "antes" e reinicia a contagem,
+         para a métrica comparar os dois regimes em vez de diluí-los. */
+      if (!s.up && state.stage === 5 && state.stage5Before === null) {
+        state.stage5Before = state.stageSent
+          ? Math.round((state.stageResponses / state.stageSent) * 100) + "%"
+          : "n/d";
+        state.stageSent = 0;
+        state.stageResponses = 0;
+      }
       log(s.up
         ? "🔧 (operador) servidor " + SERVER_NAMES[s.index] + " religado"
         : "💥 (operador) servidor " + SERVER_NAMES[s.index] + " derrubado");
       renderServers();
+      updateMetrics();
     });
 
     gotoStage(1);

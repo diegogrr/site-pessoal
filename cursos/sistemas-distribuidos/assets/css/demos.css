@@ -197,6 +197,19 @@
 
 .demo-cf-score { font-variant-numeric: tabular-nums; }
 
+/* Prazo de decisão da rodada: é o timeout do aluno, e precisa ser visível */
+.demo-cf-prazo {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.demo-cf-prazo.is-over {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
 .demo-cf-guesses {
   display: flex;
   flex-wrap: wrap;
