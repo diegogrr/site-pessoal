@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Prática 01 da disciplina Sistemas Distribuídos (IFSP Campus Salto): três instâncias EC2 no AWS Academy Sandbox para medir latência, comparar relógios e provocar uma falha parcial.">
+  <title>Prática 01: Três máquinas, nenhum relógio comum</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lab.css">
+</head>
+<body>
+
+<div class="lab-topbar">
+  <a class="voltar" href="../../index.html#/topico/01">‹ Tópico 1</a>
+  <span class="titulo">Prática 01 · Caracterização de Sistemas Distribuídos</span>
+  <span class="espaco"></span>
+  <span class="contador" id="lab-contador">0 de 9 passos</span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="lab-wrap">
+
+  <!-- ============================================================
+       Abertura
+       ============================================================ -->
+  <header class="lab-hero">
+    <p class="eyebrow">Prática 01 · Tópico 1 · AWS Academy Sandbox</p>
+    <h1>Três máquinas, nenhum relógio comum</h1>
+    <p class="lab-lead">
+      Você vai subir três servidores na nuvem, medir quanto custa falar com cada um
+      deles, colocar dois relógios em desacordo e derrubar parte do sistema. No fim,
+      vai ter respondido com números a pergunta que abre a disciplina: por que é tão
+      difícil, lá de dentro, saber se o outro caiu ou só está lento?
+    </p>
+
+    <div class="lab-chips">
+      <span class="chip">◷ 100 a 110 min</span>
+      <span class="chip">▲ dificuldade 1 de 5</span>
+      <span class="chip">☁ AWS Academy Sandbox</span>
+      <span class="chip">▤ 3 instâncias t3.micro</span>
+      <span class="chip">$ cerca de US$ 0,05</span>
+      <span class="chip">👤 individual</span>
+    </div>
+
+    <p><strong>O que você vai medir:</strong></p>
+    <ul>
+      <li>quanto tempo custa uma chamada dentro da mesma zona, entre zonas e entre continentes;</li>
+      <li>com que precisão um nó consegue saber que horas são no outro;</li>
+      <li>quanto tempo leva para perceber que um nó parou, e se dá para descobrir o motivo.</li>
+    </ul>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
+      <p>
+        A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>:
+        instâncias, chave e configuração. Reserve o bloco inteiro de duas aulas. Se a
+        sessão acabar no meio, não se desespere: reiniciar o laboratório e refazer os
+        passos 2 e 3 leva cerca de dez minutos, porque tudo aqui é feito por script.
+        Essa é, aliás, a primeira lição prática de infraestrutura: o que você não
+        souber recriar, você não tem.
+      </p>
+    </div>
+
+    <div class="lab-sumario">
+      <p class="titulo">Nesta prática</p>
+      <ol>
+        <li><a href="#passo-1">Abrir o laboratório e preparar a chave</a></li>
+        <li><a href="#passo-2">Criar o grupo de segurança</a></li>
+        <li><a href="#passo-3">Subir os três nós</a></li>
+        <li><a href="#passo-4">Entrar nos nós por SSH</a></li>
+        <li><a href="#passo-5">Distância vira latência</a></li>
+        <li><a href="#passo-6">Não existe relógio global</a></li>
+        <li><a href="#passo-7">Falha parcial</a></li>
+        <li><a href="#passo-8">Anotar os resultados</a></li>
+        <li><a href="#passo-9">Encerrar e limpar</a></li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       Pré-requisitos
+       ============================================================ -->
+  <section class="lab-step" id="antes">
+    <h2><span class="step-num is-accent">✓</span><span>Antes de começar</span><span class="step-time">3 min</span></h2>
+    <p>
+      Os passos 1 a 9 somam 95 minutos declarados, que é o tamanho de duas aulas de 50. Este
+      bloco, o de fundamentos de AWS logo abaixo e o fecho conceitual do final somam mais 13
+      minutos de leitura: se o seu tempo for exatamente 100 minutos, leia os três antes de
+      abrir o laboratório.
+    </p>
+    <ul>
+      <li>Acesso ao curso <strong>AWS Academy Cloud Foundations</strong>, no laboratório
+        <strong>Sandbox</strong>.</li>
+      <li>Um terminal. No Windows, o <strong>PowerShell</strong> já traz o cliente SSH
+        instalado, e é o que vamos usar. No macOS ou Linux, o terminal do sistema.</li>
+      <li>Nada para instalar, nem no seu computador nem nas máquinas remotas.</li>
+    </ul>
+
+    <div class="os-switch" role="group" aria-label="Escolha do sistema operacional">
+      <button type="button" data-os-btn="win" aria-pressed="true">Windows / PowerShell</button>
+      <button type="button" data-os-btn="unix" aria-pressed="false">macOS / Linux</button>
+    </div>
+    <p>Os comandos que mudam de um sistema para o outro seguem esta escolha na página inteira.</p>
+
+    <p>
+      Alguns termos aparecem sublinhados e com um <strong>ⓘ</strong>. Clicar abre, ali
+      mesmo, uma nota explicando o termo. São leitura opcional: os tempos anunciados em
+      cada passo valem para quem não abre nenhuma.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -V</pre>
+    </div>
+    <p class="saida">OpenSSH_for_Windows_9.x, LibreSSL 3.x     (qualquer versão serve)</p>
+  </section>
+
+  <!-- ============================================================
+       O parêntese de AWS
+       ============================================================ -->
+  <section class="lab-step" id="aws-em-5-minutos">
+    <h2><span class="step-num is-accent">AWS</span><span>O mínimo de AWS para esta prática</span><span class="step-time">5 min</span></h2>
+    <p>
+      Você ainda não chegou a estes módulos no curso da AWS. Não tem problema: aqui vai
+      só o suficiente para entender o que está fazendo. O aprofundamento vem depois, nos
+      módulos 3, 5 e 6 do Cloud Foundations.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th>Termo</th><th>O que significa na prática</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Região</strong></td>
+            <td>Um conjunto de data centers em uma área geográfica. O Sandbox só permite
+              <code>us-east-1</code> (Norte da Virgínia). Se o console mostrar outra região,
+              nada funciona.</td>
+          </tr>
+          <tr>
+            <td><strong>Zona de disponibilidade (AZ)</strong></td>
+            <td>Um data center, ou grupo de data centers, isolado dentro da região:
+              <code>us-east-1a</code>, <code>us-east-1b</code> e assim por diante. Ficam a
+              alguns quilômetros um do outro. Essa distância vai aparecer nas suas medições.</td>
+          </tr>
+          <tr>
+            <td><strong>EC2 e instância</strong></td>
+            <td>O serviço de máquinas virtuais. Uma <em>instância</em> é uma máquina virtual
+              ligada. Vamos usar três, do tipo <code>t3.micro</code> (2 vCPU, 1 GB), que é o
+              suficiente e quase não consome orçamento.</td>
+          </tr>
+          <tr>
+            <td><strong>AMI</strong></td>
+            <td>A imagem de disco que a instância recebe ao nascer. Usaremos Amazon Linux 2023.</td>
+          </tr>
+          <tr>
+            <td><strong>Par de chaves</strong></td>
+            <td>Criptografia assimétrica: a parte pública fica na instância, a privada fica com
+              você, no arquivo <code>labsuser.pem</code>. É assim que o SSH prova que você é você.</td>
+          </tr>
+          <tr>
+            <td><strong>Grupo de segurança</strong></td>
+            <td>Um filtro de pacotes com estado, na porta de entrada da instância. Tudo é
+              bloqueado por padrão: só entra o que uma regra permitir explicitamente.</td>
+          </tr>
+          <tr>
+            <td><strong>IP privado e IP público</strong></td>
+            <td>Toda instância ganha um endereço interno (<code>172.31.x.x</code>), que só vale
+              dentro da rede virtual, e pode ganhar um endereço público, alcançável pela
+              internet. Os nós conversam entre si pelo privado; você chega neles pelo público.</td>
+          </tr>
+          <tr>
+            <td><strong>User data</strong></td>
+            <td>Um script que a instância executa sozinha no primeiro boot. É como as três
+              máquinas vão nascer já configuradas, sem você digitar nada dentro delas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 Guarde esta ideia</p>
+      <p>
+        Tudo o que você vai clicar no console é, por baixo, uma chamada de procedimento
+        remoto para um serviço da AWS. O console é só um cliente. Você vai comprovar isso
+        no passo 3, quando fizer pelo terminal exatamente o que fez pelo navegador.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Ficha do ambiente
+       ============================================================ -->
+  <section class="lab-step" id="ficha">
+    <h2><span class="step-num is-accent">✎</span><span>Ficha do ambiente</span></h2>
+    <p>
+      Preencha os quatro campos abaixo assim que tiver os endereços (passo 3). Todos os
+      comandos desta página passam a mostrar os seus valores reais, e o botão
+      <em>copiar</em> já leva o comando pronto. Os dados ficam só no seu navegador.
+    </p>
+    <div class="ficha">
+      <label>IP público do nó A
+        <input type="text" data-ficha="IP_PUB_A" placeholder="ex.: 13.220.163.231" autocomplete="off"></label>
+      <label>IP privado do nó B
+        <input type="text" data-ficha="IP_B" placeholder="ex.: 172.31.95.180" autocomplete="off"></label>
+      <label>IP privado do nó C
+        <input type="text" data-ficha="IP_C" placeholder="ex.: 172.31.27.241" autocomplete="off"></label>
+      <label>IP público do nó C
+        <input type="text" data-ficha="IP_PUB_C" placeholder="ex.: 54.162.166.150" autocomplete="off"></label>
+    </div>
+    <p class="saida">A cada nova sessão do Sandbox os endereços mudam. Volte aqui e atualize.</p>
+  </section>
+
+  <!-- ============================================================
+       Passo 1
+       ============================================================ -->
+  <section class="lab-step" id="passo-1">
+    <h2><span class="step-num">1</span><span>Abrir o laboratório e preparar a chave</span><span class="step-time">10 min</span></h2>
+
+    <ol>
+      <li>No curso da AWS Academy, abra o laboratório <strong>Sandbox</strong> e clique em
+        <strong>Start Lab</strong>. Espere o círculo ao lado de <em>AWS</em> ficar verde.</li>
+      <li>Clique em <strong>AWS</strong> para abrir o console em outra aba. Confira no canto
+        superior direito que a região é <strong>N. Virginia (us-east-1)</strong>.</li>
+      <li>De volta à aba do laboratório, clique em <strong>Details</strong> e depois em
+        <strong>Show</strong>. Na janela que abre, clique em <strong>Download PEM</strong> e
+        salve o arquivo <code>labsuser.pem</code>.</li>
+    </ol>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ A chave vale só para esta sessão</p>
+      <p>
+        Toda vez que você iniciar o laboratório de novo, baixe o <code>labsuser.pem</code>
+        outra vez e descarte o antigo. Tentar entrar com a chave da sessão passada dá
+        <code>Permission denied (publickey)</code>, e essa mensagem não explica nada.
+      </p>
+    </div>
+
+    <p>Agora ajuste a permissão do arquivo. O cliente SSH se recusa a usar uma chave privada
+      que outras contas do computador possam ler.</p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">PowerShell, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd $env:USERPROFILE\Downloads
+icacls .\labsuser.pem /inheritance:r /grant:r "$($env:USERNAME):R"</pre>
+      </div>
+      <p class="saida">processed file: .\labsuser.pem
+Successfully processed 1 files; Failed processing 0 files</p>
+      <p>
+        O <code>icacls</code> é o equivalente do <code>chmod</code> no Windows.
+        <code>/inheritance:r</code> corta as permissões herdadas da pasta e
+        <code>/grant:r ...:R</code> devolve leitura apenas para você.
+      </p>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">terminal, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd ~/Downloads
+chmod 400 labsuser.pem</pre>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 Primeira lição de segurança</p>
+      <p>
+        Uma chave privada só vale enquanto for privada. O sistema operacional é quem
+        garante isso, e por isso o SSH se recusa a trabalhar se você não fizer a sua parte.
+        Voltamos ao assunto no Tópico 7.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c1">
+      <label for="p01-c1"><strong>Checkpoint 1.</strong> O laboratório está verde, o console
+        está em us-east-1, tenho o <code>labsuser.pem</code> desta sessão com a permissão
+        ajustada e o <code>ssh -V</code> respondeu.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 2
+       ============================================================ -->
+  <section class="lab-step" id="passo-2">
+    <h2><span class="step-num">2</span><span>Criar o grupo de segurança</span><span class="step-time">5 min</span></h2>
+
+    <p>No console, busque por <strong>EC2</strong>. No menu da esquerda, em
+      <em>Network &amp; Security</em>, escolha <strong>Security Groups</strong> e clique em
+      <strong>Create security group</strong>.</p>
+
+    <ol>
+      <li><strong>Name:</strong> <code>sd-pratica01</code></li>
+      <li><strong>Description:</strong> <code>Pratica 01 Sistemas Distribuidos</code></li>
+      <li><strong>VPC:</strong> deixe a que já vem marcada (a rede padrão da conta)</li>
+      <li>Em <em>Inbound rules</em>, clique em <strong>Add rule</strong> duas vezes:
+        <ul>
+          <li>Type <strong>SSH</strong>, Source <strong>My IP</strong></li>
+          <li>Type <strong>Custom TCP</strong>, Port range <strong>8080</strong>, Source <strong>My IP</strong></li>
+        </ul>
+      </li>
+      <li>Clique em <strong>Create security group</strong>.</li>
+    </ol>
+
+    <p>Falta a regra mais interessante. Abra o grupo recém-criado, vá em
+      <strong>Inbound rules</strong>, <strong>Edit inbound rules</strong>,
+      <strong>Add rule</strong>:</p>
+
+    <ol>
+      <li>Type <strong>All traffic</strong></li>
+      <li>Source <strong>Custom</strong> e, no campo ao lado, comece a digitar
+        <code>sd-pratica01</code> e selecione <em>o próprio grupo</em> na lista</li>
+      <li><strong>Save rules</strong></li>
+    </ol>
+
+    <div class="callout">
+      <p class="callout-title">💡 Endereço não é identidade</p>
+      <p>
+        As duas primeiras regras falam de <em>endereço</em>: "deixe entrar quem vier deste
+        IP". A terceira fala de <em>identidade</em>: "deixe entrar quem pertencer a este
+        grupo, seja qual for o endereço dele". Guarde a distinção: ela reaparece no Tópico 9
+        (nomes, identificadores e endereços) e no Tópico 7 (segurança).
+      </p>
+    </div>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Se o seu IP mudar</p>
+      <p>
+        Trocar de rede, cair o Wi-Fi ou o provedor renovar o endereço faz a regra
+        <em>My IP</em> deixar de valer, e o SSH passa a travar sem mensagem de erro.
+        Se isso acontecer, edite a regra e escolha <em>My IP</em> de novo.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c2">
+      <label for="p01-c2"><strong>Checkpoint 2.</strong> O grupo <code>sd-pratica01</code>
+        existe e tem três regras de entrada: SSH do meu IP, TCP 8080 do meu IP e todo o
+        tráfego vindo do próprio grupo.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 3
+       ============================================================ -->
+  <section class="lab-step" id="passo-3">
+    <h2><span class="step-num">3</span><span>Subir os três nós</span><span class="step-time">10 min</span></h2>
+
+    <h3>3.1 Dois nós pelo console, na zona us-east-1a</h3>
+    <p>Em <strong>EC2 &gt; Instances</strong>, clique em <strong>Launch instances</strong> e
+      preencha:</p>
+    <ul>
+      <li><strong>Name:</strong> <code>sd-no</code></li>
+      <li><strong>AMI:</strong> Amazon Linux 2023 (já vem selecionada)</li>
+      <li><strong>Instance type:</strong> <code>t3.micro</code></li>
+      <li><strong>Key pair:</strong> <code>vockey</code></li>
+      <li>Em <strong>Network settings</strong>, clique em <strong>Edit</strong>:
+        <ul>
+          <li><strong>Subnet:</strong> escolha a sub-rede da zona <code>us-east-1a</code></li>
+          <li><strong>Auto-assign public IP:</strong> <code>Enable</code></li>
+          <li><strong>Firewall:</strong> <em>Select existing security group</em> e marque
+            <code>sd-pratica01</code></li>
+        </ul>
+      </li>
+      <li>Abra <strong>Advanced details</strong>, role até o fim e cole o script no campo
+        <strong>User data</strong> (botão abaixo).</li>
+      <li>No painel <em>Summary</em>, à direita, mude <strong>Number of instances</strong>
+        para <strong>2</strong> e clique em <strong>Launch instance</strong>.</li>
+    </ul>
+
+    <details class="dobra">
+      <summary>Ver o script de inicialização antes de executá-lo (recomendado)</summary>
+      <p>
+        Ele não instala nada: escreve dois programas Python que usam só a biblioteca padrão,
+        registra a identidade da instância e sobe um serviço na porta 8080. Ler o que você
+        vai executar é um hábito, não um exagero.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">campo "User data" do EC2</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar="setup-sh">copiar</button>
+        </div>
+        <pre id="setup-sh">#!/bin/bash
+# ============================================================
+# Pratica 01 (Topico 1) - Sistemas Distribuidos - IFSP Salto
+# Script de inicializacao dos tres nos (campo "User data" do EC2).
+# Roda uma unica vez, no primeiro boot da instancia.
+#
+# Sem acentos de proposito: o user data executa antes do locale
+# estar definido. Testado em Amazon Linux 2023 (python3 da base).
+# ============================================================
+set -x
+exec &gt; /var/log/sd-setup.log 2&gt;&amp;1
+
+mkdir -p /opt/sd
+
+# ---- Identidade do no, lida do servico de metadados da instancia ----
+# 169.254.169.254 e um endereco de link local: responde apenas dentro
+# da propria instancia. E, ele mesmo, um servico distribuido.
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
+MD="http://169.254.169.254/latest/meta-data"
+AUTH="X-aws-ec2-metadata-token: $TOKEN"
+{
+  echo "instancia=$(curl -s -H "$AUTH" $MD/instance-id)"
+  echo "tipo=$(curl -s -H "$AUTH" $MD/instance-type)"
+  echo "az=$(curl -s -H "$AUTH" $MD/placement/availability-zone)"
+  echo "ip_privado=$(curl -s -H "$AUTH" $MD/local-ipv4)"
+  echo "ip_publico=$(curl -s -H "$AUTH" $MD/public-ipv4)"
+} &gt; /opt/sd/identidade.txt
+
+# ============================================================
+# servico.py - responde quem sou eu e que horas sao NO MEU relogio
+# ============================================================
+cat &gt; /opt/sd/servico.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Servico minimo da Pratica 01.
+
+Responde JSON com a identidade do no e o valor do relogio LOCAL dele.
+Sem dependencias: usa apenas a biblioteca padrao do Python.
+"""
+import http.server
+import json
+import socket
+import time
+
+IDENTIDADE = {}
+try:
+    with open("/opt/sd/identidade.txt", "r") as arquivo:
+        for linha in arquivo:
+            if "=" in linha:
+                chave, valor = linha.strip().split("=", 1)
+                IDENTIDADE[chave] = valor
+except OSError:
+    pass
+
+CONTADOR = {"pedidos": 0}
+
+
+def relogio_legivel(instante):
+    return time.strftime("%H:%M:%S", time.localtime(instante)) + \
+        ("%.3f" % (instante % 1))[1:]
+
+
+class Manipulador(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server_version = "sd-pratica01/1.0"
+
+    def do_GET(self):
+        CONTADOR["pedidos"] += 1
+        agora = time.time()
+        corpo = json.dumps({
+            # So o primeiro rotulo: o nome completo traz ".ec2.internal" e
+            # estoura as colunas do cliente. O curto e o mesmo do prompt.
+            "no": socket.gethostname().split(".")[0],
+            "az": IDENTIDADE.get("az", "?"),
+            "instancia": IDENTIDADE.get("instancia", "?"),
+            "ip_privado": IDENTIDADE.get("ip_privado", "?"),
+            "relogio": agora,
+            "relogio_legivel": relogio_legivel(agora),
+            "pedidos_atendidos": CONTADOR["pedidos"],
+        }, indent=2).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(corpo)))
+        self.end_headers()
+        self.wfile.write(corpo)
+
+    def log_message(self, *args):
+        pass  # silencia o log padrao, que poluiria o terminal
+
+
+if __name__ == "__main__":
+    servidor = http.server.ThreadingHTTPServer(("0.0.0.0", 8080), Manipulador)
+    servidor.serve_forever()
+PY
+
+# ============================================================
+# cliente.py - as tres medicoes da pratica
+# ============================================================
+cat &gt; /opt/sd/cliente.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Cliente da Pratica 01 (Topico 1) - Sistemas Distribuidos - IFSP Salto.
+
+Uso (o atalho "sd" chama este arquivo):
+  sd rtt      &lt;ip&gt; [repeticoes]   tempo de resposta da aplicacao
+  sd relogios &lt;ip&gt; [ip ...]       compara relogios (algoritmo de Cristian)
+  sd causa    &lt;ip&gt;                gera um par causa/efeito e ordena por timestamp
+  sd monitor  &lt;ip&gt; [ip ...]       laco de disponibilidade (Ctrl+C para parar)
+"""
+import json
+import socket
+import sys
+import time
+import urllib.error
+import urllib.request
+
+PORTA = 8080
+TIMEOUT = 2.0
+
+
+def consulta(host, timeout=TIMEOUT):
+    """Chama o servico do no e devolve (dados, t0, t1, duracao).
+
+    Os dois relogios da maquina, cada um no seu papel: t0 e t1 vem do
+    relogio de PAREDE, porque o algoritmo de Cristian os compara com o
+    relogio de parede do outro no; a duracao vem do relogio MONOTONICO,
+    que nao anda para tras quando a hora e corrigida.
+    """
+    url = "http://%s:%d/" % (host, PORTA)
+    t0 = time.time()
+    m0 = time.monotonic()
+    with urllib.request.urlopen(url, timeout=timeout) as resposta:
+        bruto = resposta.read()
+    m1 = time.monotonic()
+    t1 = time.time()
+    return json.loads(bruto.decode("utf-8")), t0, t1, m1 - m0
+
+
+def classifica(erro):
+    """Traduz a excecao no sintoma que o cliente enxerga."""
+    motivo = getattr(erro, "reason", erro)
+    if isinstance(motivo, (socket.timeout, TimeoutError)):
+        return "SEM RESPOSTA", "esgotou o tempo de espera"
+    if isinstance(motivo, ConnectionRefusedError):
+        return "RECUSADO", "conexao recusada (RST)"
+    if isinstance(motivo, ConnectionResetError):
+        return "RECUSADO", "conexao encerrada pelo outro lado"
+    if isinstance(motivo, socket.gaierror):
+        return "SEM NOME", "nome nao resolvido"
+    if isinstance(motivo, OSError) and getattr(motivo, "errno", None) == 113:
+        return "SEM ROTA", "sem rota para o destino"
+    return "ERRO", str(motivo)
+
+
+def ms(segundos):
+    return "%.3f ms" % (segundos * 1000.0)
+
+
+def marca(instante):
+    return time.strftime("%H:%M:%S", time.localtime(instante)) + \
+        ("%.3f" % (instante % 1))[1:]
+
+
+def cmd_rtt(argumentos):
+    host = argumentos[0]
+    repeticoes = int(argumentos[1]) if len(argumentos) &gt; 1 else 20
+    print("Tempo de resposta da aplicacao ate %s (%d chamadas)" % (host, repeticoes))
+    amostras = []
+    for _ in range(repeticoes):
+        try:
+            _, _, _, duracao = consulta(host)
+            amostras.append(duracao)
+        except Exception as erro:
+            rotulo, detalhe = classifica(erro)
+            print("  %s: %s" % (rotulo, detalhe))
+        time.sleep(0.05)
+    if not amostras:
+        print("  nenhuma resposta: confira o IP e a regra do grupo de seguranca")
+        return
+    amostras.sort()
+    n = len(amostras)
+    # Indice do p95 por interpolacao pelo piso: com n=20 cai na 19a amostra,
+    # e nao na ultima (int(n*0.95) daria o proprio maximo, escondendo a cauda).
+    p95 = amostras[int(0.95 * (n - 1))]
+    print("  respostas : %d de %d" % (n, repeticoes))
+    print("  minimo    : %s" % ms(amostras[0]))
+    print("  mediana   : %s   &lt;-- anote este valor" % ms(amostras[n // 2]))
+    print("  p95       : %s" % ms(p95))
+    print("  maximo    : %s" % ms(amostras[-1]))
+    print("")
+    print("  Use a mediana, nao a media: uma unica amostra ruim distorce a media.")
+
+
+def cmd_relogios(hosts):
+    print("Comparando relogios (algoritmo de Cristian)")
+    print("O relogio do outro no so pode ser conhecido dentro de uma janela")
+    print("do tamanho do tempo de ida e volta. Essa incerteza nao some.\n")
+    for host in hosts:
+        try:
+            dados, t0, _, ida_volta = consulta(host)
+        except Exception as erro:
+            rotulo, detalhe = classifica(erro)
+            print("  %s  %s: %s" % (host, rotulo, detalhe))
+            continue
+        # t0 e de parede (comparavel com o relogio do outro no) e a meia
+        # viagem foi medida com o monotonico: cada relogio no seu papel.
+        estimativa = t0 + ida_volta / 2.0
+        desvio = dados["relogio"] - estimativa
+        print("  no %s (%s)" % (dados["no"], dados["az"]))
+        print("    ida e volta     : %s" % ms(ida_volta))
+        print("    desvio estimado : %+.3f ms" % (desvio * 1000.0))
+        print("    incerteza       : +/- %s" % ms(ida_volta / 2.0))
+        if abs(desvio) &lt; ida_volta / 2.0:
+            print("    veredito        : o desvio cabe dentro da incerteza."
+                  " Voce NAO consegue afirmar que os relogios diferem.")
+        else:
+            print("    veredito        : o desvio e MAIOR que a incerteza."
+                  " Os relogios estao mesmo em desacordo.")
+        print("")
+
+
+def cmd_causa(argumentos):
+    host = argumentos[0]
+    print("Causa e efeito entre dois nos\n")
+    t_causa = time.time()
+    try:
+        dados, _, _, _ = consulta(host)
+    except Exception as erro:
+        rotulo, detalhe = classifica(erro)
+        print("  %s: %s" % (rotulo, detalhe))
+        return
+    t_efeito = dados["relogio"]
+    eventos = [
+        (t_causa, "no local", "enviou o pedido      (CAUSA)"),
+        (t_efeito, dados["no"], "respondeu ao pedido  (EFEITO)"),
+    ]
+    print("Log unificado, ordenado pelo timestamp que cada no registrou:")
+    for instante, no, texto in sorted(eventos):
+        print("  %s  %-18s %s" % (marca(instante), no, texto))
+    diferenca = t_efeito - t_causa
+    print("")
+    if diferenca &lt; 0:
+        print("  O EFEITO aparece %.3f s ANTES da CAUSA." % abs(diferenca))
+        print("  Nenhum dos dois relogios esta quebrado: eles apenas discordam,")
+        print("  e o log ordenado por timestamp virou ficcao.")
+    else:
+        print("  Ordem coerente: o efeito veio %.3f s depois da causa." % diferenca)
+        print("  Isso nao prova nada. Com relogios proximos e rede rapida,")
+        print("  a ordem pode inverter a qualquer momento.")
+
+
+def cmd_monitor(hosts):
+    print("Monitor de disponibilidade. Timeout de %.1f s. Ctrl+C para parar.\n" % TIMEOUT)
+    print("%-13s %-18s %-14s %s" % ("hora", "no", "situacao", "detalhe"))
+    try:
+        while True:
+            for host in hosts:
+                inicio = time.monotonic()
+                try:
+                    dados, _, t1, duracao = consulta(host)
+                    print("%-13s %-18s %-14s %s" % (
+                        marca(t1), dados["no"], "OK", ms(duracao)))
+                except Exception as erro:
+                    rotulo, detalhe = classifica(erro)
+                    # A espera vem do monotonico; a hora impressa continua
+                    # vindo do relogio de parede, que e o que se le num log.
+                    espera = time.monotonic() - inicio
+                    print("%-13s %-18s %-14s %s, apos %s" % (
+                        marca(time.time()), host, rotulo, detalhe, ms(espera)))
+            sys.stdout.flush()
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        print("\nmonitor encerrado")
+
+
+COMANDOS = {
+    "rtt": cmd_rtt,
+    "relogios": cmd_relogios,
+    "causa": cmd_causa,
+    "monitor": cmd_monitor,
+}
+
+if __name__ == "__main__":
+    if len(sys.argv) &lt; 3 or sys.argv[1] not in COMANDOS:
+        print(__doc__)
+        sys.exit(2)
+    COMANDOS[sys.argv[1]](sys.argv[2:])
+PY
+
+# ---- Atalho "sd" para encurtar os comandos da pratica ----
+printf '#!/bin/bash\nexec /usr/bin/python3 /opt/sd/cliente.py "$@"\n' &gt; /usr/local/bin/sd
+chmod +x /usr/local/bin/sd /opt/sd/servico.py /opt/sd/cliente.py
+
+# ---- Servico gerenciado pelo systemd (sobe no boot, reinicia se cair) ----
+cat &gt; /etc/systemd/system/sd-servico.service &lt;&lt;'UNIT'
+[Unit]
+Description=Servico da Pratica 01 (Sistemas Distribuidos)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/sd/servico.py
+Restart=always
+RestartSec=1
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now sd-servico
+
+echo "pratica 01: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre>
+      </div>
+    </details>
+
+    <p>
+      <button type="button" class="btn" data-copiar="setup-sh">⧉ Copiar o script de inicialização</button>
+    </p>
+
+    <h3>3.2 O terceiro nó pelo terminal, na zona us-east-1b</h3>
+    <p>
+      Abra o <strong>CloudShell</strong> (botão de terminal no canto inferior esquerdo da página) e
+      espere carregar. Ele já vem autenticado na sua conta. Cole o bloco abaixo: ele descobre
+      a sub-rede da outra zona, o identificador do grupo de segurança e a imagem mais recente
+      do Amazon Linux 2023.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>SUBREDE=$(aws ec2 describe-subnets \
+  --filters Name=default-for-az,Values=true Name=availability-zone,Values=us-east-1b \
+  --query 'Subnets[0].SubnetId' --output text)
+
+GRUPO=$(aws ec2 describe-security-groups \
+  --filters Name=group-name,Values=sd-pratica01 \
+  --query 'SecurityGroups[0].GroupId' --output text)
+
+AMI=$(aws ssm get-parameter \
+  --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
+  --query Parameter.Value --output text)
+
+echo "sub-rede: $SUBREDE | grupo: $GRUPO | imagem: $AMI"</pre>
+    </div>
+
+    <p>
+      Agora o script. Em vez de colar tudo de novo, peça ao próprio EC2 o
+      <em>user data</em> que você já enviou: ele ficou guardado como atributo da instância.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ID_A=$(aws ec2 describe-instances \
+  --filters Name=tag:Name,Values=sd-no Name=instance-state-name,Values=pending,running \
+  --query 'Reservations[0].Instances[0].InstanceId' --output text)
+
+aws ec2 describe-instance-attribute --instance-id "$ID_A" --attribute userData \
+  --query 'UserData.Value' --output text | base64 -d &gt; setup.sh
+
+head -3 setup.sh</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 run-instances \
+  --image-id "$AMI" --instance-type t3.micro --key-name vockey \
+  --subnet-id "$SUBREDE" --security-group-ids "$GRUPO" \
+  --associate-public-ip-address \
+  --user-data file://setup.sh \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=sd-no-C},{Key=pratica,Value=01}]' \
+  --query 'Instances[0].InstanceId' --output text</pre>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 O console é só um cliente</p>
+      <p>
+        Você acabou de fazer, com uma chamada de API, exatamente o que o formulário do
+        navegador faz. O console não tem poder nenhum além do seu: os dois falam com o mesmo
+        serviço remoto, pela rede, trocando mensagens. Isso é um sistema distribuído, e o
+        Tópico 5 vai desmontar essa chamada peça por peça.
+      </p>
+    </div>
+
+    <h3>3.3 Colher os endereços</h3>
+    <p>Espere cerca de dois minutos (o script roda no primeiro boot) e liste tudo:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=sd-no*" "Name=instance-state-name,Values=pending,running" \
+  --query 'Reservations[].Instances[].{Zona:Placement.AvailabilityZone,
+           Privado:PrivateIpAddress, Publico:PublicIpAddress, Estado:State.Name}' \
+  --output table</pre>
+    </div>
+
+    <p class="saida">-------------------------------------------------------------
+|                     DescribeInstances                     |
++---------+----------------+----------------+---------------+
+| Estado  |    Privado     |    Publico     |     Zona      |
++---------+----------------+----------------+---------------+
+|  running|  172.31.89.175 |  13.220.163.231|  us-east-1a   |
+|  running|  172.31.95.180 |  52.192.203.147|  us-east-1a   |
+|  running|  172.31.27.241 |  54.162.166.150|  us-east-1b   |
++---------+----------------+----------------+---------------+</p>
+
+    <p>
+      Os dois de <code>us-east-1a</code> são os nós <strong>A</strong> e <strong>B</strong>:
+      escolha qualquer um como A (é nele que você vai trabalhar) e o outro será B. O de
+      <code>us-east-1b</code> é o nó <strong>C</strong>. Preencha agora a
+      <a href="#ficha">ficha do ambiente</a>.
+    </p>
+
+    <p>
+      Para conferir que o serviço subiu, abra no navegador
+      <code>http://<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span>:8080</code>.
+      Você deve ver um JSON com o nome do nó, a zona e o relógio dele.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c3">
+      <label for="p01-c3"><strong>Checkpoint 3.</strong> Três instâncias <em>running</em>,
+        duas em us-east-1a e uma em us-east-1b, a ficha preenchida e o JSON aparecendo no
+        navegador.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 4
+       ============================================================ -->
+  <section class="lab-step" id="passo-4">
+    <h2><span class="step-num">4</span><span>Entrar nos nós por SSH</span><span class="step-time">10 min</span></h2>
+
+    <p>Na pasta onde está o <code>labsuser.pem</code>:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 1: nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -i labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span></pre>
+    </div>
+
+    <p class="saida">The authenticity of host '13.220.163.231' can't be established.
+ED25519 key fingerprint is SHA256:/x6cNbSCJk/q6iKtFUZb4TdsMYz6A6Tf60JjYRJTD3A.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? </p>
+
+    <p>Responda <code>yes</code>. Você entra sem digitar senha: quem provou a sua identidade
+      foi a chave privada.</p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Você acabou de confiar em um desconhecido</p>
+      <p>
+        Aquele <em>fingerprint</em> é a identidade do servidor, e você aceitou sem conferir
+        com nenhuma fonte independente. Funciona porque o ambiente é controlado. Guarde a
+        cena: é exatamente o problema que o Tópico 7 resolve com certificados e autoridades
+        certificadoras.
+      </p>
+    </div>
+
+    <p>Já dentro do nó A, veja quem ele é:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>cat /opt/sd/identidade.txt</pre>
+    </div>
+
+    <p class="saida">instancia=i-064a4748524c685ee
+tipo=t3.micro
+az=us-east-1a
+ip_privado=172.31.89.175
+ip_publico=13.220.163.231
+pratica 01: no pronto em 2026-07-29T19:02:21+00:00</p>
+
+    <p>
+      Repare que o nome da máquina, no prompt, contém o IP privado dela. E note de onde vieram
+      esses dados: o script perguntou tudo isso para um serviço em
+      <code>169.254.169.254</code>, um endereço que só responde de dentro da própria
+      instância. Até para saber quem ela é, a máquina precisou fazer uma chamada remota.
+    </p>
+
+    <p>Abra uma <strong>segunda janela</strong> do terminal e conecte ao nó C. Deixe as duas
+      lado a lado: você vai alternar entre elas o tempo todo.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2: nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -i labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_C">IP-PUBLICO-C</span></pre>
+    </div>
+
+    <p>Repita aqui o <code>cat</code> da identidade e confirme que a zona deste nó é outra:
+      é essa diferença que o experimento 1 vai medir.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>cat /opt/sd/identidade.txt</pre>
+    </div>
+
+    <p class="saida">instancia=i-07836d9b530d95ab1
+tipo=t3.micro
+az=us-east-1b     &lt;-- outra zona
+ip_privado=172.31.27.241
+ip_publico=54.162.166.150
+pratica 01: no pronto em 2026-07-29T19:04:15+00:00</p>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c4">
+      <label for="p01-c4"><strong>Checkpoint 4.</strong> Estou conectado ao nó A em uma janela
+        e ao nó C em outra, e <code>cat /opt/sd/identidade.txt</code> mostrou zonas
+        diferentes.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 5
+       ============================================================ -->
+  <section class="lab-step" id="passo-5">
+    <h2><span class="step-num">5</span><span>Experimento 1: distância vira latência</span><span class="step-time">15 min</span></h2>
+
+    <p>Trabalhe na janela do <strong>nó A</strong>. Primeiro, o custo da rede pura:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ping -c 20 <span class="var" data-var="IP_B">IP-PRIVADO-B</span>
+ping -c 20 <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">--- 172.31.95.180 ping statistics ---
+20 packets transmitted, 20 received, 0% packet loss, time 19753ms
+rtt min/avg/max/mdev = 0.262/0.309/0.636/0.077 ms
+                             ^^^^^ anote este número
+
+--- 172.31.27.241 ping statistics ---
+20 packets transmitted, 20 received, 0% packet loss, time 19757ms
+rtt min/avg/max/mdev = 0.396/0.443/0.527/0.038 ms</p>
+
+    <p>Agora o custo de uma chamada de aplicação, que passa por TCP, HTTP e por um programa
+      Python nos dois lados:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd rtt <span class="var" data-var="IP_B">IP-PRIVADO-B</span> 20
+sd rtt <span class="var" data-var="IP_C">IP-PRIVADO-C</span> 20</pre>
+    </div>
+
+    <p class="saida">Tempo de resposta da aplicacao ate 172.31.95.180 (20 chamadas)
+  respostas : 20 de 20
+  minimo    : 1.717 ms
+  mediana   : 1.880 ms   &lt;-- anote este valor
+  p95       : 2.270 ms
+  maximo    : 5.891 ms
+
+Tempo de resposta da aplicacao ate 172.31.27.241 (20 chamadas)
+  respostas : 20 de 20
+  minimo    : 2.009 ms
+  mediana   : 2.164 ms   &lt;-- anote este valor
+  p95       : 2.899 ms
+  maximo    : 4.920 ms</p>
+
+    <p>E, por fim, a escala continental. O mesmo serviço da AWS, o S3, atendido na Virgínia e
+      em São Paulo:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>FORMATO="DNS %{time_namelookup}s | TCP %{time_connect}s | TLS %{time_appconnect}s | total %{time_total}s\n"
+
+for R in us-east-1 sa-east-1; do
+  echo -n "$R  "
+  curl -o /dev/null -s -w "$FORMATO" https://s3.$R.amazonaws.com
+done</pre>
+    </div>
+
+    <p class="saida">us-east-1  DNS 0.009691s | TCP 0.011050s | TLS 0.022985s | total 0.025734s
+sa-east-1  DNS 0.003694s | TCP 0.115222s | TLS 0.231641s | total 0.346006s</p>
+
+    <p>Agora rode o mesmo bloco uma segunda vez, sem mudar nada:</p>
+
+    <p class="saida">us-east-1  DNS 0.001416s | TCP 0.001891s | TLS 0.014499s | total 0.017481s
+sa-east-1  DNS 0.002487s | TCP 0.113934s | TLS 0.229092s | total 0.341778s</p>
+
+    <p><strong>O que ler nesses números:</strong></p>
+    <ul>
+      <li><strong>A zona vizinha custa de uma vez e meia a duas vezes mais.</strong> Poucos
+        quilômetros de fibra já aparecem na conta: no exemplo acima, 0,309 ms contra 0,443 ms,
+        e em outra sessão a mesma medição deu 0,456 ms contra 0,964 ms. A razão exata varia de
+        sessão para sessão; o que não varia é o sinal, e ele aparece de forma consistente:
+        repare como o desvio (<code>mdev</code>) é pequeno em relação à média.</li>
+
+      <li><strong>Até São Paulo o custo é de centenas de vezes, e boa parte dele é física,
+        não engenharia.</strong> São cerca de 7.600 km em linha reta, e a luz atravessa a
+        fibra a uns 200.000 km/s. Só a ida e volta, pelo caminho mais curto que se possa
+        imaginar, já custaria perto de 76 ms. A medição acima deu 116 ms: a diferença é o
+        traçado real da fibra, que não é reto, mais os equipamentos no meio. Nenhuma
+        reescrita de código derruba aqueles 76 ms.</li>
+
+      <li><strong>Conte as rodadas até São Paulo.</strong> Cuidado com uma pegadinha do
+        <code>curl</code>: o <code>time_connect</code> conta desde o início do comando e
+        inclui a resolução do nome. Descontando o DNS (0,0037 s), abrir a conexão TCP custou
+        0,1115 s. O TLS acrescentou outros 0,116 s. A requisição HTTP, mais 0,114 s. São três
+        idas e voltas, uma para cada etapa do protocolo, cada uma pagando a travessia inteira
+        do continente. É por isso que reduzir o número de rodadas vale mais, à distância, do
+        que reduzir o tamanho dos dados. Se a soma dos três números não fechar com o
+        <code>total</code>, é isso mesmo que tem de acontecer: veja <button type="button"
+        class="nota-termo" data-nota="curl-tempos">de onde vem cada tempo e como
+        subtrair</button>.</li>
+
+      <li><strong>Olhe o que a segunda rodada fez com o DNS.</strong> Na primeira chamada, a
+        resolução do nome da Virgínia custou 9,7 ms, mais do que a conexão TCP que veio
+        depois: quase todo o "custo de conectar" ali era descobrir o endereço. Na segunda
+        chamada caiu para 1,4 ms, porque a resposta ficou em <strong>cache</strong> no
+        caminho. É o mesmo mecanismo que faz o DNS escalar para a Internet inteira, e você
+        acabou de medir a diferença entre o primeiro e o segundo acesso.</li>
+
+      <li><strong>E agora o resultado incômodo:</strong> na chamada da aplicação, a diferença
+        entre as duas zonas quase desaparece. No exemplo, as medianas ficaram em 1,880 ms e
+        2,164 ms: os 0,13 ms de distância a mais viraram 0,28 ms, dentro de uma base de quase
+        2 ms que é só software. O custo do seu programa é <strong>cerca de quinze vezes</strong>
+        a diferença de distância, e a enterra no ruído. Em outra sessão do laboratório a
+        mediana chegou a sair <em>maior para o nó mais próximo</em>, o que não é erro de
+        medição: é o ruído mandando. Olhe também o p95, várias vezes a mediana, porque a
+        instância é pequena e compartilhada.</li>
+    </ul>
+
+    <div class="callout">
+      <p class="callout-title">💡 A transparência tem preço</p>
+      <p>
+        A <strong>transparência de localização</strong> esconde <em>onde</em> o recurso está:
+        nos três destinos você chamou um serviço remoto mudando só o endereço, e em nenhum
+        momento precisou saber por qual caminho a mensagem ia. O que ela não esconde é
+        <em>quanto custa</em> chegar lá, e o custo variou por ordens de grandeza. Projetar um
+        sistema distribuído é, em boa medida, decidir o que vale a pena colocar longe.
+      </p>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 Onde otimizar, e onde não adiantar</p>
+      <p>
+        Junte as duas últimas observações. Entre zonas vizinhas, quem manda é o seu
+        software: mexer na rede não mudaria quase nada. Entre continentes, quem manda é a
+        distância: reescrever o servidor não mudaria quase nada. A pergunta útil nunca é
+        "está lento?", é "lento por causa de quê?", e só a medição responde. O Tópico 6
+        volta a esse cálculo com mais precisão.
+      </p>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">👥 Em aula, ou sozinho</p>
+      <p>
+        <strong>Em aula:</strong> leve a sua mediana do <code>sd rtt</code> ao quadro e
+        compare com a dos colegas. As instâncias são do mesmo tipo e a rede é a mesma, então
+        a dispersão entre vocês mede o que a nuvem não promete: máquina compartilhada, vizinho
+        barulhento, sorte no posicionamento.
+        <strong>Sozinho:</strong> compare com a coluna de referência da tabela do passo 8, e
+        rode o <code>sd rtt</code> mais duas vezes com um minuto de intervalo. A variação
+        entre as suas próprias rodadas conta a mesma história.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c5">
+      <label for="p01-c5"><strong>Checkpoint 5.</strong> Tenho os números do experimento 1 na
+        <a href="#passo-8">tabela de resultados</a> e sei dizer, para cada par de destinos,
+        se quem domina o custo é a distância ou o software.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 6
+       ============================================================ -->
+  <section class="lab-step" id="passo-6">
+    <h2><span class="step-num">6</span><span>Experimento 2: não existe relógio global</span><span class="step-time">15 min</span></h2>
+
+    <h3>6.1 Quanto você consegue saber sobre o relógio do outro</h3>
+    <p>No nó A:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd relogios <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">  no ip-172-31-95-180 (us-east-1a)
+    ida e volta     : 4.117 ms
+    desvio estimado : +1.459 ms
+    incerteza       : +/- 2.059 ms
+    veredito        : o desvio cabe dentro da incerteza. Voce NAO consegue
+                      afirmar que os relogios diferem.
+
+  no ip-172-31-27-241 (us-east-1b)
+    ida e volta     : 2.117 ms
+    desvio estimado : +0.344 ms
+    incerteza       : +/- 1.059 ms
+    veredito        : o desvio cabe dentro da incerteza. Voce NAO consegue
+                      afirmar que os relogios diferem.</p>
+
+    <p>
+      O cliente marca a hora antes de perguntar e depois de receber. O relógio do outro nó,
+      no instante da resposta, está em algum ponto dessa janela: você nunca sabe onde. A
+      incerteza é metade da ida e volta <em>desta</em> chamada. Ela aperta se você repetir a
+      medição e ficar com a menor ida e volta observada, que é o que os sincronizadores de
+      verdade fazem, e aperta também se você tirar software da janela (compare com o
+      <code>ping</code> do passo 5). O que ela nunca faz é chegar a zero, enquanto a mensagem
+      levar tempo para ir e voltar. É o raciocínio do <button type="button" class="nota-termo"
+      data-nota="algoritmo-de-cristian">algoritmo de Cristian</button>, que você vai
+      formalizar mais adiante no curso.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Por que o desvio estimado costuma sair positivo</p>
+      <p>
+        Nos dois nós o desvio provavelmente veio com sinal positivo, e isso não quer dizer
+        que os dois relógios estejam adiantados. O cálculo supõe que a ida custa o mesmo que
+        a volta, e aqui ela custa mais: antes de o servidor marcar a hora, foi preciso abrir
+        a conexão TCP e o servidor teve de criar uma thread para atender ao pedido. A volta é
+        só escrever a resposta. <strong>A rede raramente é simétrica, e o algoritmo aposta
+        que ela é.</strong> Por isso o veredito correto não é "o relógio dele está 0,8 ms
+        adiantado", e sim "não dá para afirmar nada dentro dessa margem".
+      </p>
+    </div>
+
+    <p>Veja também o quanto os nós já estão sincronizados com o serviço de tempo da AWS:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A e nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>chronyc tracking</pre>
+    </div>
+
+    <p class="saida">Reference ID    : A9FEA97B (169.254.169.123)
+Stratum         : 4
+Ref time (UTC)  : Wed Jul 29 20:16:38 2026
+System time     : 0.000000438 seconds slow of NTP time
+Last offset     : -0.000000174 seconds
+RMS offset      : 0.000001269 seconds
+Frequency       : 8.624 ppm slow
+Residual freq   : -0.000 ppm
+Skew            : 0.027 ppm
+Root delay      : 0.000393883 seconds
+Root dispersion : 0.000295582 seconds
+Update interval : 16.1 seconds
+Leap status     : Normal</p>
+
+    <p>
+      Duas linhas interessam aqui, e não é a que salta aos olhos.
+      <code>System time</code> diz o quanto o relógio do sistema está longe da estimativa que
+      o <strong>próprio <code>chronyd</code></strong> calculou: sub-microssegundo, ou seja,
+      ele está seguindo à risca a hora em que acredita. Isso não é a distância até a
+      referência de tempo. Quem responde por ela é o par <code>Root delay</code> e
+      <code>Root dispersion</code>: o atraso acumulado até a fonte e a incerteza acumulada no
+      caminho até ela. O limite honesto do erro é metade do <code>Root delay</code> somada à
+      <code>Root dispersion</code>, algo perto de <strong>meio milissegundo</strong> no
+      exemplo acima. As outras linhas contam o resto da história, do oscilador da instância à
+      cadeia de servidores acima dela: <button type="button" class="nota-termo"
+      data-nota="chronyc-tracking">o que cada linha dessa saída diz</button>.
+    </p>
+
+    <p>
+      Agora o contraste que interessa. A sua medição, logo antes, anunciou incerteza de um a
+      dois milissegundos, ou seja, de <strong>duas a quatro vezes</strong> o limite do
+      <code>chronyd</code>, dependendo da ida e volta que a sua sondagem pegou. E os dois
+      números são da mesma natureza: nenhum deles é a verdade, os dois são <em>limites de erro
+      obtidos por mensagens</em>. O que muda são os instrumentos. O <code>chronyd</code> sonda
+      a fonte o tempo todo, descarta amostras ruins, filtra e ainda corrige a frequência do
+      relógio; você fez uma pergunta, uma vez, por uma conexão TCP nova, com o servidor
+      criando uma thread para responder.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 O que dá para provar de dentro</p>
+      <p>
+        Note que nem o <code>chronyd</code> escapa da regra da prática: ele também descobre a
+        hora por mensagens, e também só consegue anunciar um <strong>limite</strong>, nunca o
+        erro exato. Ninguém aqui dentro tem acesso ao tempo verdadeiro. A diferença entre o
+        limite dele e o seu é de instrumento e de esforço, não de natureza, e é essa a
+        distância que separa "os relógios concordam" de "eu consigo provar o quanto eles
+        concordam". É a segunda que o seu programa tem em mãos na hora de decidir.
+      </p>
+    </div>
+
+    <h3>6.2 Provocando a anomalia</h3>
+    <p>Na janela do <strong>nó C</strong>, desligue a sincronização e atrase o relógio dele em
+      dois segundos:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo systemctl stop chronyd
+date
+sudo date -s '-2 seconds'
+date</pre>
+    </div>
+
+    <p class="saida">Wed Jul 29 20:30:18 UTC 2026
+Wed Jul 29 20:30:16 UTC 2026     &lt;-- dois segundos para tras</p>
+
+    <p>Volte à janela do <strong>nó A</strong> e gere um par causa e efeito. O nó A envia o
+      pedido; o nó C, ao respondê-lo, registra a hora pelo relógio dele:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd causa <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">Log unificado, ordenado pelo timestamp que cada no registrou:
+  20:30:29.005  ip-172-31-27-241   respondeu ao pedido  (EFEITO)
+  20:30:31.001  no local           enviou o pedido      (CAUSA)
+
+  O EFEITO aparece 1.996 s ANTES da CAUSA.</p>
+
+    <div class="callout is-danger">
+      <p class="callout-title">🚫 O log virou ficção</p>
+      <p>
+        Nenhum dos dois relógios quebrou. Um deles ficou dois segundos atrasado, o que num
+        relógio de pulso não significa absolutamente nada. Para o registro do sistema,
+        significa que o efeito aconteceu antes da causa. É por isso que sistemas distribuídos
+        não ordenam eventos por relógio físico: eles usam relógios lógicos, que ordenam por
+        causalidade em vez de por tempo.
+      </p>
+    </div>
+
+    <p>
+      Antes de desfazer, volte ao <strong>nó A</strong> e refaça a comparação de relógios do
+      passo 6.1, agora com o desvio de dois segundos no ar. É o mesmo comando de antes, e é a
+      única vez em que ele consegue afirmar alguma coisa:
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd relogios <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">  no ip-172-31-27-241 (us-east-1b)
+    ida e volta     : 3.952 ms
+    desvio estimado : -1998.627 ms
+    incerteza       : +/- 1.976 ms
+    veredito        : o desvio e MAIOR que a incerteza. Os relogios estao
+                      mesmo em desacordo.</p>
+
+    <p>
+      Compare os dois vereditos. No passo 6.1, com os relógios sincronizados, o desvio dava
+      menos que a incerteza e o cliente <strong>se recusou a afirmar</strong> que os relógios
+      diferiam. Agora o desvio é cerca de mil vezes a incerteza, e a afirmação passa a ser
+      segura. O instrumento é o mesmo: o que mudou foi o tamanho do que ele precisava
+      enxergar. Detectar desacordo grosseiro é fácil, e é exatamente o desacordo pequeno, da
+      ordem da própria incerteza, que continua invisível.
+    </p>
+
+    <p>Agora restaure o relógio do nó C antes de seguir:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo systemctl start chronyd
+sudo chronyc makestep
+date</pre>
+    </div>
+
+    <p class="saida">200 OK
+Wed Jul 29 20:41:45 UTC 2026     &lt;-- de volta ao horario certo</p>
+
+    <p>
+      O <code>200 OK</code> é a resposta do próprio <code>chronyc</code> dizendo que o
+      comando foi aceito. O relógio volta de uma vez, num salto, em vez de ser corrigido aos
+      poucos: repare que essa correção abrupta é ela mesma capaz de fazer o relógio andar
+      para trás, o que quebraria qualquer medição de duração feita naquele instante. É por
+      isso que sistemas sérios medem intervalos com um <button type="button"
+      class="nota-termo" data-nota="relogio-monotonico">relógio monotônico</button>, e não
+      com o relógio de parede.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c6">
+      <label for="p01-c6"><strong>Checkpoint 6.</strong> Vi o efeito aparecer antes da causa
+        no log unificado, e depois devolvi o relógio do nó C ao normal.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 7
+       ============================================================ -->
+  <section class="lab-step" id="passo-7">
+    <h2><span class="step-num">7</span><span>Experimento 3: falha parcial</span><span class="step-time">20 min</span></h2>
+
+    <p>Na janela do <strong>nó A</strong>, deixe o monitor rodando. Ele consulta os dois
+      outros nós uma vez por segundo, com dois segundos de paciência para cada um:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A: deixe rodando</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd monitor <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">hora          no                 situacao       detalhe
+19:10:05.213  ip-172-31-16-138   OK             4.041 ms
+19:10:05.218  ip-172-31-41-122   OK             5.218 ms
+19:10:06.221  ip-172-31-16-138   OK             1.966 ms
+19:10:06.225  ip-172-31-41-122   OK             3.332 ms</p>
+
+    <p>
+      Deixe rolar meio minuto antes de quebrar qualquer coisa. Você precisa saber como é o
+      normal para reconhecer o anormal, e vai reparar que o normal também varia: de vez em
+      quando aparece uma resposta de 20 ms no meio de outras de 2 ms. A instância é pequena
+      e compartilhada, e isso também é a realidade de um sistema distribuído.
+    </p>
+
+    <h3>Cenário 1: o processo morre, a máquina continua viva</h3>
+    <p>Na janela do <strong>nó C</strong>:</p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo systemctl stop sd-servico</pre>
+    </div>
+    <p class="saida">20:51:46.452  ip-172-31-95-180   OK             1.785 ms
+20:51:46.454  ip-172-31-27-241   OK             1.985 ms
+20:51:47.457  ip-172-31-95-180   OK             1.769 ms
+20:51:47.458  172.31.27.241      RECUSADO       conexao recusada (RST), apos 0.793 ms</p>
+    <p>
+      A resposta é imediata, e é informativa: alguém do outro lado disse "não tem ninguém
+      escutando nessa porta". A máquina está de pé, o sistema operacional está funcionando,
+      o processo é que morreu.
+    </p>
+    <p>
+      Compare a recusa com uma resposta OK <strong>do próprio nó C</strong>, um segundo antes:
+      a <strong>recusa voltou mais rápido (0,8 ms) do que a resposta bem-sucedida do mesmo nó
+      (2,0 ms)</strong>. Compare com o nó C, e não com o nó B, senão a diferença de zona entra
+      na conta e mistura dois efeitos. Faz sentido: para recusar,
+      o núcleo do sistema operacional só devolve um pacote de rejeição, sem acordar processo
+      nenhum. Descobrir que deu errado custou menos do que dar certo. Guarde essa inversão,
+      porque ela é a exceção, não a regra: nos próximos dois cenários vai ser o contrário.
+    </p>
+    <p>Religue o serviço e veja o monitor voltar ao normal:</p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo systemctl start sd-servico</pre>
+    </div>
+
+    <h3>Cenário 2: a rede some</h3>
+    <p>
+      No console, em <strong>EC2 &gt; Security Groups &gt; sd-pratica01 &gt; Inbound rules &gt;
+      Edit inbound rules</strong>, apague a regra <strong>All traffic</strong> (a que aponta
+      para o próprio grupo) e salve. Olhe o monitor por uns dez segundos e reponha a regra
+      depois.
+    </p>
+    <p class="saida">20:57:17.268  ip-172-31-95-180   OK             1.937 ms
+20:57:19.271  172.31.27.241      SEM RESPOSTA   esgotou o tempo de espera, apos 2002.411 ms
+20:57:22.273  172.31.95.180      SEM RESPOSTA   esgotou o tempo de espera, apos 2000.656 ms
+20:57:24.275  172.31.27.241      SEM RESPOSTA   esgotou o tempo de espera, apos 2002.468 ms
+20:57:27.279  172.31.95.180      SEM RESPOSTA   esgotou o tempo de espera, apos 2002.455 ms</p>
+    <p>
+      Agora não há resposta nenhuma: os pacotes são descartados em silêncio. O cliente só
+      descobre que algo está errado quando a própria paciência acaba, dois segundos depois.
+      E repare que <strong>os dois nós sumiram ao mesmo tempo</strong>. Esse padrão é uma
+      pista valiosa: quando todo mundo cai junto, o problema provavelmente não está em todo
+      mundo, está em você ou no caminho.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Olhe o relógio do monitor, não só as mensagens</p>
+      <p>
+        Antes, o monitor examinava os dois nós a cada segundo. Agora repare nos horários das
+        linhas: elas passaram a sair de cinco em cinco segundos. Não é falha do programa. Um
+        laço que espera dois segundos por nó, e depois dorme mais um, leva cinco segundos
+        para completar a volta quando ninguém responde. <strong>O detector fica lento
+        justamente quando o sistema está doente</strong>, que é quando ele mais precisaria
+        ser rápido. Por isso vigias de verdade consultam os nós em paralelo, e não em fila
+        como este aqui: o custo do timeout de um não pode virar atraso de todos.
+      </p>
+    </div>
+
+    <h3>Cenário 3: a máquina desliga</h3>
+    <p>
+      Para tornar o contraste visível numa única tela, comece parando de novo o serviço no
+      nó C, como no cenário 1, e deixe o monitor acusando <code>RECUSADO</code>. Então, no
+      console, em <strong>EC2 &gt; Instances</strong>, selecione o nó C (o de
+      <code>us-east-1b</code>) e escolha <strong>Instance state &gt; Stop instance</strong>.
+      A sua janela SSH do nó C vai cair junto, o que já era esperado: a máquina está
+      desligando.
+    </p>
+    <p class="saida">21:15:03.380  ip-172-31-95-180   OK             1.964 ms
+21:15:03.381  172.31.27.241      RECUSADO       conexao recusada (RST), apos 0.751 ms
+21:15:04.384  ip-172-31-95-180   OK             1.828 ms
+21:15:06.386  172.31.27.241      SEM RESPOSTA   esgotou o tempo de espera, apos 2002.440 ms
+21:15:07.389  ip-172-31-95-180   OK             1.775 ms
+21:15:09.391  172.31.27.241      SEM RESPOSTA   esgotou o tempo de espera, apos 2002.412 ms</p>
+    <p>
+      Duas coisas nessa tela. O <strong>mesmo nó</strong> mudou de sintoma sem que uma linha
+      do cliente fosse alterada: passou de recusa em 0,8 ms para silêncio de 2 segundos. E o
+      nó B seguiu respondendo em menos de 2 ms o tempo inteiro, intercalado com o silêncio
+      de C.
+    </p>
+
+    <div class="callout is-danger">
+      <p class="callout-title">🚫 Silêncio não diz a causa</p>
+      <p>
+        Compare o cenário 2 com o 3: <strong>o sintoma é exatamente o mesmo</strong>. Do
+        ponto de vista do nó A, uma rede bloqueada, uma máquina desligada e um servidor
+        muito lento produzem a mesma coisa: nada. E enquanto isso o nó B continuou
+        respondendo normalmente. É isso que a disciplina chama de <strong>falha
+        parcial</strong>: o sistema não para inteiro, ele fica pela metade, e a metade que
+        sobrou precisa decidir o que fazer com uma informação que ela não tem como obter.
+      </p>
+    </div>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th>O que eu fiz</th><th>O que o cliente viu</th><th>Em quanto tempo</th><th>Dá para saber a causa?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Parei o processo em C</td><td><code>RECUSADO</code></td>
+            <td>menos de 1 ms, mais rápido que uma resposta normal</td>
+            <td>Sim: a máquina respondeu que não há ninguém na porta</td>
+          </tr>
+          <tr>
+            <td>Bloqueei a rede</td><td><code>SEM RESPOSTA</code> em B e C</td>
+            <td>2 s por nó, e o ciclo do monitor passa de 1 s para 5 s</td>
+            <td>Não, mas todos caírem juntos é uma pista</td>
+          </tr>
+          <tr>
+            <td>Desliguei a máquina C</td><td><code>SEM RESPOSTA</code> só em C</td>
+            <td>2 s, o timeout inteiro</td>
+            <td>Não</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 Ligue com a demonstração do tópico</p>
+      <p>
+        Volte à demo <em>"Caiu ou está lenta?"</em>, na página do Tópico 1. Você acabou de
+        reproduzir com máquinas de verdade, e com números seus, o dilema que ela simula.
+        Aumentar o timeout deixa o sistema mais tolerante e mais lento para reagir; diminuir
+        deixa rápido e propenso a declarar morto quem só estava ocupado. Não existe valor
+        certo, existe a escolha que você assume.
+      </p>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">👥 Em aula, ou sozinho</p>
+      <p>
+        <strong>Em aula:</strong> antes de rodar o cenário 3, combine com um colega. Um
+        provoca a falha na máquina dele sem dizer qual das três provocou; o outro olha só o
+        monitor e aposta. Depois troquem. É a demo do tópico, com máquinas de verdade.
+        <strong>Sozinho:</strong> escreva a sua aposta antes de olhar o monitor, e só então
+        rode o cenário. Anotar antes é o que separa prever de explicar depois.
+      </p>
+    </div>
+
+    <p>Encerre o monitor com <kbd>Ctrl</kbd> + <kbd>C</kbd>.</p>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c7">
+      <label for="p01-c7"><strong>Checkpoint 7.</strong> Reproduzi os três cenários e sei
+        dizer qual deles o cliente consegue diagnosticar sozinho.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 8
+       ============================================================ -->
+  <section class="lab-step" id="passo-8">
+    <h2><span class="step-num">8</span><span>Anotar os resultados</span><span class="step-time">5 min</span></h2>
+
+    <p>
+      Cada linha diz de onde tirar o número. <strong>Não existe resposta certa aqui: o valor
+      é o seu.</strong> A coluna de referência é só uma checagem de sanidade, para você saber
+      se a medição faz sentido. Ficar dentro da faixa não vale ponto, e ficar fora não é erro:
+      é motivo para repetir a medição e desconfiar do que aconteceu naquele instante.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Para que servem estes números</p>
+      <p>
+        O questionário desta prática, no Moodle, pergunta sobre eles. Não pede o valor exato:
+        pede a <strong>faixa</strong> em que o seu resultado caiu, ou a comparação entre dois
+        deles. Quem não mediu não tem como responder. Por isso existe o botão
+        <em>copiar meus resultados</em> no fim da tabela: leve os números com você antes de
+        encerrar o laboratório, porque a sessão apaga as máquinas e você não vai conseguir
+        medir de novo sem refazer tudo.
+      </p>
+    </div>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:44%">Medição</th><th style="width:28%">O seu valor</th><th>Referência</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ping</code> na mesma zona<br>
+              <span class="ref">passo 5 · campo <code>avg</code> da linha <code>rtt min/avg/max/mdev</code></span></td>
+            <td><input type="text" data-res="ping_mesma_az" data-rotulo="ping mesma zona (avg, ms)" placeholder="ms"></td>
+            <td class="ref">0,25 a 1 ms</td>
+          </tr>
+          <tr>
+            <td><code>ping</code> na outra zona<br>
+              <span class="ref">passo 5 · mesmo campo, no segundo <code>ping</code></span></td>
+            <td><input type="text" data-res="ping_outra_az" data-rotulo="ping outra zona (avg, ms)" placeholder="ms"></td>
+            <td class="ref">0,4 a 1,6 ms, e maior que o da mesma zona</td>
+          </tr>
+          <tr>
+            <td><code>sd rtt</code> na mesma zona<br>
+              <span class="ref">passo 5 · linha <code>mediana</code></span></td>
+            <td><input type="text" data-res="rtt_mesma_az" data-rotulo="sd rtt mesma zona (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">1,5 a 8 ms</td>
+          </tr>
+          <tr>
+            <td><code>sd rtt</code> na outra zona<br>
+              <span class="ref">passo 5 · linha <code>mediana</code>, no segundo comando</span></td>
+            <td><input type="text" data-res="rtt_outra_az" data-rotulo="sd rtt outra zona (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">1,5 a 8 ms, e pode até sair menor que o da mesma zona</td>
+          </tr>
+          <tr>
+            <td>TCP até o S3 da Virgínia<br>
+              <span class="ref">passo 5 · número após <code>TCP</code> na linha <code>us-east-1</code></span></td>
+            <td><input type="text" data-res="tcp_virginia" data-rotulo="TCP ate o S3 us-east-1 (s)" placeholder="s"></td>
+            <td class="ref">0,002 a 0,012 s (a primeira chamada carrega o DNS e sai maior)</td>
+          </tr>
+          <tr>
+            <td>TCP até o S3 de São Paulo<br>
+              <span class="ref">passo 5 · número após <code>TCP</code> na linha <code>sa-east-1</code></span></td>
+            <td><input type="text" data-res="tcp_saopaulo" data-rotulo="TCP ate o S3 sa-east-1 (s)" placeholder="s"></td>
+            <td class="ref">0,105 a 0,140 s</td>
+          </tr>
+          <tr>
+            <td>TLS até o S3 de São Paulo<br>
+              <span class="ref">passo 5 · número após <code>TLS</code> na mesma linha</span></td>
+            <td><input type="text" data-res="tls_saopaulo" data-rotulo="TLS ate o S3 sa-east-1 (s)" placeholder="s"></td>
+            <td class="ref">cerca do dobro do TCP: uma rodada a mais</td>
+          </tr>
+          <tr>
+            <td>Quantas idas e voltas na sua zona cabem em uma até São Paulo<br>
+              <span class="ref">conta sua · <strong>converta o TCP de São Paulo para ms</strong> (multiplique
+              por 1000) e divida pelo <code>ping</code> da mesma zona. Ex.: 113,9 ÷ 0,309 = 368</span></td>
+            <td><input type="text" data-res="razao" data-rotulo="idas e voltas ate Sao Paulo / mesma zona" placeholder="vezes"></td>
+            <td class="ref">150 a 400 vezes</td>
+          </tr>
+          <tr>
+            <td>Limite do erro do relógio do nó<br>
+              <span class="ref">passo 6 · linha <code>Root dispersion</code> do <code>chronyc tracking</code></span></td>
+            <td><input type="text" data-res="chrony" data-rotulo="limite do erro do relogio, Root dispersion (s)" placeholder="s"></td>
+            <td class="ref">abaixo de 0,001 s, em geral bem abaixo</td>
+          </tr>
+          <tr>
+            <td>Tempo até perceber o processo parado<br>
+              <span class="ref">passo 7, cenário 1 · o tempo na linha <code>RECUSADO</code></span></td>
+            <td><input type="text" data-res="det_processo" data-rotulo="deteccao do processo parado (ms)" placeholder="ms"></td>
+            <td class="ref">em geral 0,7 a 2 ms, e <strong>menor</strong> que uma resposta
+              normal do mesmo nó: é a comparação que importa, não o valor</td>
+          </tr>
+          <tr>
+            <td>Tempo de uma resposta normal do mesmo nó<br>
+              <span class="ref">passo 7 · uma linha <code>OK</code> do nó C, antes de você quebrar algo</span></td>
+            <td><input type="text" data-res="resposta_normal" data-rotulo="resposta normal do no C (ms)" placeholder="ms"></td>
+            <td class="ref">em geral 1,7 a 3 ms, e sempre <strong>maior</strong> que a recusa.
+              A primeira linha de cada rodada custa mais, e picos de alguns milissegundos são
+              normais numa instância compartilhada: o único teto é o timeout de 2 s, e qualquer
+              valor abaixo dele ainda é uma resposta, não uma falha</td>
+          </tr>
+          <tr>
+            <td>Tempo até perceber a máquina desligada<br>
+              <span class="ref">passo 7, cenário 3 · o tempo na linha <code>SEM RESPOSTA</code></span></td>
+            <td><input type="text" data-res="det_maquina" data-rotulo="deteccao da maquina desligada (ms)" placeholder="ms"></td>
+            <td class="ref">2000 ms (o timeout)</td>
+          </tr>
+          <tr>
+            <td>Ciclo do monitor com tudo bloqueado<br>
+              <span class="ref">passo 7, cenário 2 · diferença entre os horários de duas linhas
+              seguidas do <em>mesmo</em> nó</span></td>
+            <td><input type="text" data-res="ciclo_monitor" data-rotulo="ciclo do monitor sob falha (s)" placeholder="s"></td>
+            <td class="ref">5 s, contra 1 s no estado normal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      <button type="button" class="btn" id="copiar-resultados">⧉ Copiar meus resultados</button>
+      <button type="button" class="btn btn-secondary" id="limpar-lab">Apagar os dados desta prática</button>
+    </p>
+
+    <p class="saida">A tabela fica guardada neste navegador, mas some se voce limpar os dados do
+site ou trocar de computador. Cole os seus numeros em algum lugar seu antes de
+encerrar o laboratorio.</p>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c8">
+      <label for="p01-c8"><strong>Checkpoint 8.</strong> A tabela está preenchida e eu
+        guardei uma cópia dos meus números.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Fechamento conceitual
+       ============================================================ -->
+  <section class="lab-step" id="fechamento">
+    <h2><span class="step-num is-accent">§</span><span>O que isso tem a ver com o Tópico 1</span><span class="step-time">5 min</span></h2>
+
+    <p>
+      A definição diz que um sistema distribuído é um conjunto de componentes em máquinas
+      interligadas que se comunicam <em>apenas por troca de mensagens</em>. Tudo o que você
+      mediu hoje é consequência direta dessa única restrição:
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:34%">Conceito do tópico</th><th>Onde ele apareceu</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Falhas independentes e parciais</strong></td>
+            <td>O nó C sumiu e o nó B continuou atendendo. Não existe "o sistema caiu": existe
+              uma parte que caiu e outra que precisa seguir decidindo sem saber o que houve.</td>
+          </tr>
+          <tr>
+            <td><strong>Inexistência de relógio global</strong></td>
+            <td>Dois segundos de desacordo, irrelevantes para um ser humano, inverteram a
+              ordem de causa e efeito no registro do sistema.</td>
+          </tr>
+          <tr>
+            <td><strong>Concorrência</strong></td>
+            <td>Os três nós executam ao mesmo tempo, sem coordenação nenhuma. O contador de
+              pedidos de cada um avança no seu próprio ritmo, e ninguém sabe o total.</td>
+          </tr>
+          <tr>
+            <td><strong>Transparência e seu custo</strong></td>
+            <td>A mesma chamada, com o mesmo código, custou de 0,2 ms a 350 ms conforme o
+              destino. Transparência de localização esconde o endereço, não a distância.</td>
+          </tr>
+          <tr>
+            <td><strong>Detecção de falhas por timeout</strong></td>
+            <td>O único instrumento do cliente é a própria paciência. Curta demais, acusa
+              inocentes; longa demais, demora a reagir.</td>
+          </tr>
+          <tr>
+            <td><strong>Heterogeneidade e middleware</strong></td>
+            <td>Você falou com o EC2 pelo navegador e pelo terminal, e com o serviço de
+              metadados por HTTP. Camadas de software escondendo diferenças, o tempo todo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Extensões (antes da limpeza: as duas primeiras precisam do nó C ligado)
+       ============================================================ -->
+  <section class="lab-step" id="extensoes">
+    <h2><span class="step-num is-accent">+</span><span>Se sobrar tempo</span></h2>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Estas extensões vêm antes de encerrar as instâncias</p>
+      <p>
+        As duas primeiras precisam do <strong>nó C ligado</strong>. Se você fez o cenário 3 do
+        passo 7 e deixou a instância parada, ligue-a outra vez em <strong>Instance state &gt;
+        Start instance</strong> e <strong>atualize o IP público na ficha</strong>: ele muda a
+        cada parada, e o endereço antigo daria um timeout que você leria como se fosse a lição
+        da extensão.
+      </p>
+      <p>
+        As duas também dependem de o grupo de segurança estar com as <strong>três regras
+        originais</strong> do passo 2. Se você apagou e repôs a regra <em>All traffic</em> no
+        cenário 2, confirme que ela voltou como estava, e não mais aberta do que estava, antes
+        de tirar conclusão do que observar aqui:
+      </p>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-security-groups --group-names sd-pratica01 \
+  --query 'SecurityGroups[0].IpPermissions[].{Porta:FromPort,Faixas:IpRanges[].CidrIp,Grupos:UserIdGroupPairs[].GroupId}' \
+  --output table</pre>
+    </div>
+
+    <h3>Endereço não é identidade</h3>
+    <p>
+      Do nó A, chame o nó C duas vezes: primeiro pelo <em>IP privado</em>, depois pelo
+      <em>IP público</em>.
+    </p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd rtt <span class="var" data-var="IP_C">IP-PRIVADO-C</span> 3
+sd rtt <span class="var" data-var="IP_PUB_C">IP-PUBLICO-C</span> 3</pre>
+    </div>
+    <p>
+      A primeira chamada responde; a segunda trava. A regra <em>All traffic</em> que você criou
+      no passo 2 fala de <strong>identidade</strong> ("deixe entrar quem pertence a este
+      grupo"), e ela casa com o endereço <em>privado</em> dos membros. Pelo endereço público, o
+      pacote sai da rede e volta pelo gateway da internet, e o nó C recebe como origem o
+      endereço público do nó A, que não pertence a grupo nenhum. A identidade se perdeu no
+      caminho, e o mesmo nó, chamado pelo mesmo serviço, deixa de ser alcançável.
+    </p>
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Se a chamada pelo IP público funcionar, procure a regra</p>
+      <p>
+        Isso quer dizer que existe uma regra por <strong>endereço</strong> cobrindo aquela
+        porta, e é ela, não a identidade, que está deixando o pacote entrar. O caso mais comum
+        é a regra da porta 8080 ter sido aberta para <code>0.0.0.0/0</code> em algum momento,
+        no lugar de <em>My IP</em>. Confira na saída do
+        <code>describe-security-groups</code> acima: descobrir <em>qual</em> regra respondeu
+        por um comportamento é metade do trabalho de quem cuida de rede, e o experimento acima
+        só demonstra o que promete com as três regras originais.
+      </p>
+    </div>
+
+    <h3>Um cliente sem paciência definida</h3>
+    <p>
+      O <code>curl</code> não define timeout curto por padrão, e isso deixa medir a diferença
+      entre os dois sintomas do passo 7 com uma ferramenta que você já usava. Faça os dois na
+      janela do nó A:
+    </p>
+    <ol>
+      <li><strong>Recusa.</strong> Pare o serviço no nó C
+        (<code>sudo systemctl stop sd-servico</code>) e chame a porta 8080 dele. A resposta
+        volta na hora: <code>Failed to connect ... after 0 ms: Could not connect to
+        server</code>. Tem alguém do outro lado para dizer não.</li>
+      <li><strong>Silêncio.</strong> Religue o serviço e chame uma porta que o grupo de
+        segurança não libera, como a <strong>8081</strong>, pelo <em>IP público</em> do nó C.
+        Agora o pacote é descartado sem aviso e o comando fica pendurado até o TCP desistir
+        sozinho. Na nossa sessão levou <strong>135 segundos</strong>, contra os 0 ms do caso
+        anterior.</li>
+    </ol>
+    <p>
+      Dois sintomas, três ordens de grandeza de diferença no tempo de descobrir, e nenhuma
+      linha de código sua mudou. É por isso que todo cliente de rede sério define o próprio
+      timeout em vez de aceitar o do sistema: sem prazo declarado, quem espera herda a
+      paciência do sistema operacional, que é de minutos.
+    </p>
+
+    <h3>Com um colega, se houver oportunidade</h3>
+    <p>
+      Cada um libera a porta 8080 para o IP público do outro e mede o tempo de resposta entre
+      as duas contas. Compare com os números medidos dentro da AWS: vocês estão na mesma sala,
+      mas o caminho passa pela internet.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       Passo 9
+       ============================================================ -->
+  <section class="lab-step" id="passo-9">
+    <h2><span class="step-num">9</span><span>Encerrar e limpar</span><span class="step-time">5 min</span></h2>
+
+    <ol>
+      <li>Em <strong>EC2 &gt; Instances</strong>, selecione as três instâncias e escolha
+        <strong>Instance state &gt; Terminate instance</strong>.</li>
+      <li>Depois que elas ficarem <em>terminated</em>, apague o grupo de segurança
+        <code>sd-pratica01</code> em <strong>Security Groups</strong>.</li>
+      <li>Apague o <code>labsuser.pem</code> desta sessão: ele não vai servir na próxima.</li>
+      <li>Na aba do laboratório, clique em <strong>End Lab</strong>.</li>
+    </ol>
+
+    <p>Se preferir fazer pelo terminal:</p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 terminate-instances --instance-ids $(aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=sd-no*" \
+            "Name=instance-state-name,Values=pending,running,stopped" \
+  --query 'Reservations[].Instances[].InstanceId' --output text)</pre>
+    </div>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Limpe mesmo sabendo que o ambiente limparia sozinho</p>
+      <p>
+        Aqui a sessão apagaria tudo de qualquer jeito. Mais adiante no curso você vai
+        trabalhar em um ambiente que <strong>não apaga nada</strong> e tem orçamento
+        limitado, onde um recurso esquecido consome crédito silenciosamente por dias. O
+        hábito que protege você lá é o que você constrói aqui.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p01-c9">
+      <label for="p01-c9"><strong>Checkpoint 9.</strong> Instâncias encerradas, grupo de
+        segurança apagado, laboratório encerrado.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Questionário
+       ============================================================ -->
+  <div class="moodle-note">
+    <p>
+      <strong>Para concluir:</strong> responda ao questionário desta prática no Moodle da
+      disciplina. As perguntas usam os números que você mediu, e pedem a faixa em que eles
+      caíram, não o valor exato. Tenha a tabela de resultados à mão.
+    </p>
+  </div>
+
+  <!-- ============================================================
+       Se der errado
+       ============================================================ -->
+  <section class="lab-step" id="se-der-errado">
+    <h2><span class="step-num is-accent">!</span><span>Se der errado</span></h2>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:32%">Sintoma</th><th style="width:30%">Causa provável</th><th>O que fazer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>O comando responde <code>Name or service not known</code>, ou o
+              <code>sd rtt</code> mostra <code>SEM NOME</code> na coluna do nó</td>
+            <td>A ficha do ambiente está vazia: o comando foi copiado com o texto de
+              exemplo (<code>IP-PRIVADO-B</code>) em vez do endereço</td>
+            <td>Volte à <a href="#ficha">ficha do ambiente</a>, preencha os quatro campos e
+              copie o comando de novo. Os endereços entram nos comandos da página inteira.</td>
+          </tr>
+          <tr>
+            <td>No CloudShell, a sub-rede saiu como <code>None</code></td>
+            <td>A conta não tem sub-rede padrão naquela zona de disponibilidade</td>
+            <td>Repita o bloco escolhendo outra zona (por exemplo <code>us-east-1c</code> no
+              lugar de <code>us-east-1b</code>) e ajuste o que você anotou no checkpoint.</td>
+          </tr>
+          <tr>
+            <td><code>UNPROTECTED PRIVATE KEY FILE</code></td>
+            <td>Permissões do <code>labsuser.pem</code></td>
+            <td>Rode o <code>icacls</code> (ou <code>chmod 400</code>) do passo 1.</td>
+          </tr>
+          <tr>
+            <td><code>Permission denied (publickey)</code></td>
+            <td>Chave de uma sessão anterior, ou usuário errado</td>
+            <td>Baixe o PEM de novo nesta sessão. O usuário é <code>ec2-user</code>, nunca
+              <code>root</code> nem o seu nome.</td>
+          </tr>
+          <tr>
+            <td>O SSH fica parado e termina em <code>Connection timed out</code></td>
+            <td>A regra de SSH aponta para outro IP, ou a instância ainda está iniciando</td>
+            <td>Edite a regra e escolha <em>My IP</em> outra vez. Confira se
+              <em>Status check</em> está em 2/2.</td>
+          </tr>
+          <tr>
+            <td>O navegador não abre a porta 8080</td>
+            <td>O script de inicialização ainda está rodando, ou falhou</td>
+            <td>Espere dois minutos. Depois, dentro da instância:
+              <code>sudo systemctl status sd-servico</code> e
+              <code>sudo tail -30 /var/log/sd-setup.log</code>.</td>
+          </tr>
+          <tr>
+            <td><code>sd: command not found</code></td>
+            <td>O <em>user data</em> não foi colado, ou foi colado com algum caractere a mais</td>
+            <td>Confira <code>sudo tail -30 /var/log/sd-setup.log</code>. Em último caso,
+              copie o script para um arquivo na instância e rode
+              <code>sudo bash setup.sh</code>.</td>
+          </tr>
+          <tr>
+            <td>Instância <em>running</em> mas sem IP público</td>
+            <td>A sub-rede não atribuiu endereço automaticamente</td>
+            <td>Encerre e lance de novo com
+              <em>Auto-assign public IP: Enable</em>.</td>
+          </tr>
+          <tr>
+            <td>No CloudShell, o comando do <code>ssm get-parameter</code> falha</td>
+            <td>Restrição de permissão no parâmetro público</td>
+            <td>Descubra a imagem por outro caminho:
+              <code>AMI=$(aws ec2 describe-images --owners amazon --filters
+              "Name=name,Values=al2023-ami-2023*x86_64" --query
+              'sort_by(Images,&amp;CreationDate)[-1].ImageId' --output text)</code></td>
+          </tr>
+          <tr>
+            <td>A sessão do laboratório expirou no meio</td>
+            <td>É o comportamento normal do Sandbox</td>
+            <td>Inicie de novo e refaça os passos 2 e 3. Leva cerca de dez minutos, e os
+              endereços da ficha mudam.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="lab-foot">
+    <span>Sistemas Distribuídos · IFSP Campus Salto</span>
+    <span><a href="../../index.html#/topico/01">Voltar ao Tópico 1</a></span>
+  </footer>
+
+</div>
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/lab.js"></script>
+<script>SD.lab.init({ id: "pratica-01" });</script>
+</body>
+</html>

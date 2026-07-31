@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Prática 02 da disciplina Sistemas Distribuídos (IFSP Campus Salto): três instâncias EC2 no AWS Academy Sandbox para medir o custo de uma fronteira entre camadas e descobrir o que a replicação mascara e o que ela não mascara.">
+  <title>Prática 02: O mesmo código, sistemas diferentes</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%97%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lab.css">
+</head>
+<body>
+
+<div class="lab-topbar">
+  <a class="voltar" href="../../index.html#/topico/02">‹ Tópico 2</a>
+  <span class="titulo">Prática 02 · Modelos de Sistema</span>
+  <span class="espaco"></span>
+  <span class="contador" id="lab-contador">0 de 9 passos</span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="lab-wrap">
+
+  <!-- ============================================================
+       Abertura
+       ============================================================ -->
+  <header class="lab-hero">
+    <p class="eyebrow">Prática 02 · Tópico 2 · AWS Academy Sandbox</p>
+    <h1>O mesmo código, sistemas diferentes</h1>
+    <p class="lab-lead">
+      Três máquinas vão subir com programas idênticos. Sem tocar em uma linha de código,
+      você vai arrumá-las de jeitos diferentes e medir o que cada arranjo custa. Depois vai
+      quebrar uma delas de duas maneiras: uma que a replicação conserta sozinha e outra que
+      ela não conserta de jeito nenhum, e que passa despercebida por todo instrumento que
+      você tiver à mão.
+    </p>
+
+    <div class="lab-chips">
+      <span class="chip">◷ 100 min</span>
+      <span class="chip">▲ dificuldade 2 de 5</span>
+      <span class="chip">☁ AWS Academy Sandbox</span>
+      <span class="chip">▤ 3 instâncias t3.micro</span>
+      <span class="chip">$ menos de US$ 0,05</span>
+      <span class="chip">👤 individual</span>
+    </div>
+
+    <p><strong>O que você vai medir:</strong></p>
+    <ul>
+      <li>quanto custa separar a aplicação dos dados, e por que esse custo se multiplica;</li>
+      <li>quanto a replicação esconde quando um nó cai, e qual é o preço desse disfarce;</li>
+      <li>o que acontece quando um nó não cai: continua no ar, responde depressa e responde errado.</li>
+    </ul>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
+      <p>
+        A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>:
+        instâncias, chave e configuração. Reserve o bloco inteiro de duas aulas. Se a sessão
+        acabar no meio, refazer os passos 2 e 3 leva cerca de dez minutos, porque tudo aqui
+        é feito por script.
+      </p>
+    </div>
+
+    <div class="lab-sumario">
+      <p class="titulo">Nesta prática</p>
+      <ol>
+        <li><a href="#passo-1">Abrir o laboratório e preparar a chave</a></li>
+        <li><a href="#passo-2">Criar o grupo de segurança</a></li>
+        <li><a href="#passo-3">Subir os três nós</a></li>
+        <li><a href="#passo-4">Entrar por SSH e ver as duas camadas</a></li>
+        <li><a href="#passo-5">A fronteira entre camadas tem preço</a></li>
+        <li><a href="#passo-6">Uma réplica cai</a></li>
+        <li><a href="#passo-7">Uma réplica mente</a></li>
+        <li><a href="#passo-8">Anotar os resultados</a></li>
+        <li><a href="#passo-9">Encerrar e limpar</a></li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       Pré-requisitos
+       ============================================================ -->
+  <section class="lab-step" id="antes">
+    <h2><span class="step-num is-accent">✓</span><span>Antes de começar</span></h2>
+    <ul>
+      <li>Acesso ao curso <strong>AWS Academy Cloud Foundations</strong>, no laboratório
+        <strong>Sandbox</strong>.</li>
+      <li>Um terminal. No Windows, o <strong>PowerShell</strong> já traz o cliente SSH
+        instalado, e é o que vamos usar. No macOS ou Linux, o terminal do sistema.</li>
+      <li>Nada para instalar, nem no seu computador nem nas máquinas remotas.</li>
+      <li>A prática 01 <strong>não é pré-requisito</strong>. Se você a fez, os passos 1 a 4
+        são o mesmo caminho e você vai andar depressa neles.</li>
+    </ul>
+
+    <div class="os-switch" role="group" aria-label="Escolha do sistema operacional">
+      <button type="button" data-os-btn="win" aria-pressed="true">Windows / PowerShell</button>
+      <button type="button" data-os-btn="unix" aria-pressed="false">macOS / Linux</button>
+    </div>
+    <p>Os comandos que mudam de um sistema para o outro seguem esta escolha na página inteira.</p>
+
+    <p>
+      Alguns termos aparecem sublinhados e com um <strong>ⓘ</strong>. Clicar abre, ali mesmo,
+      uma nota explicando o termo. Essas notas são leitura opcional: os tempos anunciados em
+      cada passo valem para quem não abre nenhuma.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -V</pre>
+    </div>
+    <p class="saida">OpenSSH_for_Windows_9.x, LibreSSL 3.x     (qualquer versão serve)</p>
+  </section>
+
+  <!-- ============================================================
+       O parêntese de AWS
+       ============================================================ -->
+  <section class="lab-step" id="aws-em-5-minutos">
+    <h2><span class="step-num is-accent">AWS</span><span>O mínimo de AWS para esta prática</span></h2>
+    <p>
+      Você ainda não chegou a estes módulos no curso da AWS. Aqui vai só o suficiente para
+      entender o que está fazendo; o aprofundamento vem nos módulos 3, 5 e 6 do Cloud
+      Foundations.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th>Termo</th><th>O que significa na prática</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Região</strong></td>
+            <td>Um conjunto de data centers em uma área geográfica. O Sandbox só permite
+              <code>us-east-1</code> (Norte da Virgínia). Se o console mostrar outra região,
+              nada funciona.</td>
+          </tr>
+          <tr>
+            <td><strong>Zona de disponibilidade (AZ)</strong></td>
+            <td>Um data center, ou grupo de data centers, isolado dentro da região:
+              <code>us-east-1a</code>, <code>us-east-1b</code>. Ficam a alguns quilômetros um
+              do outro, e é por isso que dividir o sistema entre zonas protege contra a queda
+              de uma delas.</td>
+          </tr>
+          <tr>
+            <td><strong>EC2 e instância</strong></td>
+            <td>O serviço de máquinas virtuais. Uma <em>instância</em> é uma máquina virtual
+              ligada. Vamos usar três, do tipo <code>t3.micro</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Par de chaves</strong></td>
+            <td>Criptografia assimétrica: a parte pública fica na instância, a privada fica
+              com você, no arquivo <code>labsuser.pem</code>. É assim que o SSH prova que
+              você é você.</td>
+          </tr>
+          <tr>
+            <td><strong>Grupo de segurança</strong></td>
+            <td>Um filtro de pacotes com estado, na porta de entrada da instância. Tudo é
+              bloqueado por padrão: só entra o que uma regra permitir explicitamente.</td>
+          </tr>
+          <tr>
+            <td><strong>User data</strong></td>
+            <td>Um script que a instância executa sozinha no primeiro boot. É como as três
+              máquinas vão nascer configuradas, sem você digitar nada dentro delas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Os dois serviços que cada nó vai subir</h3>
+    <p>
+      O script instala <strong>dois</strong> programas em cada uma das três máquinas, e os
+      dois sobem em todas elas:
+    </p>
+    <ul>
+      <li><strong>Camada de dados</strong>, na porta <code>8081</code>: serve um catálogo de
+        200 peças e mais nada. Não soma, não decide, não valida. Só devolve linhas.</li>
+      <li><strong>Camada de aplicação</strong>, na porta <code>8080</code>: monta o total de
+        um pedido. Para isso precisa das peças, e é aí que ela escolhe: ler o catálogo no
+        próprio disco ou pedir a uma camada de dados pela rede.</li>
+    </ul>
+
+    <div class="callout">
+      <p class="callout-title">💡 A ideia central desta prática</p>
+      <p>
+        Repare no que acabou de acontecer: as três máquinas são idênticas e carregam o mesmo
+        código. <strong>Nenhuma delas sabe qual é a arquitetura do sistema.</strong> Duas
+        camadas ou três, uma réplica ou duas, tudo isso vai ser decidido por quem chama, no
+        momento da chamada. A arquitetura não está no código: está no arranjo. É exatamente
+        por isso que ela merece um modelo próprio, e é o que o Tópico 2 chama de
+        <em>modelo de arquitetura</em>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Ficha do ambiente
+       ============================================================ -->
+  <section class="lab-step" id="ficha">
+    <h2><span class="step-num is-accent">✎</span><span>Ficha do ambiente</span></h2>
+    <p>
+      Preencha os cinco campos abaixo assim que tiver os endereços (passo 3). Todos os
+      comandos desta página passam a mostrar os seus valores reais, e o botão
+      <em>copiar</em> já leva o comando pronto. Os dados ficam só no seu navegador.
+    </p>
+    <div class="ficha">
+      <label>IP público do nó A
+        <input type="text" data-ficha="IP_PUB_A" placeholder="ex.: 54.221.10.7" autocomplete="off"></label>
+      <label>IP privado do nó A
+        <input type="text" data-ficha="IP_A" placeholder="ex.: 172.31.20.15" autocomplete="off"></label>
+      <label>IP privado do nó B
+        <input type="text" data-ficha="IP_B" placeholder="ex.: 172.31.22.31" autocomplete="off"></label>
+      <label>IP privado do nó C
+        <input type="text" data-ficha="IP_C" placeholder="ex.: 172.31.40.22" autocomplete="off"></label>
+      <label>IP público do nó C
+        <input type="text" data-ficha="IP_PUB_C" placeholder="ex.: 3.88.201.44" autocomplete="off"></label>
+    </div>
+    <p class="saida">A cada nova sessão do Sandbox os endereços mudam. Volte aqui e atualize.</p>
+  </section>
+
+  <!-- ============================================================
+       Passo 1
+       ============================================================ -->
+  <section class="lab-step" id="passo-1">
+    <h2><span class="step-num">1</span><span>Abrir o laboratório e preparar a chave</span><span class="step-time">8 min</span></h2>
+
+    <ol>
+      <li>No curso da AWS Academy, abra o laboratório <strong>Sandbox</strong> e clique em
+        <strong>Start Lab</strong>. Espere o círculo ao lado de <em>AWS</em> ficar verde.</li>
+      <li>Clique em <strong>AWS</strong> para abrir o console em outra aba. Confira no canto
+        superior direito que a região é <strong>N. Virginia (us-east-1)</strong>.</li>
+      <li>De volta à aba do laboratório, clique em <strong>Details</strong> e depois em
+        <strong>Show</strong>. Na janela que abre, clique em <strong>Download PEM</strong> e
+        salve o arquivo <code>labsuser.pem</code>.</li>
+    </ol>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ A chave vale só para esta sessão</p>
+      <p>
+        Toda vez que você iniciar o laboratório de novo, baixe o <code>labsuser.pem</code>
+        outra vez e descarte o antigo. Tentar entrar com a chave da sessão passada dá
+        <code>Permission denied (publickey)</code>, e essa mensagem não explica nada.
+      </p>
+    </div>
+
+    <p>Agora ajuste a permissão do arquivo. O cliente SSH se recusa a usar uma chave privada
+      que outras contas do computador possam ler.</p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">PowerShell, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd $env:USERPROFILE\Downloads
+icacls .\labsuser.pem /inheritance:r /grant:r "$($env:USERNAME):R"</pre>
+      </div>
+      <p class="saida">processed file: .\labsuser.pem
+Successfully processed 1 files; Failed processing 0 files</p>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">terminal, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd ~/Downloads
+chmod 400 labsuser.pem</pre>
+      </div>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c1">
+      <label for="p02-c1"><strong>Checkpoint 1.</strong> O laboratório está verde, o console
+        está em us-east-1 e tenho o <code>labsuser.pem</code> desta sessão com a permissão
+        ajustada.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 2
+       ============================================================ -->
+  <section class="lab-step" id="passo-2">
+    <h2><span class="step-num">2</span><span>Criar o grupo de segurança</span><span class="step-time">5 min</span></h2>
+
+    <p>No console, busque por <strong>EC2</strong>. No menu da esquerda, em
+      <em>Network &amp; Security</em>, escolha <strong>Security Groups</strong> e clique em
+      <strong>Create security group</strong>.</p>
+
+    <ol>
+      <li><strong>Name:</strong> <code>sd-pratica02</code></li>
+      <li><strong>Description:</strong> <code>Pratica 02 Sistemas Distribuidos</code></li>
+      <li><strong>VPC:</strong> deixe a que já vem marcada (a rede padrão da conta)</li>
+      <li>Em <em>Inbound rules</em>, clique em <strong>Add rule</strong> duas vezes:
+        <ul>
+          <li>Type <strong>SSH</strong>, Source <strong>My IP</strong></li>
+          <li>Type <strong>Custom TCP</strong>, Port range <strong>8080</strong>, Source <strong>My IP</strong></li>
+        </ul>
+      </li>
+      <li>Clique em <strong>Create security group</strong>.</li>
+    </ol>
+
+    <p>Falta a regra que faz os nós se enxergarem. Abra o grupo recém-criado, vá em
+      <strong>Inbound rules</strong>, <strong>Edit inbound rules</strong>,
+      <strong>Add rule</strong>:</p>
+
+    <ol>
+      <li>Type <strong>All traffic</strong></li>
+      <li>Source <strong>Custom</strong> e, no campo ao lado, comece a digitar
+        <code>sd-pratica02</code> e selecione <em>o próprio grupo</em> na lista</li>
+      <li><strong>Save rules</strong></li>
+    </ol>
+
+    <div class="callout">
+      <p class="callout-title">💡 A porta 8081 ficou de fora, e isso é uma decisão de arquitetura</p>
+      <p>
+        Você abriu a porta <strong>8080</strong> para o seu computador, mas não a
+        <strong>8081</strong>. A camada de dados vai ficar alcançável apenas pelos outros
+        nós, através da regra do próprio grupo. Não é economia de digitação: é o desenho
+        clássico de um sistema em camadas, em que só a camada de cima é exposta e o banco
+        vive atrás dela. O Tópico 7 volta ao assunto com nome e sobrenome; por ora, note que
+        <em>onde cada peça mora</em> já é, por si só, uma medida de segurança.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c2">
+      <label for="p02-c2"><strong>Checkpoint 2.</strong> O grupo <code>sd-pratica02</code>
+        existe e tem três regras de entrada: SSH do meu IP, TCP 8080 do meu IP e todo o
+        tráfego vindo do próprio grupo.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 3
+       ============================================================ -->
+  <section class="lab-step" id="passo-3">
+    <h2><span class="step-num">3</span><span>Subir os três nós</span><span class="step-time">10 min</span></h2>
+
+    <h3>3.1 Dois nós na zona us-east-1a</h3>
+    <p>Em <strong>EC2 &gt; Instances</strong>, clique em <strong>Launch instances</strong> e
+      preencha:</p>
+    <ul>
+      <li><strong>Name:</strong> <code>sd-no</code></li>
+      <li><strong>AMI:</strong> Amazon Linux 2023 (já vem selecionada)</li>
+      <li><strong>Instance type:</strong> <code>t3.micro</code></li>
+      <li><strong>Key pair:</strong> <code>vockey</code></li>
+      <li>Em <strong>Network settings</strong>, clique em <strong>Edit</strong>:
+        <ul>
+          <li><strong>Subnet:</strong> escolha a sub-rede da zona <code>us-east-1a</code></li>
+          <li><strong>Auto-assign public IP:</strong> <code>Enable</code></li>
+          <li><strong>Firewall:</strong> <em>Select existing security group</em> e marque
+            <code>sd-pratica02</code></li>
+        </ul>
+      </li>
+      <li>Abra <strong>Advanced details</strong>, role até o fim e cole o script no campo
+        <strong>User data</strong> (botão no fim deste passo).</li>
+      <li>No painel <em>Summary</em>, à direita, mude <strong>Number of instances</strong>
+        para <strong>2</strong> e clique em <strong>Launch instance</strong>.</li>
+    </ul>
+
+    <h3>3.2 O terceiro nó na zona us-east-1b</h3>
+    <p>
+      Repita o <strong>Launch instances</strong> com os mesmos campos, mudando duas coisas:
+      <strong>Subnet</strong> para a sub-rede de <code>us-east-1b</code> e
+      <strong>Number of instances</strong> de volta para <strong>1</strong>. O user data é o
+      mesmo: cole outra vez.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Por que uma zona diferente</p>
+      <p>
+        As três máquinas nascem iguais, mas uma delas nasce longe. Essa distância vai virar
+        um número no passo 5 e um argumento no passo 6: colocar réplicas em zonas diferentes
+        é o que impede que a queda de um data center leve as duas embora. Toda decisão de
+        posicionamento é uma troca entre proximidade e independência.
+      </p>
+    </div>
+
+    <details class="dobra">
+      <summary>Ver o script de inicialização antes de executá-lo (recomendado)</summary>
+      <p>
+        Ele não instala nada de fora: escreve quatro programas Python que usam só a
+        biblioteca padrão, cria o catálogo em SQLite e sobe dois serviços. Ler o que você vai
+        executar é um hábito, não um exagero.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">campo "User data" do EC2</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar="setup-sh">copiar</button>
+        </div>
+        <pre id="setup-sh">#!/bin/bash
+# ============================================================
+# Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto
+# Script de inicializacao dos tres nos (campo "User data" do EC2).
+# Roda uma unica vez, no primeiro boot da instancia.
+#
+# Os tres nos recebem o MESMO script e sobem os MESMOS dois
+# servicos: camada de dados na 8081 e camada de aplicacao na 8080.
+# Que arranjo esta no ar (duas ou tres camadas, uma replica ou
+# duas) nao esta escrito em lugar nenhum do codigo: e escolha de
+# quem chama. Essa e a ideia central da pratica.
+#
+# Sem acentos de proposito: o user data executa antes do locale
+# estar definido. Testado em Amazon Linux 2023 (python3 da base).
+# ============================================================
+set -x
+exec &gt; /var/log/sd-setup.log 2&gt;&amp;1
+
+mkdir -p /opt/sd
+
+# ---- Identidade do no, lida do servico de metadados da instancia ----
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
+MD="http://169.254.169.254/latest/meta-data"
+AUTH="X-aws-ec2-metadata-token: $TOKEN"
+{
+  echo "instancia=$(curl -s -H "$AUTH" $MD/instance-id)"
+  echo "tipo=$(curl -s -H "$AUTH" $MD/instance-type)"
+  echo "az=$(curl -s -H "$AUTH" $MD/placement/availability-zone)"
+  echo "ip_privado=$(curl -s -H "$AUTH" $MD/local-ipv4)"
+  echo "ip_publico=$(curl -s -H "$AUTH" $MD/public-ipv4)"
+} &gt; /opt/sd/identidade.txt
+
+# ============================================================
+# semear.py - cria o catalogo que a camada de dados serve
+# ============================================================
+cat &gt; /opt/sd/semear.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Cria o catalogo de pecas da Pratica 02.
+
+Os precos saem de uma formula, nao de um sorteio: os tres nos
+precisam ter EXATAMENTE o mesmo catalogo. Se o conteudo variasse de
+maquina para maquina, a comparacao entre replicas do experimento 3
+nao provaria nada.
+"""
+import os
+import sqlite3
+import sys
+
+BANCO = "/opt/sd/catalogo.sqlite"
+PECAS = 200
+
+
+def preco(identificador):
+    """Deterministica: mesmo id, mesmo preco, em qualquer no."""
+    return round(10.0 + ((identificador * 3719) % 90000) / 100.0, 2)
+
+
+def criar(caminho=BANCO):
+    if os.path.exists(caminho):
+        os.remove(caminho)
+    conexao = sqlite3.connect(caminho)
+    try:
+        conexao.execute(
+            "CREATE TABLE peca ("
+            "  id INTEGER PRIMARY KEY,"
+            "  nome TEXT NOT NULL,"
+            "  preco REAL NOT NULL,"
+            "  estoque INTEGER NOT NULL)"
+        )
+        conexao.executemany(
+            "INSERT INTO peca (id, nome, preco, estoque) VALUES (?, ?, ?, ?)",
+            [(i, "peca-%03d" % i, preco(i), (i * 7) % 50)
+             for i in range(1, PECAS + 1)],
+        )
+        conexao.commit()
+    finally:
+        conexao.close()
+    return caminho
+
+
+if __name__ == "__main__":
+    destino = sys.argv[1] if len(sys.argv) &gt; 1 else BANCO
+    criar(destino)
+    print("catalogo com %d pecas em %s" % (PECAS, destino))
+PY
+
+# ============================================================
+# dados.py - CAMADA DE DADOS (porta 8081)
+# ============================================================
+cat &gt; /opt/sd/dados.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Camada de dados da Pratica 02.
+
+Serve o catalogo por HTTP e nao tem regra de negocio nenhuma: devolve
+linhas, e quem soma e a camada de aplicacao. Essa divisao de trabalho
+e o que faz dela uma camada separada, e nao apenas outro processo.
+
+  GET /peca?id=7         uma peca por chamada
+  GET /pecas?ids=1,2,3   varias pecas em UMA chamada
+  GET /saude             estou vivo?
+
+Sem dependencias: apenas a biblioteca padrao do Python.
+"""
+import http.server
+import json
+import socket
+import sqlite3
+import urllib.parse
+
+BANCO = "/opt/sd/catalogo.sqlite"
+PORTA = 8081
+
+CONTADOR = {"chamadas": 0, "linhas": 0}
+
+
+def no():
+    # So o primeiro rotulo: o nome completo traz ".ec2.internal" e
+    # estoura as colunas do cliente.
+    return socket.gethostname().split(".")[0]
+
+
+def busca(ids):
+    """Uma consulta SQL com todos os ids pedidos."""
+    if not ids:
+        return []
+    conexao = sqlite3.connect(BANCO)
+    try:
+        marcas = ",".join("?" * len(ids))
+        cursor = conexao.execute(
+            "SELECT id, nome, preco, estoque FROM peca WHERE id IN (%s)" % marcas,
+            ids,
+        )
+        return [{"id": linha[0], "nome": linha[1],
+                 "preco": linha[2], "estoque": linha[3]}
+                for linha in cursor.fetchall()]
+    finally:
+        conexao.close()
+
+
+class Servidor(http.server.ThreadingHTTPServer):
+    """Nao reclama quando o cliente desiste antes da resposta.
+
+    Sob timeout o cliente fecha a conexao no meio, e o servidor padrao
+    despejaria um traceback no journal a cada pedido abandonado.
+    """
+
+    def handle_error(self, pedido, endereco):
+        pass
+
+
+class Manipulador(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server_version = "sd-dados/1.0"
+
+    def responde(self, corpo, codigo=200):
+        bruto = json.dumps(corpo).encode("utf-8")
+        self.send_response(codigo)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(bruto)))
+        self.end_headers()
+        self.wfile.write(bruto)
+
+    def do_GET(self):
+        partes = urllib.parse.urlparse(self.path)
+        consulta = urllib.parse.parse_qs(partes.query)
+
+        if partes.path == "/saude":
+            self.responde({"ok": True, "no": no(), "camada": "dados"})
+            return
+
+        if partes.path == "/peca":
+            ids = [int(consulta.get("id", ["1"])[0])]
+        elif partes.path == "/pecas":
+            bruto = consulta.get("ids", [""])[0]
+            ids = [int(p) for p in bruto.split(",") if p.strip()]
+        else:
+            self.responde({"erro": "rota desconhecida"}, 404)
+            return
+
+        pecas = busca(ids)
+        CONTADOR["chamadas"] += 1
+        CONTADOR["linhas"] += len(pecas)
+        self.responde({
+            "no": no(),
+            "pecas": pecas,
+            "chamadas_atendidas": CONTADOR["chamadas"],
+        })
+
+    def log_message(self, *args):
+        pass  # silencia o log padrao, que poluiria o terminal
+
+
+if __name__ == "__main__":
+    Servidor(("0.0.0.0", PORTA), Manipulador).serve_forever()
+PY
+
+# ============================================================
+# aplicacao.py - CAMADA DE APLICACAO (porta 8080)
+# ============================================================
+cat &gt; /opt/sd/aplicacao.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Camada de aplicacao da Pratica 02.
+
+  GET /pedido?itens=30&amp;dados=local        duas camadas: le o disco
+  GET /pedido?itens=30&amp;dados=172.31.0.9   tres camadas: pergunta pela rede
+  GET /pedido?itens=30&amp;dados=...&amp;lote=1   a mesma resposta em UMA chamada
+  GET /saude                              estou vivo?
+
+O codigo e o mesmo nos dois arranjos: muda quem responde pelo dado.
+A arquitetura nao esta no codigo, esta no arranjo.
+
+Dois defeitos podem ser ligados de fora, criando um arquivo, para os
+experimentos 2 e 3. Nenhum dos dois afeta a rota /saude, e essa e
+justamente a licao: o teste de saude pergunta se o no esta vivo, nao
+se ele esta certo.
+"""
+import http.server
+import json
+import os
+import socket
+import sqlite3
+import time
+import urllib.parse
+import urllib.request
+
+BANCO = "/opt/sd/catalogo.sqlite"
+PORTA = 8080
+PORTA_DADOS = 8081
+TIMEOUT_DADOS = 5.0
+
+# Ligados com "sudo touch", desligados com "sudo rm". Sem reiniciar nada.
+LENTIDAO = "/opt/sd/lentidao"   # experimento 2: falha de temporizacao
+DEFEITO = "/opt/sd/defeito"     # experimento 3: falha arbitraria
+ATRASO = 5.0                    # segundos, maior que o timeout do cliente
+
+CONTADOR = {"pedidos": 0}
+
+IDENTIDADE = {}
+try:
+    with open("/opt/sd/identidade.txt", "r") as arquivo:
+        for linha in arquivo:
+            if "=" in linha:
+                chave, valor = linha.strip().split("=", 1)
+                IDENTIDADE[chave] = valor
+except OSError:
+    pass
+
+
+def no():
+    return socket.gethostname().split(".")[0]
+
+
+def do_disco(ids, lote):
+    """Duas camadas: a aplicacao abre o catalogo no proprio disco."""
+    conexao = sqlite3.connect(BANCO)
+    try:
+        if lote:
+            marcas = ",".join("?" * len(ids))
+            cursor = conexao.execute(
+                "SELECT id, preco FROM peca WHERE id IN (%s)" % marcas, ids)
+            return [{"id": l[0], "preco": l[1]} for l in cursor.fetchall()], 1
+        pecas = []
+        for identificador in ids:
+            cursor = conexao.execute(
+                "SELECT id, preco FROM peca WHERE id = ?", (identificador,))
+            pecas.extend({"id": l[0], "preco": l[1]} for l in cursor.fetchall())
+        return pecas, len(ids)
+    finally:
+        conexao.close()
+
+
+def baixa(url):
+    with urllib.request.urlopen(url, timeout=TIMEOUT_DADOS) as resposta:
+        return json.loads(resposta.read().decode("utf-8"))["pecas"]
+
+
+def alvo(host, porta):
+    """Aceita "ip" ou "ip:porta". O roteiro sempre passa so o ip."""
+    return host if ":" in host else "%s:%d" % (host, porta)
+
+
+def da_rede(ids, origem, lote):
+    """Tres camadas: a aplicacao pergunta para a camada de dados."""
+    base = "http://%s" % alvo(origem, PORTA_DADOS)
+    if lote:
+        lista = ",".join(str(i) for i in ids)
+        return baixa("%s/pecas?ids=%s" % (base, lista)), 1
+    pecas = []
+    for identificador in ids:
+        pecas.extend(baixa("%s/peca?id=%d" % (base, identificador)))
+    return pecas, len(ids)
+
+
+def total_de(pecas):
+    """Soma os precos. Com o defeito ligado, perde a peca mais cara.
+
+    O erro e silencioso de proposito: nao levanta excecao, nao escreve
+    no log e devolve um valor plausivel. E o que torna a falha
+    arbitraria diferente de todas as outras.
+    """
+    valores = sorted(peca["preco"] for peca in pecas)
+    if os.path.exists(DEFEITO):
+        valores = valores[:-1]
+    return round(sum(valores), 2)
+
+
+def monta_pedido(itens, origem, lote):
+    ids = list(range(1, itens + 1))
+    inicio = time.monotonic()
+    if origem == "local":
+        pecas, consultas = do_disco(ids, lote)
+    else:
+        pecas, consultas = da_rede(ids, origem, lote)
+    tempo_dados = time.monotonic() - inicio
+    CONTADOR["pedidos"] += 1
+    return {
+        "no": no(),
+        "az": IDENTIDADE.get("az", "?"),
+        "arranjo": "2 camadas" if origem == "local" else "3 camadas",
+        "origem": origem,
+        "itens": len(pecas),
+        "consultas": consultas,
+        "tempo_dados_ms": round(tempo_dados * 1000.0, 3),
+        "total": total_de(pecas),
+        "pedidos_atendidos": CONTADOR["pedidos"],
+    }
+
+
+class Servidor(http.server.ThreadingHTTPServer):
+    """Nao reclama quando o cliente desiste antes da resposta.
+
+    Com a lentidao ligada isso acontece a cada pedido: o cliente
+    esgota o timeout dele e fecha a conexao enquanto o servidor ainda
+    dorme. E comportamento esperado, nao defeito, e nao precisa de um
+    traceback no journal.
+    """
+
+    def handle_error(self, pedido, endereco):
+        pass
+
+
+class Manipulador(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server_version = "sd-aplicacao/1.0"
+
+    def responde(self, corpo, codigo=200):
+        bruto = json.dumps(corpo).encode("utf-8")
+        self.send_response(codigo)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(bruto)))
+        self.end_headers()
+        self.wfile.write(bruto)
+
+    def do_GET(self):
+        partes = urllib.parse.urlparse(self.path)
+        consulta = urllib.parse.parse_qs(partes.query)
+
+        # O teste de saude nao passa pela camada de dados e nao dorme:
+        # responde depressa mesmo com os dois defeitos ligados.
+        if partes.path == "/saude":
+            self.responde({"ok": True, "no": no(),
+                           "az": IDENTIDADE.get("az", "?"),
+                           "camada": "aplicacao"})
+            return
+
+        if partes.path != "/pedido":
+            self.responde({"erro": "rota desconhecida"}, 404)
+            return
+
+        if os.path.exists(LENTIDAO):
+            time.sleep(ATRASO)
+
+        itens = max(1, min(200, int(consulta.get("itens", ["12"])[0])))
+        origem = consulta.get("dados", ["local"])[0]
+        lote = consulta.get("lote", ["0"])[0] not in ("0", "", "nao")
+        try:
+            self.responde(monta_pedido(itens, origem, lote))
+        except Exception as erro:
+            self.responde({"erro": "%s: %s" % (type(erro).__name__, erro)}, 502)
+
+    def log_message(self, *args):
+        pass
+
+
+if __name__ == "__main__":
+    Servidor(("0.0.0.0", PORTA), Manipulador).serve_forever()
+PY
+
+# ============================================================
+# cliente.py - as tres medicoes da pratica
+# ============================================================
+cat &gt; /opt/sd/cliente.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Cliente da Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto.
+
+Uso (o atalho "sd" chama este arquivo):
+  sd tempo    &lt;app&gt; [--dados local|IP] [--itens N] [--lote] [--repeticoes R]
+  sd frota    &lt;app&gt; &lt;app&gt; [--dados local|IP] [--itens N] [--pedidos N]
+  sd conferir &lt;app&gt; &lt;app&gt; [--dados local|IP] [--itens N]
+  sd saude    &lt;app&gt; [&lt;app&gt; ...]
+
+Padroes: --dados local, --itens 12, --repeticoes 10, --pedidos 20.
+"""
+import json
+import socket
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+PORTA_APP = 8080
+TIMEOUT = 2.0
+
+SEM_OPCAO = ("lote",)  # opcoes que nao levam valor
+
+
+def opcoes(argumentos):
+    """Separa &lt;posicionais&gt; das opcoes --chave valor."""
+    posicionais, flags = [], {}
+    indice = 0
+    while indice &lt; len(argumentos):
+        atual = argumentos[indice]
+        if atual.startswith("--"):
+            nome = atual[2:]
+            if nome in SEM_OPCAO:
+                flags[nome] = True
+                indice += 1
+            else:
+                flags[nome] = argumentos[indice + 1] if indice + 1 &lt; len(argumentos) else ""
+                indice += 2
+        else:
+            posicionais.append(atual)
+            indice += 1
+    return posicionais, flags
+
+
+def alvo(host):
+    """Aceita "ip" ou "ip:porta". O roteiro sempre passa so o ip."""
+    return host if ":" in host else "%s:%d" % (host, PORTA_APP)
+
+
+def pede(host, itens, origem, lote=False, timeout=None):
+    """Um pedido a camada de aplicacao. Devolve (resposta, duracao).
+
+    A duracao vem do relogio monotonico, que nao anda para tras se a
+    hora da maquina for corrigida no meio da medicao.
+    """
+    timeout = TIMEOUT if timeout is None else timeout
+    parametros = {"itens": itens, "dados": origem}
+    if lote:
+        parametros["lote"] = "1"
+    url = "http://%s/pedido?%s" % (
+        alvo(host), urllib.parse.urlencode(parametros))
+    inicio = time.monotonic()
+    with urllib.request.urlopen(url, timeout=timeout) as resposta:
+        bruto = resposta.read()
+    return json.loads(bruto.decode("utf-8")), time.monotonic() - inicio
+
+
+def pergunta_saude(host, timeout=None):
+    timeout = TIMEOUT if timeout is None else timeout
+    url = "http://%s/saude" % alvo(host)
+    inicio = time.monotonic()
+    with urllib.request.urlopen(url, timeout=timeout) as resposta:
+        bruto = resposta.read()
+    return json.loads(bruto.decode("utf-8")), time.monotonic() - inicio
+
+
+def classifica(erro):
+    """Traduz a excecao no sintoma que o cliente enxerga."""
+    if isinstance(erro, urllib.error.HTTPError):
+        # A aplicacao respondeu, e respondeu que nao conseguiu. O motivo
+        # esta no corpo: quase sempre a camada de dados fora do ar.
+        try:
+            corpo = json.loads(erro.read().decode("utf-8"))
+            return "ERRO %d" % erro.code, corpo.get("erro", erro.reason)
+        except Exception:
+            return "ERRO %d" % erro.code, erro.reason
+    motivo = getattr(erro, "reason", erro)
+    if isinstance(motivo, (socket.timeout, TimeoutError)):
+        return "SEM RESPOSTA", "esgotou o tempo de espera"
+    if isinstance(motivo, ConnectionRefusedError):
+        return "RECUSADO", "conexao recusada (RST)"
+    if isinstance(motivo, ConnectionResetError):
+        return "RECUSADO", "conexao encerrada pelo outro lado"
+    if isinstance(motivo, socket.gaierror):
+        return "SEM NOME", "nome nao resolvido"
+    if isinstance(motivo, OSError) and getattr(motivo, "errno", None) == 113:
+        return "SEM ROTA", "sem rota para o destino"
+    return "ERRO", str(motivo)
+
+
+def ms(segundos):
+    return "%.3f ms" % (segundos * 1000.0)
+
+
+def mediana(valores):
+    ordenados = sorted(valores)
+    return ordenados[len(ordenados) // 2]
+
+
+def percentil95(valores):
+    ordenados = sorted(valores)
+    # Interpolacao pelo piso: com n=10 cai na nona amostra, e nao na
+    # ultima, que seria o proprio maximo escondendo a cauda.
+    return ordenados[int(0.95 * (len(ordenados) - 1))]
+
+
+def cmd_tempo(argumentos):
+    posicionais, flags = opcoes(argumentos)
+    host = posicionais[0]
+    origem = flags.get("dados", "local")
+    itens = int(flags.get("itens", 12))
+    repeticoes = int(flags.get("repeticoes", 10))
+    lote = bool(flags.get("lote", False))
+
+    arranjo = "2 camadas (dado no disco da propria aplicacao)" \
+        if origem == "local" else "3 camadas (dado em %s)" % origem
+    print("Pedido de %d itens em %s, %d repeticoes" % (itens, host, repeticoes))
+    print("arranjo: %s" % arranjo)
+    print("consulta: %s\n" % ("uma chamada em lote" if lote
+                              else "uma chamada por item"))
+
+    totais, nos_dados, resposta = [], [], None
+    for _ in range(repeticoes):
+        try:
+            resposta, duracao = pede(host, itens, origem, lote)
+            if "erro" in resposta:
+                print("  a aplicacao devolveu erro: %s" % resposta["erro"])
+                return
+            totais.append(duracao)
+            nos_dados.append(resposta["tempo_dados_ms"] / 1000.0)
+        except Exception as erro:
+            rotulo, detalhe = classifica(erro)
+            print("  %s: %s" % (rotulo, detalhe))
+        time.sleep(0.05)
+
+    if not totais:
+        print("  nenhuma resposta: confira o IP e a regra do grupo de seguranca")
+        return
+
+    fatia = 100.0 * mediana(nos_dados) / mediana(totais)
+    print("  respostas        : %d de %d" % (len(totais), repeticoes))
+    print("  mediana total    : %s   &lt;-- anote este valor" % ms(mediana(totais)))
+    print("  p95 total        : %s" % ms(percentil95(totais)))
+    print("  mediana nos dados: %s   (%.0f%% do total)" % (ms(mediana(nos_dados)), fatia))
+    print("  idas e voltas    : %d por pedido" % resposta["consultas"])
+    print("  total do pedido  : %.2f" % resposta["total"])
+
+
+def cmd_frota(argumentos):
+    posicionais, flags = opcoes(argumentos)
+    hosts = posicionais
+    origem = flags.get("dados", "local")
+    itens = int(flags.get("itens", 12))
+    pedidos = int(flags.get("pedidos", 20))
+
+    print("Rodizio entre %d replicas, %d pedidos de %d itens" % (
+        len(hosts), pedidos, itens))
+    print("timeout de %.1f s; se uma replica falhar, tenta a seguinte\n" % TIMEOUT)
+
+    atendidos, perdidos = {}, 0
+    custos_diretos, custos_com_desvio, falhas = [], [], {}
+    for numero in range(pedidos):
+        giro = numero % len(hosts)
+        ordem = hosts[giro:] + hosts[:giro]
+        inicio = time.monotonic()
+        desviou = False
+        for host in ordem:
+            try:
+                resposta, _ = pede(host, itens, origem)
+                nome = resposta.get("no", host)
+                atendidos[nome] = atendidos.get(nome, 0) + 1
+                custo = time.monotonic() - inicio
+                (custos_com_desvio if desviou else custos_diretos).append(custo)
+                break
+            except Exception as erro:
+                rotulo, detalhe = classifica(erro)
+                falhas[rotulo] = falhas.get(rotulo, 0) + 1
+                falhas["_detalhe"] = detalhe
+                desviou = True
+        else:
+            perdidos += 1
+
+    todos = custos_diretos + custos_com_desvio
+    print("  atendidos     : %d de %d" % (pedidos - perdidos, pedidos))
+    if atendidos:
+        print("  por no        : %s" % " | ".join(
+            "%s %d" % (nome, quantos) for nome, quantos in sorted(atendidos.items())))
+    if falhas:
+        detalhe = falhas.pop("_detalhe", "")
+        print("  tentativas perdidas: %s (%s)" % (
+            " | ".join("%s %d" % (rotulo, quantos)
+                       for rotulo, quantos in sorted(falhas.items())), detalhe))
+    else:
+        print("  tentativas perdidas: nenhuma")
+    if todos:
+        print("  mediana       : %s" % ms(mediana(todos)))
+        print("  p95           : %s" % ms(percentil95(todos)))
+    if custos_com_desvio and custos_diretos:
+        penalidade = mediana(custos_com_desvio) - mediana(custos_diretos)
+        print("  preco do desvio: %s a mais nos pedidos que precisaram da"
+              " segunda tentativa" % ms(penalidade))
+
+
+def cmd_conferir(argumentos):
+    posicionais, flags = opcoes(argumentos)
+    hosts = posicionais
+    origem = flags.get("dados", "local")
+    itens = int(flags.get("itens", 12))
+
+    print("Mesma pergunta, duas replicas: %d itens, dados em %s\n" % (itens, origem))
+    respostas = []
+    for host in hosts:
+        try:
+            resposta, duracao = pede(host, itens, origem)
+            respostas.append(resposta)
+            print("  no %-18s %-12s total %12.2f   itens %3d   %s" % (
+                resposta["no"], resposta["az"], resposta["total"],
+                resposta["itens"], ms(duracao)))
+        except Exception as erro:
+            rotulo, detalhe = classifica(erro)
+            print("  %s  %s: %s" % (host, rotulo, detalhe))
+    print("")
+
+    if len(respostas) &lt; 2:
+        print("  Preciso de duas respostas para comparar.")
+        return
+
+    divergentes = [campo for campo in ("total", "itens")
+                   if len({r[campo] for r in respostas}) &gt; 1]
+    if not divergentes:
+        print("  As respostas sao IDENTICAS.")
+        print("  Isso nao prova que estao certas: prova que as duas concordam.")
+        return
+
+    print("  As respostas DIVERGEM em: %s" % ", ".join(divergentes))
+    print("  Nenhuma replica acusou erro e as duas responderam 200 OK.")
+    print("  Elas leram o mesmo catalogo, entao a diferenca esta na aplicacao.")
+    print("  Com duas replicas voce descobre que ha desacordo,")
+    print("  mas nao descobre qual das duas esta errada.")
+
+
+def cmd_saude(argumentos):
+    hosts, _ = opcoes(argumentos)
+    print("Saude das replicas: a pergunta que um balanceador faria\n")
+    for host in hosts:
+        try:
+            resposta, duracao = pergunta_saude(host)
+            print("  %-16s SAUDAVEL   no %-18s %s" % (
+                host, resposta.get("no", "?"), ms(duracao)))
+        except Exception as erro:
+            rotulo, detalhe = classifica(erro)
+            print("  %-16s FORA       %s: %s" % (host, rotulo, detalhe))
+    print("")
+    print("  Esta rota nao consulta a camada de dados e nao soma nada.")
+    print("  Ela responde \"estou vivo\", nunca \"estou certo\".")
+
+
+COMANDOS = {
+    "tempo": cmd_tempo,
+    "frota": cmd_frota,
+    "conferir": cmd_conferir,
+    "saude": cmd_saude,
+}
+
+if __name__ == "__main__":
+    if len(sys.argv) &lt; 3 or sys.argv[1] not in COMANDOS:
+        print(__doc__)
+        sys.exit(2)
+    COMANDOS[sys.argv[1]](sys.argv[2:])
+PY
+
+# ---- Atalho "sd" para encurtar os comandos da pratica ----
+printf '#!/bin/bash\nexec /usr/bin/python3 /opt/sd/cliente.py "$@"\n' &gt; /usr/local/bin/sd
+chmod +x /usr/local/bin/sd /opt/sd/dados.py /opt/sd/aplicacao.py /opt/sd/cliente.py
+
+# ---- Catalogo, antes dos servicos subirem ----
+/usr/bin/python3 /opt/sd/semear.py
+
+# ---- As duas camadas, cada uma no seu servico ----
+cat &gt; /etc/systemd/system/sd-dados.service &lt;&lt;'UNIT'
+[Unit]
+Description=Camada de dados da Pratica 02 (Sistemas Distribuidos)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/sd/dados.py
+Restart=always
+RestartSec=1
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat &gt; /etc/systemd/system/sd-aplicacao.service &lt;&lt;'UNIT'
+[Unit]
+Description=Camada de aplicacao da Pratica 02 (Sistemas Distribuidos)
+After=network-online.target sd-dados.service
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/sd/aplicacao.py
+Restart=always
+RestartSec=1
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now sd-dados
+systemctl enable --now sd-aplicacao
+
+echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre>
+      </div>
+    </details>
+
+    <p>
+      <button type="button" class="btn" data-copiar="setup-sh">⧉ Copiar o script de inicialização</button>
+    </p>
+
+    <h3>3.3 Colher os endereços</h3>
+    <p>
+      Espere cerca de dois minutos (o script roda no primeiro boot) e, em
+      <strong>EC2 &gt; Instances</strong>, anote de cada instância a
+      <strong>zona</strong>, o <strong>IP privado</strong> e o <strong>IP público</strong>.
+      Se preferir a lista pronta, abra o <strong>CloudShell</strong> (o ícone de terminal no
+      canto inferior esquerdo do console) e rode:
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=sd-no*" "Name=instance-state-name,Values=pending,running" \
+  --query 'Reservations[].Instances[].{Zona:Placement.AvailabilityZone,
+           Privado:PrivateIpAddress, Publico:PublicIpAddress, Estado:State.Name}' \
+  --output table</pre>
+    </div>
+
+    <p class="saida">-------------------------------------------------------------
+|                     DescribeInstances                     |
++---------+----------------+----------------+---------------+
+| Estado  |    Privado     |    Publico     |     Zona      |
++---------+----------------+----------------+---------------+
+|  running|  172.31.20.15  |  54.221.10.7   |  us-east-1a   |
+|  running|  172.31.22.31  |  3.94.60.12    |  us-east-1a   |
+|  running|  172.31.40.22  |  3.88.201.44   |  us-east-1b   |
++---------+----------------+----------------+---------------+</p>
+
+    <p>
+      Os dois de <code>us-east-1a</code> são os nós <strong>A</strong> e <strong>B</strong>:
+      escolha qualquer um como A (é nele que você vai trabalhar) e o outro será B. O de
+      <code>us-east-1b</code> é o nó <strong>C</strong>. Preencha agora a
+      <a href="#ficha">ficha do ambiente</a>.
+    </p>
+
+    <p>
+      Para conferir que os serviços subiram, abra no navegador
+      <code>http://<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span>:8080/saude</code>.
+      Você deve ver um JSON curto com o nome do nó e a zona dele.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c3">
+      <label for="p02-c3"><strong>Checkpoint 3.</strong> Três instâncias <em>running</em>,
+        duas em us-east-1a e uma em us-east-1b, a ficha preenchida e o
+        <code>/saude</code> respondendo no navegador.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 4
+       ============================================================ -->
+  <section class="lab-step" id="passo-4">
+    <h2><span class="step-num">4</span><span>Entrar por SSH e ver as duas camadas</span><span class="step-time">7 min</span></h2>
+
+    <p>Na pasta onde está o <code>labsuser.pem</code>, abra <strong>duas janelas</strong> de
+      terminal. Você vai alternar entre elas o tempo todo.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 1: nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -i labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span></pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2: nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -i labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_C">IP-PUBLICO-C</span></pre>
+    </div>
+
+    <p>Responda <code>yes</code> à pergunta sobre o <em>fingerprint</em>. Você entra sem
+      digitar senha: quem provou a sua identidade foi a chave privada.</p>
+
+    <p>No <strong>nó A</strong>, veja as duas camadas rodando lado a lado:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>systemctl is-active sd-dados sd-aplicacao
+cat /opt/sd/identidade.txt</pre>
+    </div>
+
+    <p class="saida">active
+active
+instancia=i-0a1b2c3d4e5f60718
+tipo=t3.micro
+az=us-east-1a
+ip_privado=172.31.20.15
+ip_publico=54.221.10.7
+pratica 02: no pronto em 2026-08-11T13:22:41+00:00</p>
+
+    <p>
+      São dois processos distintos, na mesma máquina, escutando em portas distintas.
+      Pergunte a cada um deles quem ele é:
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -s localhost:8081/saude; echo
+curl -s localhost:8080/saude; echo</pre>
+    </div>
+
+    <p class="saida">{"ok": true, "no": "ip-172-31-20-15", "camada": "dados"}
+{"ok": true, "no": "ip-172-31-20-15", "az": "us-east-1a", "camada": "aplicacao"}</p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Camada é papel, não é máquina</p>
+      <p>
+        As três máquinas rodam as duas camadas. Nenhuma delas "é" a camada de dados: elas
+        <em>oferecem</em> as duas, e você é quem decide quais vai usar em cada chamada. Um
+        mesmo nó pode ser cliente de um serviço e servidor de outro ao mesmo tempo, e é
+        assim que os sistemas reais funcionam: o servidor Web que responde ao seu navegador é
+        cliente do DNS um instante depois.
+      </p>
+    </div>
+
+    <h3>4.3 O atalho que você vai usar daqui em diante</h3>
+    <p>
+      Os próximos passos não chamam mais o <code>curl</code> na mão. O user data instalou
+      <code>/usr/local/bin/sd</code>, um atalho com quatro subcomandos:
+      <code>tempo</code> (mede um pedido), <code>frota</code> (distribui pedidos entre
+      réplicas), <code>conferir</code> (compara réplicas) e <code>saude</code>. Digitar
+      <code>sd</code> sozinho imprime o uso, e isso também serve de conferência barata de que
+      o provisionamento terminou.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd</pre>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c4">
+      <label for="p02-c4"><strong>Checkpoint 4.</strong> Estou conectado ao nó A em uma janela
+        e ao nó C em outra, os dois <code>/saude</code> do nó A responderam, um dizendo
+        <code>dados</code> e o outro <code>aplicacao</code>, e o comando <code>sd</code>
+        imprimiu o uso.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 5
+       ============================================================ -->
+  <section class="lab-step" id="passo-5">
+    <h2><span class="step-num">5</span><span>Experimento 1: a fronteira entre camadas tem preço</span><span class="step-time">20 min</span></h2>
+
+    <p>
+      Trabalhe na janela do <strong>nó A</strong>. Todos os comandos abaixo pedem a mesma
+      coisa para a <strong>mesma aplicação</strong>, no nó B: o total de um pedido. O que
+      muda é <em>de onde ela tira as peças</em>.
+    </p>
+
+    <h3>5.1 Um item só</h3>
+    <p>Primeiro o arranjo de <strong>duas camadas</strong>: a aplicação lê o catálogo no
+      disco dela mesma.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados local --itens 1</pre>
+    </div>
+
+    <p class="saida">Pedido de 1 itens em 172.31.22.31, 10 repeticoes
+arranjo: 2 camadas (dado no disco da propria aplicacao)
+consulta: uma chamada por item
+
+  respostas        : 10 de 10
+  mediana total    : 3.104 ms   &lt;-- anote este valor
+  p95 total        : 5.418 ms
+  mediana nos dados: 0.312 ms   (10% do total)
+  idas e voltas    : 1 por pedido
+  total do pedido  : 47.19</p>
+
+    <p>Agora <strong>três camadas</strong>: a mesma aplicação, mas as peças vêm da camada de
+      dados do nó A, pela rede.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 1</pre>
+    </div>
+
+    <p class="saida">  respostas        : 10 de 10
+  mediana total    : 5.902 ms   &lt;-- anote este valor
+  p95 total        : 9.771 ms
+  mediana nos dados: 2.744 ms   (46% do total)
+  idas e voltas    : 1 por pedido
+  total do pedido  : 47.19</p>
+
+    <p>
+      Mesmo total do pedido, porque o catálogo é idêntico nos três nós. A conta ficou cerca
+      de <strong>2,8 ms mais cara</strong>. Guarde esse número: ele é o preço de atravessar
+      a fronteira uma vez.
+    </p>
+
+    <h3>5.2 Trinta itens</h3>
+    <p>Repita os dois comandos com um pedido de trinta peças em vez de uma.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados local --itens 30
+sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 30</pre>
+    </div>
+
+    <p class="saida">arranjo: 2 camadas (dado no disco da propria aplicacao)
+  mediana total    : 5.361 ms   &lt;-- anote este valor
+  mediana nos dados: 1.986 ms   (37% do total)
+  idas e voltas    : 30 por pedido
+  total do pedido  : 12193.35
+
+arranjo: 3 camadas (dado em 172.31.20.15)
+  mediana total    : 81.774 ms   &lt;-- anote este valor
+  p95 total        : 96.330 ms
+  mediana nos dados: 76.905 ms   (94% do total)
+  idas e voltas    : 30 por pedido
+  total do pedido  : 12193.35</p>
+
+    <p>
+      <strong>Quinze vezes mais lento, com o mesmo código e o mesmo resultado.</strong> A
+      aplicação fez as mesmas trinta consultas nos dois casos. No arranjo de duas camadas
+      elas custaram 2 ms somadas; no de três, quase 77 ms. E olhe a última linha do resumo:
+      94% do tempo do pedido foi gasto esperando a camada de dados.
+    </p>
+
+    <p>
+      Isso tem nome. Uma requisição que se desdobra em uma consulta por item é o
+      <button type="button" class="nota-termo" data-nota="problema-n-mais-1">problema N+1</button>,
+      e ele é invisível enquanto tudo mora junto.
+    </p>
+
+    <h3>5.3 A mesma fronteira, mais longe</h3>
+    <p>Agora com a camada de dados na <em>outra zona de disponibilidade</em>, no nó C:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --itens 30</pre>
+    </div>
+
+    <p class="saida">arranjo: 3 camadas (dado em 172.31.40.22)
+  mediana total    : 88.140 ms   &lt;-- anote este valor
+  mediana nos dados: 83.221 ms   (94% do total)
+  idas e voltas    : 30 por pedido</p>
+
+    <p>
+      Um resultado desconfortável e importante: a outra zona acrescenta pouco. A diferença
+      física entre duas zonas vizinhas é de fração de milissegundo por viagem, e mesmo
+      multiplicada pelas trinta viagens ela costuma somar poucos milissegundos, enquanto cada
+      viagem já custava mais de 2 ms de software (abrir conexão, montar HTTP, serializar
+      JSON, acordar processos). <strong>A fronteira já era cara antes da distância
+      entrar na conta.</strong> Se o seu resultado sair até menor que o da mesma zona, não é
+      erro de medição: é o ruído do software engolindo o sinal da distância. E se sair
+      visivelmente maior, o argumento não muda: compare a diferença entre as duas zonas com
+      os 80 ms que as trinta rodadas já custavam e veja qual parcela domina.
+    </p>
+
+    <h3>5.4 A mesma arquitetura, uma viagem só</h3>
+    <p>
+      Continuamos com três camadas, o mesmo dado remoto e a mesma resposta. Muda apenas que a
+      aplicação pede as trinta peças de uma vez:
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 30 --lote</pre>
+    </div>
+
+    <p class="saida">arranjo: 3 camadas (dado em 172.31.20.15)
+consulta: uma chamada em lote
+
+  respostas        : 10 de 10
+  mediana total    : 8.219 ms   &lt;-- anote este valor
+  mediana nos dados: 3.410 ms   (41% do total)
+  idas e voltas    : 1 por pedido
+  total do pedido  : 12193.35</p>
+
+    <div class="callout">
+      <p class="callout-title">💡 O que ler nesses números</p>
+      <p>
+        Separar as camadas não é o erro; conversar trinta vezes é. O arranjo de três camadas
+        com uma chamada em lote custou 8 ms contra os 5 ms do arranjo de duas camadas: um
+        preço pequeno por ganhar um banco de dados independente, que pode ser reforçado,
+        replicado e protegido sem tocar na aplicação. O mesmo arranjo com trinta chamadas
+        custou 82 ms. <strong>A conta é do número de rodadas, não da separação.</strong>
+      </p>
+    </div>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ E o que estes números não dizem</p>
+      <p>
+        Um sistema de verdade reaproveita conexões e mantém um <em>pool</em> aberto para o
+        banco, o que barateia cada viagem, mas não a elimina: continua havendo uma ida, uma
+        volta e uma espera. E o efeito piora com a carga: enquanto a aplicação espera pela
+        trigésima resposta, ela está ocupando memória e um lugar na fila. É por isso que a
+        conta de latência do Tópico 6 começa contando rodadas.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c5">
+      <label for="p02-c5"><strong>Checkpoint 5.</strong> Tenho os seis tempos do experimento
+        1 na <a href="#passo-8">tabela de resultados</a> e sei explicar por que o arranjo em
+        lote recuperou quase todo o prejuízo.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 6
+       ============================================================ -->
+  <section class="lab-step" id="passo-6">
+    <h2><span class="step-num">6</span><span>Experimento 2: uma réplica cai</span><span class="step-time">15 min</span></h2>
+
+    <p>
+      Até agora só o nó B trabalhou. Vamos usar os dois nós de aplicação como
+      <strong>réplicas</strong>: o cliente reveza os pedidos entre eles e, se um falhar,
+      tenta o outro. É o mesmo desenho de um balanceador de carga, escrito em vinte linhas
+      para você poder ler.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --pedidos 20</pre>
+    </div>
+
+    <p class="saida">Rodizio entre 2 replicas, 20 pedidos de 12 itens
+timeout de 2.0 s; se uma replica falhar, tenta a seguinte
+
+  atendidos     : 20 de 20
+  por no        : ip-172-31-22-31 10 | ip-172-31-40-22 10
+  tentativas perdidas: nenhuma
+  mediana       : 4.318 ms
+  p95           : 11.204 ms</p>
+
+    <h3>6.1 Derrube a aplicação do nó C</h3>
+    <p>Na <strong>janela 2</strong>, que está conectada ao nó C:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo systemctl stop sd-aplicacao
+systemctl is-active sd-aplicacao sd-dados</pre>
+    </div>
+
+    <p class="saida">inactive
+active</p>
+
+    <p>
+      Note que só a camada de aplicação parou. A camada de dados do nó C continua no ar,
+      atendendo normalmente. Volte à <strong>janela 1</strong> e repita o rodízio:
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --pedidos 20
+sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">  atendidos     : 20 de 20
+  por no        : ip-172-31-22-31 20
+  tentativas perdidas: RECUSADO 10 (conexao recusada (RST))
+  mediana       : 5.771 ms
+  p95           : 9.882 ms
+  preco do desvio: 1.402 ms a mais nos pedidos que precisaram da segunda tentativa
+
+Saude das replicas: a pergunta que um balanceador faria
+
+  172.31.22.31     SAUDAVEL   no ip-172-31-22-31   1.905 ms
+  172.31.40.22     FORA       RECUSADO: conexao recusada (RST)</p>
+
+    <p>
+      <strong>Vinte de vinte atendidos, com metade da frota no chão.</strong> Quem estivesse
+      olhando só para a linha de cima não teria visto nada acontecer. Isso é
+      <em>mascaramento</em>: o serviço converteu a falha de um componente em algo mais
+      aceitável, no caso em um atraso de 1,4 ms. A linha das tentativas perdidas é o preço,
+      e ela existe justamente porque o programa se deu ao trabalho de contar.
+    </p>
+
+    <h3>6.2 A mesma queda, mil vezes mais cara</h3>
+    <p>
+      Suba a aplicação de volta no nó C e, no lugar dela, ligue um defeito diferente: o
+      processo continua vivo e responde, mas leva cinco segundos para montar cada pedido.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo systemctl start sd-aplicacao
+sudo touch /opt/sd/lentidao</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --pedidos 8
+sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">  atendidos     : 8 de 8
+  por no        : ip-172-31-22-31 8
+  tentativas perdidas: SEM RESPOSTA 4 (esgotou o tempo de espera)
+  mediana       : 2003.118 ms
+  p95           : 2011.640 ms
+  preco do desvio: 2001.664 ms a mais nos pedidos que precisaram da segunda tentativa
+
+  172.31.22.31     SAUDAVEL   no ip-172-31-22-31   1.905 ms
+  172.31.40.22     SAUDAVEL   no ip-172-31-40-22   2.140 ms</p>
+
+    <p>
+      Todos os oito pedidos foram atendidos de novo: o mascaramento funcionou. Mas o desvio
+      que custava 1,4 ms passou a custar <strong>2 segundos</strong>, porque agora não há
+      recusa nenhuma para o cliente escutar. Ele precisa esperar a paciência acabar. E repare
+      na última linha: <strong>o nó C está saudável</strong>. A rota de saúde não monta
+      pedido nenhum, então ela responde depressa mesmo quando tudo o que importa está parado.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Falha por omissão e falha de temporização</p>
+      <p>
+        Os dois casos que você acabou de provocar têm nomes distintos no modelo de falhas do
+        Tópico 2. O primeiro é uma <strong>falha por omissão</strong>: o processo parou e
+        ficou parado. O segundo exige um cuidado que é fácil pular. O tópico diz que
+        <strong>falha de temporização</strong> só faz sentido quando existe um limite
+        prometido, e a rede que você está usando não promete nada. Quem prometeu foi o
+        cliente, para si mesmo: <code>TIMEOUT = 2.0</code>. É em relação a esse limite
+        declarado que a resposta chega atrasada, e é só por isso que o nome se aplica aqui.
+        Sem um limite declarado, num sistema assíncrono, nem "atraso" se poderia afirmar:
+        restaria a suspeita. A replicação mascarou os dois casos, e cobrou preços que diferem
+        em três ordens de grandeza. A diferença toda está em quanto tempo o sistema leva para
+        <em>desconfiar</em>.
+      </p>
+    </div>
+
+    <p>Desligue a lentidão antes de seguir:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo rm -f /opt/sd/lentidao</pre>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c6">
+      <label for="p02-c6"><strong>Checkpoint 6.</strong> Provoquei as duas falhas, anotei os
+        dois preços do desvio e vi o nó C aparecer como <em>saudável</em> mesmo estando
+        inútil.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 7
+       ============================================================ -->
+  <section class="lab-step" id="passo-7">
+    <h2><span class="step-num">7</span><span>Experimento 3: uma réplica mente</span><span class="step-time">15 min</span></h2>
+
+    <p>
+      Agora o nó C não vai cair nem demorar. Ele vai responder na hora, com HTTP 200, e vai
+      responder errado.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo touch /opt/sd/defeito</pre>
+    </div>
+
+    <p>Volte para a janela 1 e procure o defeito com os instrumentos que você tem:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span>
+sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --pedidos 10</pre>
+    </div>
+
+    <p class="saida">  172.31.22.31     SAUDAVEL   no ip-172-31-22-31   1.884 ms
+  172.31.40.22     SAUDAVEL   no ip-172-31-40-22   2.093 ms
+
+  atendidos     : 10 de 10
+  por no        : ip-172-31-22-31 5 | ip-172-31-40-22 5
+  tentativas perdidas: nenhuma
+  mediana       : 33.940 ms
+  p95           : 41.002 ms</p>
+
+    <p>
+      Nada. Saúde verde nos dois, dez de dez atendidos, nenhuma falha, tempos normais.
+      Qualquer painel de monitoramento estaria todo verde, e metade das respostas está
+      errada.
+    </p>
+
+    <h3>7.1 A única coisa que ainda dá para fazer</h3>
+    <p>
+      Se nenhum instrumento acusa, resta perguntar a mesma coisa para as duas réplicas e
+      comparar as respostas. As duas vão ler o <strong>mesmo</strong> catálogo, na camada de
+      dados do nó A, então qualquer diferença só pode ter nascido na aplicação:
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd conferir <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 12</pre>
+    </div>
+
+    <p class="saida">Mesma pergunta, duas replicas: 12 itens, dados em 172.31.20.15
+
+  no ip-172-31-22-31   us-east-1a   total      3020.82   itens  12   32.104 ms
+  no ip-172-31-40-22   us-east-1b   total      2564.54   itens  12   35.660 ms
+
+  As respostas DIVERGEM em: total
+  Nenhuma replica acusou erro e as duas responderam 200 OK.
+  Elas leram o mesmo catalogo, entao a diferenca esta na aplicacao.
+  Com duas replicas voce descobre que ha desacordo,
+  mas nao descobre qual das duas esta errada.</p>
+
+    <p>
+      Achamos. E, mesmo tendo achado, <strong>você não sabe qual das duas mente</strong>. Com
+      duas réplicas em desacordo há exatamente um empate. É por isso que os sistemas que
+      levam esse problema a sério trabalham com três, cinco ou mais réplicas e decidem por
+      maioria, e é por isso que a
+      <button type="button" class="nota-termo" data-nota="falha-bizantina">falha bizantina</button>
+      é a semântica mais cara de tolerar.
+    </p>
+
+    <p>Desligue o defeito e confira que a divergência some:</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo rm -f /opt/sd/defeito</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd conferir <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 12</pre>
+    </div>
+
+    <p class="saida">  As respostas sao IDENTICAS.
+  Isso nao prova que estao certas: prova que as duas concordam.</p>
+
+    <div class="callout">
+      <p class="callout-title">💡 O que a replicação mascara, e o que ela não mascara</p>
+      <p>
+        Nos três casos o nó C falhou, e a frota continuou entregando todas as respostas
+        pedidas. A
+        diferença está no que foi entregue. Quando C <em>parou</em>, o pedido foi refeito em
+        B e a resposta saiu certa: a redundância resolveu. Quando C <em>mentiu</em>, cada
+        pedido que caiu nele produziu uma resposta errada, entregue com sucesso, e a segunda
+        réplica nunca chegou a ser consultada, porque não houve falha nenhuma para detectar.
+        <strong>Replicar protege contra o nó que some, não contra o nó que erra.</strong>
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c7">
+      <label for="p02-c7"><strong>Checkpoint 7.</strong> Vi os dois totais divergentes com as
+        duas réplicas saudáveis, anotei os valores e desliguei o defeito.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 8
+       ============================================================ -->
+  <section class="lab-step" id="passo-8">
+    <h2><span class="step-num">8</span><span>Anotar os resultados</span><span class="step-time">5 min</span></h2>
+
+    <p>
+      Cada linha diz de onde tirar o número. <strong>Não existe resposta certa aqui: o valor
+      é o seu.</strong> A coluna de referência é só uma checagem de sanidade. Ficar dentro da
+      faixa não vale ponto, e ficar fora não é erro: é motivo para repetir a medição e
+      desconfiar do que aconteceu naquele instante.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Para que servem estes números</p>
+      <p>
+        O questionário desta prática, no Moodle, pergunta sobre eles. Não pede o valor exato:
+        pede a <strong>faixa</strong> em que o seu resultado caiu, ou a comparação entre dois
+        deles. Quem não mediu não tem como responder. Use o botão <em>copiar meus
+        resultados</em> antes de encerrar o laboratório: a sessão apaga as máquinas.
+      </p>
+    </div>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:44%">Medição</th><th style="width:28%">O seu valor</th><th>Referência</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1 item, duas camadas<br>
+              <span class="ref">passo 5.1 · linha <code>mediana total</code></span></td>
+            <td><input type="text" data-res="um_local" data-rotulo="1 item, 2 camadas (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">2 a 6 ms</td>
+          </tr>
+          <tr>
+            <td>1 item, três camadas<br>
+              <span class="ref">passo 5.1 · segundo comando</span></td>
+            <td><input type="text" data-res="um_remoto" data-rotulo="1 item, 3 camadas (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">4 a 10 ms: alguns milissegundos a mais</td>
+          </tr>
+          <tr>
+            <td>30 itens, duas camadas<br>
+              <span class="ref">passo 5.2 · linha <code>mediana total</code></span></td>
+            <td><input type="text" data-res="trinta_local" data-rotulo="30 itens, 2 camadas (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">3 a 12 ms: quase igual ao de 1 item</td>
+          </tr>
+          <tr>
+            <td>30 itens, três camadas, mesma zona<br>
+              <span class="ref">passo 5.2 · segundo comando</span></td>
+            <td><input type="text" data-res="trinta_remoto" data-rotulo="30 itens, 3 camadas mesma zona (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">50 a 150 ms</td>
+          </tr>
+          <tr>
+            <td>30 itens, três camadas, outra zona<br>
+              <span class="ref">passo 5.3</span></td>
+            <td><input type="text" data-res="trinta_outra_az" data-rotulo="30 itens, 3 camadas outra zona (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">igual ou até ~50% maior que o anterior, e pode sair até menor</td>
+          </tr>
+          <tr>
+            <td>30 itens, três camadas, em lote<br>
+              <span class="ref">passo 5.4</span></td>
+            <td><input type="text" data-res="trinta_lote" data-rotulo="30 itens, 3 camadas em lote (mediana, ms)" placeholder="ms"></td>
+            <td class="ref">5 a 20 ms</td>
+          </tr>
+          <tr>
+            <td>Quantas vezes o arranjo de 30 chamadas foi mais lento que o em lote<br>
+              <span class="ref">conta sua · divida o tempo das 30 chamadas pelo tempo em lote: ex.: 81,8 ÷ 8,2 = 10</span></td>
+            <td><input type="text" data-res="razao_lote" data-rotulo="razao 30 chamadas / lote" placeholder="vezes"></td>
+            <td class="ref">5 a 20 vezes</td>
+          </tr>
+          <tr>
+            <td>Fatia do pedido gasta na camada de dados, com 30 chamadas<br>
+              <span class="ref">passo 5.2 · o percentual da linha <code>mediana nos dados</code></span></td>
+            <td><input type="text" data-res="fatia_dados" data-rotulo="fatia do tempo na camada de dados (%)" placeholder="%"></td>
+            <td class="ref">acima de 85%</td>
+          </tr>
+          <tr>
+            <td>Preço do desvio com a réplica parada<br>
+              <span class="ref">passo 6.1 · linha <code>preco do desvio</code></span></td>
+            <td><input type="text" data-res="desvio_parada" data-rotulo="preco do desvio, replica parada (ms)" placeholder="ms"></td>
+            <td class="ref">menos de 10 ms</td>
+          </tr>
+          <tr>
+            <td>Preço do desvio com a réplica lenta<br>
+              <span class="ref">passo 6.2 · mesma linha</span></td>
+            <td><input type="text" data-res="desvio_lenta" data-rotulo="preco do desvio, replica lenta (ms)" placeholder="ms"></td>
+            <td class="ref">cerca de 2000 ms: o timeout do cliente</td>
+          </tr>
+          <tr>
+            <td>Pedidos atendidos com uma réplica no chão<br>
+              <span class="ref">passo 6.1 · linha <code>atendidos</code></span></td>
+            <td><input type="text" data-res="atendidos_falha" data-rotulo="pedidos atendidos com uma replica fora" placeholder="de 20"></td>
+            <td class="ref">20 de 20</td>
+          </tr>
+          <tr>
+            <td>Total do pedido de 12 itens na réplica sã<br>
+              <span class="ref">passo 7.1 · coluna <code>total</code>, na linha do nó B</span></td>
+            <td><input type="text" data-res="total_sao" data-rotulo="total de 12 itens, replica sa" placeholder="valor"></td>
+            <td class="ref">3020,82 (o catálogo é o mesmo para todos)</td>
+          </tr>
+          <tr>
+            <td>Total do pedido de 12 itens na réplica com defeito<br>
+              <span class="ref">passo 7.1 · mesma coluna, linha do nó C</span></td>
+            <td><input type="text" data-res="total_mentiroso" data-rotulo="total de 12 itens, replica com defeito" placeholder="valor"></td>
+            <td class="ref">menor que o anterior, e igualmente plausível</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      <button type="button" class="btn" id="copiar-resultados">⧉ Copiar meus resultados</button>
+      <button type="button" class="btn btn-secondary" id="limpar-lab">Apagar os dados desta prática</button>
+    </p>
+
+    <p class="saida">A tabela fica guardada neste navegador, mas some se voce limpar os dados do
+site ou trocar de computador. Cole os seus numeros em algum lugar seu antes de
+encerrar o laboratorio.</p>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c8">
+      <label for="p02-c8"><strong>Checkpoint 8.</strong> A tabela está preenchida e eu
+        guardei uma cópia dos meus números.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Fechamento conceitual
+       ============================================================ -->
+  <section class="lab-step" id="fechamento">
+    <h2><span class="step-num is-accent">§</span><span>O que isso tem a ver com o Tópico 2</span></h2>
+
+    <p>
+      O tópico apresenta três famílias de modelos: físico, de arquitetura e fundamentais.
+      Você passou pelas três em cem minutos, com as mesmas três máquinas.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:34%">Conceito do tópico</th><th>Onde ele apareceu</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Modelo de arquitetura</strong></td>
+            <td>O mesmo código produziu quatro sistemas diferentes. Entidades, papéis e
+              posicionamento não estavam no programa: estavam na forma de chamá-lo.</td>
+          </tr>
+          <tr>
+            <td><strong>Camadas físicas (tiers)</strong></td>
+            <td>Duas camadas custaram 5 ms; três camadas custaram 8 ms em lote e 82 ms com uma
+              chamada por item. O que separar cobra é pequeno; o que conversar demais cobra é
+              uma ordem de grandeza. A manutenibilidade que você ganha ao separar é paga em
+              latência, e a fatura chega multiplicada pelo número de rodadas.</td>
+          </tr>
+          <tr>
+            <td><strong>Posicionamento</strong></td>
+            <td>Colocar a camada de dados na outra zona quase não mudou o tempo, mas mudou
+              tudo em disponibilidade. Nem toda decisão de posicionamento se justifica por
+              desempenho.</td>
+          </tr>
+          <tr>
+            <td><strong>Vários servidores (replicação)</strong></td>
+            <td>Duas réplicas atenderam vinte pedidos com uma delas parada. Foi a estratégia
+              de posicionamento que virou tolerância a falhas.</td>
+          </tr>
+          <tr>
+            <td><strong>Modelo de interação</strong></td>
+            <td>O timeout de 2 s foi o único instrumento disponível para decidir que alguém
+              não vinha. Em um sistema assíncrono não existe limite conhecido de atraso: os
+              2 s não vieram do sistema, foi o cliente que os declarou para si, e esperar é a
+              única forma de desconfiar.</td>
+          </tr>
+          <tr>
+            <td><strong>Modelo de falhas</strong></td>
+            <td>Você provocou uma falha por omissão (processo parado), uma de temporização
+              (resposta fora do limite que o cliente declarou para si) e uma arbitrária
+              (resposta errada com sucesso). As
+              três foram mascaradas de formas diferentes, e a última não foi mascarada de
+              forma nenhuma.</td>
+          </tr>
+          <tr>
+            <td><strong>Mascaramento</strong></td>
+            <td>A frota converteu a queda de um nó em 1,4 ms de atraso. Converter uma falha
+              em outra mais aceitável é a definição exata do termo no tópico.</td>
+          </tr>
+          <tr>
+            <td><strong>Modelo de segurança</strong></td>
+            <td>A porta 8081 nunca foi exposta. A camada de dados só é alcançável por quem
+              pertence ao grupo, e a decisão de arquitetura veio antes de qualquer
+              criptografia.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 A frase para levar</p>
+      <p>
+        Um modelo serve para tornar explícitas as suposições do sistema. Hoje você viu duas
+        suposições muito comuns caírem em cima da mesa: a de que separar camadas custa pouco,
+        e a de que ter duas réplicas significa estar protegido. Nenhuma das duas é falsa
+        sempre. As duas são falsas o suficiente para merecerem medição.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 9
+       ============================================================ -->
+  <section class="lab-step" id="passo-9">
+    <h2><span class="step-num">9</span><span>Encerrar e limpar</span><span class="step-time">5 min</span></h2>
+
+    <ol>
+      <li>Em <strong>EC2 &gt; Instances</strong>, selecione as três instâncias e escolha
+        <strong>Instance state &gt; Terminate instance</strong>.</li>
+      <li>Depois que elas ficarem <em>terminated</em>, apague o grupo de segurança
+        <code>sd-pratica02</code> em <strong>Security Groups</strong>.</li>
+      <li>Apague o <code>labsuser.pem</code> desta sessão: ele não vai servir na próxima.</li>
+      <li>Na aba do laboratório, clique em <strong>End Lab</strong>.</li>
+    </ol>
+
+    <p>Se preferir fazer pelo terminal:</p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 terminate-instances --instance-ids $(aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=sd-no*" \
+            "Name=instance-state-name,Values=pending,running,stopped" \
+  --query 'Reservations[].Instances[].InstanceId' --output text)</pre>
+    </div>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Limpe mesmo sabendo que o ambiente limparia sozinho</p>
+      <p>
+        Aqui a sessão apagaria tudo de qualquer jeito. Mais adiante no curso você vai
+        trabalhar em um ambiente que <strong>não apaga nada</strong> e tem orçamento
+        limitado, onde um recurso esquecido consome crédito silenciosamente por dias. O
+        hábito que protege você lá é o que você constrói aqui.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p02-c9">
+      <label for="p02-c9"><strong>Checkpoint 9.</strong> Instâncias encerradas, grupo de
+        segurança apagado, laboratório encerrado.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Questionário
+       ============================================================ -->
+  <div class="moodle-note">
+    <p>
+      <strong>Para concluir:</strong> responda ao questionário desta prática no Moodle da
+      disciplina. As perguntas usam os números que você mediu, e pedem a faixa em que eles
+      caíram, não o valor exato. Tenha a tabela de resultados à mão.
+    </p>
+  </div>
+
+  <!-- ============================================================
+       Se der errado
+       ============================================================ -->
+  <section class="lab-step" id="se-der-errado">
+    <h2><span class="step-num is-accent">!</span><span>Se der errado</span></h2>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:32%">Sintoma</th><th style="width:30%">Causa provável</th><th>O que fazer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>UNPROTECTED PRIVATE KEY FILE</code></td>
+            <td>Permissões do <code>labsuser.pem</code></td>
+            <td>Rode o <code>icacls</code> (ou <code>chmod 400</code>) do passo 1.</td>
+          </tr>
+          <tr>
+            <td><code>Permission denied (publickey)</code></td>
+            <td>Chave de uma sessão anterior, ou usuário errado</td>
+            <td>Baixe o PEM de novo nesta sessão. O usuário é <code>ec2-user</code>.</td>
+          </tr>
+          <tr>
+            <td>O SSH fica parado e termina em <code>Connection timed out</code></td>
+            <td>A regra de SSH aponta para outro IP, ou a instância ainda está iniciando</td>
+            <td>Edite a regra e escolha <em>My IP</em> outra vez. Confira se
+              <em>Status check</em> está em 2/2.</td>
+          </tr>
+          <tr>
+            <td><code>sd: command not found</code></td>
+            <td>O <em>user data</em> não foi colado, ou foi colado com algum caractere a mais</td>
+            <td>Confira <code>sudo tail -30 /var/log/sd-setup.log</code>. Em último caso,
+              copie o script para um arquivo na instância e rode
+              <code>sudo bash setup.sh</code>.</td>
+          </tr>
+          <tr>
+            <td>Todos os pedidos voltam com <code>ERRO 502</code></td>
+            <td>A camada de dados do endereço que você passou em <code>--dados</code> não está
+              respondendo, ou a regra do próprio grupo não está valendo</td>
+            <td>No nó em questão: <code>systemctl is-active sd-dados</code> e
+              <code>curl -s localhost:8081/saude</code>. Se estiver parada,
+              <code>sudo systemctl start sd-dados</code>. Confira também a regra
+              <em>All traffic</em> com origem no próprio grupo, do passo 2.</td>
+          </tr>
+          <tr>
+            <td><code>SEM RESPOSTA: esgotou o tempo de espera</code> em todas as repetições, ou
+              <code>SEM NOME: nome nao resolvido</code></td>
+            <td>Campo da ficha vazio, IP público no lugar do privado, ou a regra do próprio
+              grupo faltando no passo 2</td>
+            <td>Confira a ficha do topo da página, confirme que o endereço é o
+              <strong>privado</strong> (começa com <code>172.31.</code>) e que o grupo
+              <code>sd-pratica02</code> tem a regra <em>All traffic</em> com origem nele
+              mesmo. Depois repita o comando.</td>
+          </tr>
+          <tr>
+            <td><code>sd tempo</code> responde, mas <code>sd frota</code> só usa um dos nós</td>
+            <td>A aplicação da outra réplica está fora, ou ficou um defeito ligado da etapa
+              anterior</td>
+            <td>Rode <code>sd saude</code> nos dois. No nó suspeito,
+              <code>sudo rm -f /opt/sd/lentidao /opt/sd/defeito</code>.</td>
+          </tr>
+          <tr>
+            <td>As réplicas divergem sem você ter ligado defeito nenhum</td>
+            <td>Sobrou um <code>/opt/sd/defeito</code> de um experimento anterior</td>
+            <td>Nos três nós: <code>ls -l /opt/sd/</code> e apague o arquivo que estiver
+              lá.</td>
+          </tr>
+          <tr>
+            <td>Todas as medições saem muito acima da referência</td>
+            <td>Instância pequena e compartilhada, ou algo pesado rodando junto</td>
+            <td>Repita a medição. Olhe também o <code>p95</code>: se ele estiver muito acima
+              da mediana, foi uma amostra ruim, não o arranjo.</td>
+          </tr>
+          <tr>
+            <td>A sessão do laboratório expirou no meio</td>
+            <td>É o comportamento normal do Sandbox</td>
+            <td>Inicie de novo e refaça os passos 2 e 3. Leva cerca de dez minutos, e os
+              endereços da ficha mudam.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Extensões
+       ============================================================ -->
+  <section class="lab-step" id="extensoes">
+    <h2><span class="step-num is-accent">+</span><span>Se sobrar tempo</span></h2>
+
+    <h3>Onde está o joelho da curva</h3>
+    <p>
+      Rode <code>sd tempo</code> com a camada de dados remota variando os itens: 1, 5, 10, 30,
+      60, 120. O tempo cresce em linha reta com o número de chamadas, e o coeficiente angular
+      é o preço de uma ida e volta. Você acabou de medir uma constante da sua infraestrutura.
+    </p>
+
+    <h3>Três camadas de verdade</h3>
+    <p>
+      Nada obriga a camada de dados a viver junto do cliente. Aponte a aplicação do nó B para
+      a camada de dados do nó B (<code>--dados</code> com o IP privado do próprio B) e compare
+      com o modo <code>local</code>. A diferença que sobrar é o preço de atravessar a rede
+      sem sair da máquina: mesmo pela interface de retorno, HTTP e TCP cobram.
+    </p>
+
+    <h3>Um terceiro voto</h3>
+    <p>
+      Ligue o defeito em C e rode <code>sd conferir</code> incluindo os três nós de aplicação,
+      A, B e C. Com três respostas e duas iguais, a maioria aponta o mentiroso. Anote quantas
+      réplicas o cliente precisaria consultar para a maioria ainda apontar a resposta certa
+      com <strong>dois</strong> mentirosos. Guarde também que esse número cresce quando não é
+      o cliente que vota, e sim as réplicas que precisam entrar em acordo entre si antes de
+      responder: essa conta tem nome e aparece no Tópico 10, quando o assunto for replicação
+      e quóruns.
+    </p>
+
+    <h3>Com um colega, se houver oportunidade</h3>
+    <p>
+      Comparem a fatia do tempo gasta na camada de dados no arranjo de 30 chamadas. O número
+      deve ficar acima de 85% nas duas contas, mesmo com instâncias e zonas diferentes. Uma
+      medição que se repete em ambientes distintos deixa de ser anedota e vira propriedade do
+      arranjo.
+    </p>
+  </section>
+
+  <footer class="lab-foot">
+    <span>Sistemas Distribuídos · IFSP Campus Salto</span>
+    <span><a href="../../index.html#/topico/02">Voltar ao Tópico 2</a></span>
+  </footer>
+
+</div>
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/lab.js"></script>
+<script>SD.lab.init({ id: "pratica-02" });</script>
+</body>
+</html>

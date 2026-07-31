@@ -503,6 +503,20 @@ SD.content["02"] = {
     }
   ],
 
+  /* Roteiro de prática na AWS (página autônoma em app/labs/).
+     Campo opcional: sem ele, a página do tópico não mostra o cartão. */
+  lab: {
+    href: "labs/pratica-02/index.html",
+    title: "O mesmo código, sistemas diferentes",
+    summary:
+      "Suba três máquinas com programas idênticos e arrume-as de jeitos diferentes: " +
+      "meça o que custa separar a aplicação dos dados, veja a replicação mascarar a " +
+      "queda de um nó e depois descubra a falha que esse arranjo não mascara, a do nó " +
+      "que responde na hora e responde errado.",
+    duration: "100 min",
+    environment: "AWS Academy Sandbox"
+  },
+
   glossary: [
     {
       term: "Modelo físico",

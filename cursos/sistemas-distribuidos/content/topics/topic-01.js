@@ -498,6 +498,19 @@ SD.content["01"] = {
     }
   ],
 
+  /* Roteiro de prática na AWS (página autônoma em app/labs/).
+     Campo opcional: sem ele, a página do tópico não mostra o cartão. */
+  lab: {
+    href: "labs/pratica-01/index.html",
+    title: "Três máquinas, nenhum relógio comum",
+    summary:
+      "Suba três servidores na AWS, meça o custo de falar com cada um, coloque " +
+      "dois relógios em desacordo e derrube parte do sistema para descobrir, com " +
+      "números, por que ninguém consegue dizer se o outro caiu ou só está lento.",
+    duration: "100 min",
+    environment: "AWS Academy Sandbox"
+  },
+
   glossary: [
     {
       term: "Sistema distribuído",
