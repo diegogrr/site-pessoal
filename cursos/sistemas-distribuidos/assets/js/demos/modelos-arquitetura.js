@@ -27,12 +27,13 @@ SD.demos["modelos-arquitetura"] = (function () {
 
   var REQ_PER_USER = 0.5;   // pedidos/s gerados por usuário
   var CAP = 100;            // capacidade de um servidor (pedidos/s)
-  var PEER_CAP = 0.8;       // capacidade que cada peer traz (pedidos/s)
+  var PEER_CAP = 1.5;       // capacidade que cada peer traz (pedidos/s)
   var BASE_MS = 60;         // tempo de resposta com sistema ocioso
   var CACHE_MS = 20;        // resposta servida pelo cache
   var HOP_MS = 15;          // custo por salto de localização no P2P
   var TARGET_MS = 250;      // alvo de tempo de resposta
-  var HOT_SHARE = 0.5;      // fatia "quente" no modo particionado
+  var HOT_SHARE = 0.7;      // fatia "quente" no modo particionado
+  var STAGE2_USERS = 360;   // população da etapa 2: 1 servidor satura, 2 melhoram, 3 fecham
   var MAX_SERVERS = 4;
   var INF = 99999;          // saturado: fila crescendo sem limite
   var SERVER_NAMES = ["A", "B", "C", "D"];
@@ -68,9 +69,12 @@ SD.demos["modelos-arquitetura"] = (function () {
       var demand = usersN * REQ_PER_USER;
       if (cfg.p2p) {
         var hops = Math.ceil(Math.log(Math.max(usersN, 2)) / Math.LN2);
+        var rhoPeer = demand / (usersN * PEER_CAP);
         return {
-          t: BASE_MS + hops * HOP_MS,
-          utils: [demand / (usersN * PEER_CAP)],
+          /* a utilização também pesa no P2P: o que muda é que a capacidade
+             cresce junto com a demanda, então ρ não dispara com a população */
+          t: respTime(rhoPeer) + hops * HOP_MS,
+          utils: [rhoPeer],
           served: demand,
           hops: hops
         };
@@ -119,18 +123,19 @@ SD.demos["modelos-arquitetura"] = (function () {
       '  <div class="demo-ma-userrow">' +
       '    <label>Usuários: <output class="demo-ma-users-out"></output>' +
       '    <input type="range" class="demo-ma-users" min="10" max="1000" step="10"></label>' +
+      '    <p class="demo-ma-demand"></p>' +
       '  </div>' +
       '  <div class="demo-ma-world">' +
       '    <div class="demo-ma-bars"></div>' +
       '    <svg class="demo-ma-chart" viewBox="0 0 300 130" preserveAspectRatio="none" aria-hidden="true"></svg>' +
       '  </div>' +
-      '  <p class="demo-ma-chart-caption">Tempo de resposta × usuários — <span class="demo-ma-leg-ref">— 1 servidor (referência)</span> · ' +
-      '<span class="demo-ma-leg-cur">— arranjo atual</span> · <span class="demo-ma-leg-target">┄ alvo (' + TARGET_MS + ' ms)</span></p>' +
+      '  <p class="demo-ma-chart-caption">Tempo de resposta × usuários: <span class="demo-ma-leg-ref">─ 1 servidor (referência)</span> · ' +
+      '<span class="demo-ma-leg-cur">─ arranjo atual</span> · <span class="demo-ma-leg-target">┄ alvo (' + TARGET_MS + ' ms)</span></p>' +
       '  <div class="demo-cf-controls demo-ma-controls"></div>' +
       '  <dl class="demo-cf-metrics">' +
-      '    <div><dt>Tempo de resposta</dt><dd data-metric="tempo">—</dd></div>' +
-      '    <div><dt>Utilização máx.</dt><dd data-metric="util">—</dd></div>' +
-      '    <div><dt>Atendidos por segundo</dt><dd data-metric="served">—</dd></div>' +
+      '    <div><dt>Tempo de resposta</dt><dd data-metric="tempo">n/d</dd></div>' +
+      '    <div><dt>Utilização máx.</dt><dd data-metric="util">n/d</dd></div>' +
+      '    <div><dt>Atendidos por segundo</dt><dd data-metric="served">n/d</dd></div>' +
       '    <div><dt>Alvo</dt><dd>≤ ' + TARGET_MS + ' ms</dd></div>' +
       '  </dl>' +
       '  <div class="demo-ma-tiers" hidden>' +
@@ -138,24 +143,27 @@ SD.demos["modelos-arquitetura"] = (function () {
       '      <p><strong>Duas camadas físicas</strong></p>' +
       '      <p class="demo-ma-tier-path">cliente ⇄ servidor (aplicação + dados)</p>' +
       '      <button type="button" class="btn btn-secondary" data-tier="2">Testar pedido</button>' +
-      '      <p class="demo-ma-tier-result" data-tier-result="2">—</p>' +
+      '      <p class="demo-ma-tier-result" data-tier-result="2">n/d</p>' +
       '      <p class="demo-ma-tier-badge">lógica da aplicação <strong>dividida</strong> entre cliente e servidor</p>' +
       '    </div>' +
       '    <div class="demo-ma-tier">' +
       '      <p><strong>Três camadas físicas</strong></p>' +
-      '      <p class="demo-ma-tier-path">cliente ⇄ servidor de aplicação ⇄ banco de dados</p>' +
+      '      <p class="demo-ma-tier-path">cliente ⇄ servidor de aplicação ⇄ banco de dados' +
+      ' <span class="demo-ma-tier-hint">(o segundo salto é rede local do centro de dados)</span></p>' +
       '      <button type="button" class="btn btn-secondary" data-tier="3">Testar pedido</button>' +
-      '      <p class="demo-ma-tier-result" data-tier-result="3">—</p>' +
+      '      <p class="demo-ma-tier-result" data-tier-result="3">n/d</p>' +
       '      <p class="demo-ma-tier-badge">lógica da aplicação <strong>em um só lugar</strong> (manutenibilidade)</p>' +
       '    </div>' +
       '  </div>' +
       '  <div class="demo-cf-summary callout" hidden>' +
       '    <p class="callout-title">🎓 O que você acabou de viver</p>' +
       '    <p><strong>Cliente-servidor</strong> centralizado satura na capacidade de um nó. ' +
-      '    <strong>Réplicas</strong> dividem a carga (partições podem desequilibrar — fatia quente). ' +
+      '    <strong>Réplicas</strong> dividem a leitura, ao custo de manter todas as cópias em ' +
+      '    dia; <strong>partições</strong> escalam escrita e armazenamento, ao custo do ' +
+      '    desequilíbrio quando uma fatia é mais procurada (a fatia quente). ' +
       '    <strong>Cache</strong> corta carga e latência, ao custo de respostas possivelmente ' +
-      '    desatualizadas (tópico 10). <strong>Peer-to-peer</strong> escala porque cada usuário ' +
-      '    traz recursos — pagando em complexidade de localização. E <strong>camadas físicas</strong> ' +
+      '    desatualizadas (Tópico 10). <strong>Peer-to-peer</strong> escala porque cada usuário ' +
+      '    traz recursos, pagando em complexidade de localização. E <strong>camadas físicas</strong> ' +
       '    trocam latência por manutenibilidade. Arquitetura é decisão com consequências mensuráveis.</p>' +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
@@ -178,6 +186,7 @@ SD.demos["modelos-arquitetura"] = (function () {
       goal: container.querySelector(".demo-cf-goal"),
       usersRange: container.querySelector(".demo-ma-users"),
       usersOut: container.querySelector(".demo-ma-users-out"),
+      demand: container.querySelector(".demo-ma-demand"),
       bars: container.querySelector(".demo-ma-bars"),
       chart: container.querySelector(".demo-ma-chart"),
       controls: container.querySelector(".demo-ma-controls"),
@@ -194,9 +203,10 @@ SD.demos["modelos-arquitetura"] = (function () {
 
     var STAGES = [
       {
-        title: "Etapa 1 — Um servidor para todos",
+        title: "Etapa 1: Um servidor para todos",
         instructions: "Cliente-servidor puro: um servidor de " + CAP + " pedidos/s para " +
-          "todo mundo. Aumente os usuários e observe a utilização e o tempo de resposta.",
+          "todo mundo, e cada usuário gerando " + num(REQ_PER_USER) + " pedido/s. Aumente " +
+          "os usuários e observe a utilização e o tempo de resposta.",
         goalText: "Meta: saturar o servidor (utilização ≥ 100%).",
         setup: function () {
           state.users = 100; state.servers = 1; state.mode = "replicado";
@@ -205,22 +215,25 @@ SD.demos["modelos-arquitetura"] = (function () {
         goalMet: function () { return state.saturatedOnce; }
       },
       {
-        title: "Etapa 2 — Replicar ou particionar",
-        instructions: "Com 400 usuários o servidor único afunda. Adicione réplicas até " +
-          "voltar ao alvo — e experimente o modo particionado para ver a fatia quente " +
-          "desequilibrar a carga.",
-        goalText: "Meta: com 400+ usuários, tempo de resposta ≤ " + TARGET_MS + " ms.",
+        title: "Etapa 2: Replicar ou particionar",
+        instructions: "Com " + STAGE2_USERS + " usuários o servidor único afunda. Adicione " +
+          "réplicas até voltar ao alvo, e experimente o modo particionado para ver a fatia " +
+          "quente desequilibrar a carga.",
+        goalText: "Meta: com " + STAGE2_USERS + "+ usuários, tempo de resposta ≤ " +
+          TARGET_MS + " ms.",
         setup: function () {
-          if (state.users < 400) state.users = 400;
+          /* fixa a população da etapa (não só eleva): com 1000 usuários herdados da
+             etapa 1, nem os 4 servidores do teto dariam conta e a meta seria impossível */
+          state.users = STAGE2_USERS;
           state.cacheOn = false; state.p2p = false;
         },
         goalMet: function () {
-          return !state.p2p && state.users >= 400 && current().t <= TARGET_MS;
+          return !state.p2p && state.users >= STAGE2_USERS && current().t <= TARGET_MS;
         }
       },
       {
-        title: "Etapa 3 — Cache na frente",
-        instructions: "Ligue o cache e veja a carga nos servidores despencar — a ponto " +
+        title: "Etapa 3: Cache na frente",
+        instructions: "Ligue o cache e veja a carga nos servidores despencar, a ponto " +
           "de dispensar réplicas. Repare no contador de respostas possivelmente " +
           "desatualizadas: nada é de graça.",
         goalText: "Meta: atender 400+ usuários no alvo com no máximo 2 servidores e cache ligado.",
@@ -234,10 +247,10 @@ SD.demos["modelos-arquitetura"] = (function () {
         }
       },
       {
-        title: "Etapa 4 — Peer-to-peer",
-        instructions: "Migre para P2P: cada usuário vira peer e traz " + PEER_CAP +
-          " pedido/s de capacidade. Suba até 1000 usuários e compare a curva com a da " +
-          "etapa 1. O preço aparece nos saltos de localização.",
+        title: "Etapa 4: Peer-to-peer",
+        instructions: "Migre para P2P: cada usuário vira peer e traz " + num(PEER_CAP) +
+          " pedido/s de capacidade, três vezes o que ele consome. Suba até 1000 usuários e " +
+          "compare a curva com a da etapa 1. O preço aparece nos saltos de localização.",
         goalText: "Meta: 1000 usuários com tempo de resposta ≤ " + TARGET_MS + " ms.",
         setup: function () { state.cacheOn = false; },
         goalMet: function () {
@@ -245,9 +258,9 @@ SD.demos["modelos-arquitetura"] = (function () {
         }
       },
       {
-        title: "Etapa 5 — Duas × três camadas físicas",
+        title: "Etapa 5: Duas × três camadas físicas",
         instructions: "Para fechar: o mesmo pedido em uma arquitetura de duas e de três " +
-          "camadas físicas. Teste os dois e compare a latência — e o que se ganha em troca.",
+          "camadas físicas. Teste os dois e compare a latência, e o que se ganha em troca.",
         goalText: "Meta: testar um pedido em cada arquitetura.",
         setup: function () {},
         goalMet: function () { return state.tiers.t2 && state.tiers.t3; }
@@ -265,6 +278,9 @@ SD.demos["modelos-arquitetura"] = (function () {
     }
 
     function fmtMs(t) { return t >= INF ? "∞ (fila crescendo)" : Math.round(t) + " ms"; }
+
+    /* números para leitura em pt_BR: 0.5 vira "0,5" e 180 continua "180" */
+    function num(v) { return String(v).replace(".", ","); }
 
     /* ============ Renderização ============ */
 
@@ -292,6 +308,14 @@ SD.demos["modelos-arquitetura"] = (function () {
             '%"></span></span>' +
             '<span class="demo-ma-bar-value">' + Math.round(u * 100) + "%</span></div>";
         });
+        if (state.servers > 1) {
+          html += '<p class="demo-ma-bar-note">' + (state.mode === "particionado"
+            ? "Cada servidor guarda 1/" + state.servers + " dos dados: particionar é o que " +
+              "escala escrita e armazenamento. O preço é o desequilíbrio quando uma fatia é " +
+              "mais procurada que as outras."
+            : "As réplicas dividem a leitura, mas guardam os mesmos dados: toda atualização " +
+              "precisa chegar a todas as cópias (Tópico 10).") + "</p>";
+        }
         if (state.cacheOn) {
           html += '<p class="demo-ma-bar-note">Cache absorvendo ' +
             Math.round(state.cacheHit * 100) + "% dos pedidos antes dos servidores.</p>";
@@ -424,7 +448,7 @@ SD.demos["modelos-arquitetura"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
       if (state.stage === STAGES.length && st.goalMet()) els.summary.hidden = false;
     }
@@ -434,6 +458,9 @@ SD.demos["modelos-arquitetura"] = (function () {
       var m = current();
       els.usersOut.textContent = state.users;
       els.usersRange.value = state.users;
+      els.demand.textContent = "cada usuário gera " + num(REQ_PER_USER) + " pedido/s, " +
+        "então " + state.users + " usuários = " + num(state.users * REQ_PER_USER) +
+        " pedidos/s de demanda.";
       renderBars(m);
       renderChart(m);
       updateMetrics(m);
@@ -446,11 +473,30 @@ SD.demos["modelos-arquitetura"] = (function () {
     function gotoStage(n) {
       state.stage = n;
       var st = STAGES[n - 1];
+      /* o setup da etapa mexe no arranjo por baixo do pano; o log precisa contar,
+         senão as barras mudam de patamar sem explicação no painel de decisões */
+      var antes = {
+        users: state.users, servers: state.servers, mode: state.mode,
+        cacheOn: state.cacheOn, p2p: state.p2p
+      };
       st.setup();
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
       els.instructions.textContent = st.instructions;
       els.tiers.hidden = state.stage !== 5;
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
+      var ajustes = [];
+      if (antes.users !== state.users) ajustes.push("usuários em " + state.users);
+      if (antes.servers !== state.servers) ajustes.push("servidores em " + state.servers);
+      if (antes.mode !== state.mode) ajustes.push("dados no modo " + state.mode);
+      if (antes.cacheOn !== state.cacheOn) {
+        ajustes.push(state.cacheOn ? "cache ligado" : "cache desligado");
+      }
+      if (antes.p2p !== state.p2p) {
+        ajustes.push(state.p2p ? "peer-to-peer ligado" : "de volta ao cliente-servidor");
+      }
+      if (ajustes.length) {
+        log("⚙️ ajustes automáticos para esta etapa: " + ajustes.join(", ") + ".");
+      }
       update(true);
     }
 
@@ -468,12 +514,15 @@ SD.demos["modelos-arquitetura"] = (function () {
       var b = e.target.closest("[data-tier]");
       if (!b) return;
       var tier = b.getAttribute("data-tier");
-      // Latências fixas do comparador: 2 camadas = 2 pernas de rede + processamento;
-      // 3 camadas = 4 pernas (cliente⇄aplicação⇄banco) + processamento em dois nós.
-      var t = tier === "2" ? 2 * 40 + 30 : 4 * 40 + 30 + 20;
+      // Latências fixas do comparador: 2 camadas = 2 pernas de rede (40 ms cada, cliente
+      // até o servidor) + processamento; 3 camadas acrescenta 2 pernas de rede local do
+      // centro de dados (5 ms cada, como os ~2,8 ms medidos na prática 02) + processamento
+      // no segundo nó.
+      var t = tier === "2" ? 2 * 40 + 30 : 2 * 40 + 2 * 5 + 30 + 20;
       container.querySelector('[data-tier-result="' + tier + '"]').innerHTML =
         "latência medida: <strong data-tier-ms=\"" + t + "\">" + t + " ms</strong>" +
-        (tier === "2" ? " (1 ida e volta)" : " (2 idas e voltas)");
+        (tier === "2" ? " (1 ida e volta até o servidor)"
+          : " (1 ida e volta até o servidor + 1 na rede local)");
       state.tiers["t" + tier] = true;
       log("pedido de teste em " + tier + " camadas físicas: " + t + " ms");
       updateNav();

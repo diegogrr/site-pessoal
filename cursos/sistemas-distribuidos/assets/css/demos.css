@@ -305,6 +305,16 @@
   font-weight: 600;
 }
 
+.demo-ma-demand {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-ma-tier-hint {
+  color: var(--color-text-muted);
+}
+
 .demo-ma-world {
   display: flex;
   gap: var(--space-4);
