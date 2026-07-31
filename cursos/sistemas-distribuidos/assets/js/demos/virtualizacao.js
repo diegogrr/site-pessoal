@@ -45,13 +45,13 @@ SD.demos["virtualizacao"] = (function () {
     { id: "local", name: "Chamada de procedimento local", cost: "≈ 0,5 µs",
       why: "fica dentro do mesmo espaço de endereçamento: nem núcleo, nem rede." },
     { id: "sistema", name: "Chamada de sistema", cost: "≈ 20 µs",
-      why: "cruza para o núcleo (TRAP + troca de contexto) — mas não muda de " +
+      why: "cruza para o núcleo (TRAP + troca de contexto), mas não muda de " +
         "espaço de usuário nem toca a rede." },
     { id: "lrpc", name: "LRPC (mesmo computador)", cost: "≈ 50 µs",
       why: "cruza para OUTRO processo, mas com pilha A compartilhada e sem " +
-        "escalonar thread do servidor — o caso local otimizado." },
+        "escalonar thread do servidor: o caso local otimizado." },
     { id: "lan", name: "RPC nula na rede local", cost: "≈ 150 µs",
-      why: "atravessa DOIS núcleos, empacota, copia e ainda viaja pela rede — " +
+      why: "atravessa DOIS núcleos, empacota, copia e ainda viaja pela rede: " +
         "décimos de milissegundo." },
     { id: "internet", name: "RPC pela Internet", cost: "≈ 200 ms",
       why: "latência alta e variável, muitos roteadores, carga do servidor: " +
@@ -63,7 +63,7 @@ SD.demos["virtualizacao"] = (function () {
     { kind: "comum", name: "ADD r1, r2 (soma)" },
     { kind: "priv", name: "configurar tabela de páginas" },
     { kind: "comum", name: "MOV r3, [mem] (leitura comum)" },
-    { kind: "sens", name: "LSL — ler limite de segmento" },
+    { kind: "sens", name: "LSL: ler limite de segmento" },
     { kind: "priv", name: "desabilitar interrupções" }
   ];
 
@@ -122,7 +122,7 @@ SD.demos["virtualizacao"] = (function () {
       "memória</strong> do SO (etapa 3), dentro de máquinas que hoje são " +
       "<strong>virtuais</strong> (etapa 4), empacotadas como <strong>MVs ou " +
       "contêineres</strong> (etapa 5). É essa infraestrutura que a computação em " +
-      "nuvem (Tópico 11) aluga por hora — e é sobre ela que TODO o middleware deste " +
+      "nuvem (Tópico 11) aluga por hora, e é sobre ela que TODO o middleware deste " +
       "curso está de pé.</p>" +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
@@ -181,7 +181,7 @@ SD.demos["virtualizacao"] = (function () {
       if (r.v === 500) state.seen500 = true;
       els.area.innerHTML =
         '<div class="demo-vz-server">' +
-        '  <p class="demo-vz-server-title">🖥️ Servidor — requisições: ' +
+        '  <p class="demo-vz-server-title">🖥️ Servidor · requisições: ' +
         (state.cache ? "2,5 ms CPU + 2 ms disco (média c/ cache 75%)"
           : "2 ms CPU + 8 ms disco") + "</p>" +
         '  <dl class="demo-cf-metrics">' +
@@ -267,7 +267,7 @@ SD.demos["virtualizacao"] = (function () {
         '">' + html + "</div>" +
         '<div class="demo-vz-xray2" data-xray2' + (state.xraySeen ? "" : " hidden") + ">" +
         "<p><strong>Raio-X da RPC nula na LAN (~0,15 ms):</strong> rede " +
-        '<strong>~0,01 ms</strong> — todo o resto é <strong>software</strong>:</p>' +
+        '<strong>~0,01 ms</strong>. Todo o resto é <strong>software</strong>:</p>' +
         "<ul><li>empacotamento e desempacotamento</li>" +
         "<li>cópias de dados (usuário↔núcleo, camadas, interface de rede)</li>" +
         "<li>cabeçalhos e somas de verificação</li>" +
@@ -276,7 +276,7 @@ SD.demos["virtualizacao"] = (function () {
         '<p class="demo-vz-exp" data-exp' + (state.expSeen ? "" : " hidden") + ">" +
         "📦 Buscar 32 KB (RMI nula 2 ms + 1,5 ms/KB): <strong>1 chamada de 32 KB = " +
         '<span data-exp1>50 ms</span></strong> × <strong>32 chamadas de 1 KB = ' +
-        '<span data-exp32>112 ms</span></strong> — a latência fixa se paga a cada ida.</p>';
+        '<span data-exp32>112 ms</span></strong>: a latência fixa se paga a cada ida.</p>';
       els.controls.innerHTML =
         '<button type="button" class="btn demo-vz-xraybtn"' +
         (state.ladderNext < LADDER.length ? " disabled" : "") +
@@ -289,7 +289,7 @@ SD.demos["virtualizacao"] = (function () {
       });
       els.controls.querySelector(".demo-vz-xraybtn").addEventListener("click", function () {
         state.xraySeen = true;
-        log("🩻 O raio-X abriu a barra da RPC: a REDE é ~0,01 ms de ~0,15 ms — o atraso " +
+        log("🩻 O raio-X abriu a barra da RPC: a REDE é ~0,01 ms de ~0,15 ms. O atraso " +
           "é dominado pelo código do núcleo e do runtime de RPC.");
         renderStage2();
         updateNav();
@@ -316,10 +316,10 @@ SD.demos["virtualizacao"] = (function () {
       }
       state.ladderNext++;
       log("✓ Degrau " + state.ladderNext + ": <strong>" + picked.name + "</strong> (" +
-        picked.cost + ") — " + picked.why);
+        picked.cost + "): " + picked.why);
       if (state.ladderNext >= LADDER.length) {
         log("🪜 Escada completa: da fração de microssegundo às centenas de " +
-          "milissegundos — <strong>seis ordens de grandeza</strong>. Agora abra o " +
+          "milissegundos, <strong>seis ordens de grandeza</strong>. Agora abra o " +
           "raio-X e rode o experimento dos 32 KB.");
       }
       renderStage2();
@@ -339,25 +339,25 @@ SD.demos["virtualizacao"] = (function () {
       }).join("");
       els.area.innerHTML =
         '<div class="demo-vz-cow">' +
-        '  <p class="demo-vz-server-title">🧠 (a) Cópia na escrita — processo pai com 8 ' +
+        '  <p class="demo-vz-server-title">🧠 (a) Cópia na escrita: processo pai com 8 ' +
         "páginas" + (state.forked ? " + filho (fork feito)" : "") + "</p>" +
         '  <div class="demo-vz-frames">' + pagesHtml + "</div>" +
         '  <p class="demo-vz-marks" data-fork-done="' + state.forked +
         '" data-copies="' + state.copies + '">cópias físicas de quadros: <strong>' +
         state.copies + "</strong>" +
-        (state.forked ? " — clique numa página para o FILHO escrever nela" : "") + "</p>" +
+        (state.forked ? " · clique numa página para o FILHO escrever nela" : "") + "</p>" +
         "</div>" +
         '<div class="demo-vz-lrpc">' +
         '  <p class="demo-vz-server-title">⚡ (b) A mesma invocação local, dois caminhos</p>' +
         '  <dl class="demo-cf-metrics">' +
         '    <div><dt>RPC local: cópias</dt><dd data-rpc-copias>' +
-        (state.ranRPC ? "4" : "—") + "</dd></div>" +
+        (state.ranRPC ? "4" : "n/d") + "</dd></div>" +
         '    <div><dt>RPC local: tempo</dt><dd data-rpc-tempo>' +
-        (state.ranRPC ? "~300 µs" : "—") + "</dd></div>" +
+        (state.ranRPC ? "~300 µs" : "n/d") + "</dd></div>" +
         '    <div><dt>LRPC: cópias</dt><dd data-lrpc-copias>' +
-        (state.ranLRPC ? "1" : "—") + "</dd></div>" +
+        (state.ranLRPC ? "1" : "n/d") + "</dd></div>" +
         '    <div><dt>LRPC: tempo</dt><dd data-lrpc-tempo>' +
-        (state.ranLRPC ? "~100 µs" : "—") + "</dd></div>" +
+        (state.ranLRPC ? "~100 µs" : "n/d") + "</dd></div>" +
         "  </dl>" +
         "</div>";
       els.controls.innerHTML =
@@ -389,7 +389,7 @@ SD.demos["virtualizacao"] = (function () {
       if (state.forked) return;
       state.forked = true;
       state.pages = state.pages.map(function () { return "compartilhado"; });
-      log("🍴 <strong>fork()</strong>: o filho nasceu com as 8 páginas — e o contador de " +
+      log("🍴 <strong>fork()</strong>: o filho nasceu com as 8 páginas, e o contador de " +
         "cópias físicas marca <strong>ZERO</strong>. Os quadros ficaram compartilhados " +
         "e protegidos contra escrita.");
       renderStage3();
@@ -402,7 +402,7 @@ SD.demos["virtualizacao"] = (function () {
       state.pages[i] = "escrevendo";
       renderStage3();
       log("✍️ O filho tenta escrever na página " + (i + 1) +
-        " — página protegida: <strong>exceção de erro de acesso</strong>!");
+        ". Página protegida: <strong>exceção de erro de acesso</strong>!");
       to(function () {
         state.pages[i] = "copiado";
         state.copies++;
@@ -410,7 +410,7 @@ SD.demos["virtualizacao"] = (function () {
         log("📄 O tratador copiou SÓ o quadro da página " + (i + 1) +
           " (cópias físicas: <strong>" + state.copies + "</strong>) e liberou a " +
           "escrita. As outras " + (8 - state.copies) + " páginas seguem " +
-          "compartilhadas — quem nunca escreve, nunca paga.");
+          "compartilhadas: quem nunca escreve, nunca paga.");
         if (state.stage === 3) renderStage3();
         updateNav();
       }, 700);
@@ -423,15 +423,15 @@ SD.demos["virtualizacao"] = (function () {
       var t = 0;
       if (isLrpc) {
         log("▶ <strong>LRPC</strong>: o stub empacota os argumentos DIRETO na pilha A, " +
-          "na região compartilhada com o servidor (cópia 1 — e única).");
+          "na região compartilhada com o servidor (cópia 1, e única).");
         to(function () {
           log("🚪 O núcleo valida a entrada e a <strong>própria thread do cliente</strong> " +
-            "executa o procedimento no domínio do servidor — ninguém foi escalonado.");
+            "executa o procedimento no domínio do servidor: ninguém foi escalonado.");
         }, (t += 600));
         to(function () {
           state.ranLRPC = true;
           state.busy3 = false;
-          log("✅ LRPC concluída: <strong>1 cópia</strong>, ~100 µs — o fator ~3× de " +
+          log("✅ LRPC concluída: <strong>1 cópia</strong>, ~100 µs, o fator ~3× de " +
             "Bershad sobre a RPC local.");
           if (state.stage === 3) renderStage3();
           updateNav();
@@ -458,16 +458,16 @@ SD.demos["virtualizacao"] = (function () {
     function renderStage4() {
       els.area.innerHTML =
         '<div class="demo-vz-rings">' +
-        '  <div class="demo-vz-ring" data-ring="0">anel 0 — <strong>hipervisor</strong>' +
+        '  <div class="demo-vz-ring" data-ring="0">anel 0: <strong>hipervisor</strong>' +
         "<span>instruções privilegiadas só aqui</span></div>" +
-        '  <div class="demo-vz-ring" data-ring="1">anel 1 — SO convidado ' +
+        '  <div class="demo-vz-ring" data-ring="1">anel 1: SO convidado ' +
         (state.paravirt ? "<strong>(portado: paravirtualização)</strong>" : "(sem modificação)") +
         "<span data-guest-view>" +
         (state.guestLeak
-          ? "💥 o convidado leu a máquina REAL: 2 CPUs, 16 GB — a MV acreditava ter " +
+          ? "💥 o convidado leu a máquina REAL: 2 CPUs, 16 GB. A MV acreditava ter " +
             "1 vCPU, 2 GB. Virtualização quebrada em silêncio."
           : "visão do convidado: 1 vCPU · 2 GB (virtual) ✓") + "</span></div>" +
-        '  <div class="demo-vz-ring" data-ring="3">anel 3 — aplicativos</div>' +
+        '  <div class="demo-vz-ring" data-ring="3">anel 3: aplicativos</div>' +
         "</div>" +
         '<p class="demo-vz-marks" data-leak-seen="' + state.leakSeen +
         '" data-paravirt="' + state.paravirt + '" data-fix-seen="' + state.fixSeen +
@@ -500,8 +500,9 @@ SD.demos["virtualizacao"] = (function () {
       els.controls.querySelector(".demo-vz-cost").addEventListener("click", function () {
         state.costSeen = true;
         log("📊 Simulação total: TODAS as instruções afetadas passam pela camada de " +
-          "simulação — convidado intacto, desempenho ruim. Paravirtualização: quase " +
-          "tudo roda direto no hardware — desempenho, ao preço de portar o convidado.");
+          "simulação: convidado intacto, desempenho ruim. Paravirtualização: quase " +
+          "tudo roda direto no hardware, ganhando desempenho ao preço de portar o " +
+          "convidado.");
         renderStage4();
         updateNav();
       });
@@ -516,34 +517,34 @@ SD.demos["virtualizacao"] = (function () {
         ? BATCH.slice().sort(function () { return rand() - 0.5; })
         : BATCH;
       var t = 0;
-      log("— ▶ lote de " + batch.length + " instruções do convidado (" +
-        (state.paravirt ? "paravirtualizado" : "sem modificação") + ") —");
+      log("▶ lote de " + batch.length + " instruções do convidado (" +
+        (state.paravirt ? "paravirtualizado" : "sem modificação") + ")");
       batch.forEach(function (ins) {
         to(function () {
           if (state.stage !== 4) return;
           if (ins.kind === "comum") {
-            log("· <code>" + ins.name + "</code> — comum: executa direto no hardware, " +
+            log("· <code>" + ins.name + "</code>, comum: executa direto no hardware, " +
               "rápida.");
           } else if (ins.kind === "priv") {
             log(state.paravirt
-              ? "📞 <code>" + ins.name + "</code> — privilegiada REESCRITA como " +
+              ? "📞 <code>" + ins.name + "</code>, privilegiada REESCRITA como " +
                 "<strong>hiperchamada</strong>: o hipervisor executa com segurança."
-              : "🪤 <code>" + ins.name + "</code> — privilegiada: <strong>TRAP!</strong> " +
+              : "🪤 <code>" + ins.name + "</code>, privilegiada: <strong>TRAP!</strong> " +
                 "Capturada pelo hipervisor (anel 0), que a executa com segurança.");
           } else {
             if (state.paravirt) {
               state.fixSeen = true;
               state.guestLeak = false;
-              log("🛡️ <code>" + ins.name + "</code> — sensível não privilegiada: o " +
+              log("🛡️ <code>" + ins.name + "</code>, sensível não privilegiada: o " +
                 "convidado PORTADO não a usa crua; o código reescrito preserva a visão " +
                 "virtual. Nada vazou.");
             } else {
               state.leakSeen = true;
               state.guestLeak = true;
-              log("💥 <code>" + ins.name + "</code> — <strong>sensível e NÃO " +
+              log("💥 <code>" + ins.name + "</code>, <strong>sensível e NÃO " +
                 "privilegiada</strong>: nenhum trap! Ela leu o estado FÍSICO da máquina " +
                 "e o convidado viu 2 CPUs e 16 GB reais. A condição de Popek e Goldberg " +
-                "foi violada — em silêncio (é a falha do x86 clássico: 17 instruções " +
+                "foi violada, em silêncio (é a falha do x86 clássico: 17 instruções " +
                 "assim).");
             }
             if (state.stage === 4) renderStage4();
@@ -578,7 +579,7 @@ SD.demos["virtualizacao"] = (function () {
       els.area.innerHTML =
         '<div class="demo-vz-racks">' +
         '  <div class="demo-vz-rack">' +
-        '    <p class="demo-vz-server-title">🗄️ Rack A — máquinas virtuais (' + SRV_RAM +
+        '    <p class="demo-vz-server-title">🗄️ Rack A: máquinas virtuais (' + SRV_RAM +
         " GB) <span>cada MV: SO convidado 1,5 GB + app 0,5 GB · boot ~30 s</span></p>" +
         '    <div class="demo-vz-slotrow" data-vm-count="' + state.vms.length +
         '" data-vm-full="' + state.vmFullSeen + '" data-vm-contained="' +
@@ -588,7 +589,7 @@ SD.demos["virtualizacao"] = (function () {
         '<strong data-hyper>ok</strong></p>' +
         "  </div>" +
         '  <div class="demo-vz-rack">' +
-        '    <p class="demo-vz-server-title">🗄️ Rack B — contêineres (' + SRV_RAM +
+        '    <p class="demo-vz-server-title">🗄️ Rack B: contêineres (' + SRV_RAM +
         " GB) <span>núcleo hospedeiro 0,5 GB + ~0,55 GB por contêiner · boot ~1 s</span></p>" +
         '    <div class="demo-vz-slotrow" data-ct-count="' + state.cts.length +
         '" data-ct-all="' + state.ctAllSeen + '" data-ct-kernel-fail="' +
@@ -621,7 +622,7 @@ SD.demos["virtualizacao"] = (function () {
       els.controls.querySelector(".demo-vz-failct").addEventListener("click", function () { fail5("ct"); });
       els.controls.querySelector(".demo-vz-migrate").addEventListener("click", function () {
         log("➡️ MV <strong>" + state.vms[0].name + "</strong> migrada A QUENTE para outro " +
-          "servidor físico — sem parar o serviço. Processos comuns não têm essa " +
+          "servidor físico, sem parar o serviço. Processos comuns não têm essa " +
           "facilidade; MVs, sim (§7.7.1). É assim que a nuvem esvazia um servidor para " +
           "manutenção.");
       });
@@ -643,7 +644,7 @@ SD.demos["virtualizacao"] = (function () {
       if (kind === "vm" && ramUsed("vm") + VM_GB > SRV_RAM) {
         state.vmFullSeen = true;
         log("🚫 <strong>Sem memória no rack A</strong>: cada MV carrega um SO convidado " +
-          "inteiro (2 GB por serviço) — só " + state.vms.length + " de " +
+          "inteiro (2 GB por serviço): só " + state.vms.length + " de " +
           SERVICES.length + " serviços couberam. Densidade tem preço.");
         renderStage5();
         updateNav();
@@ -658,8 +659,8 @@ SD.demos["virtualizacao"] = (function () {
       }
       renderStage5();
       log((kind === "vm" ? "🖥️ MV" : "📦 Contêiner") + " <strong>" + name +
-        "</strong>: boot iniciado (" + (kind === "vm" ? "~30 s — SO convidado inteiro"
-          : "~1 s — só o processo") + ")…");
+        "</strong>: boot iniciado (" + (kind === "vm" ? "~30 s, SO convidado inteiro"
+          : "~1 s, só o processo") + ")…");
       to(function () {
         item.booting = false;
         state.busy5 = false;
@@ -669,7 +670,7 @@ SD.demos["virtualizacao"] = (function () {
           state.ctAllSeen = true;
           log("📊 Rack B: os <strong>" + SERVICES.length + " serviços</strong> couberam " +
             "com folga (" + ramUsed("ct").toFixed(2) + " GB de " + SRV_RAM +
-            ") — e cada boot levou ~1 s. Densidade e velocidade: o forte do contêiner.");
+            "), e cada boot levou ~1 s. Densidade e velocidade: o forte do contêiner.");
         }
         if (state.stage === 5) renderStage5();
         updateNav();
@@ -685,7 +686,7 @@ SD.demos["virtualizacao"] = (function () {
         state.vmContained = true;
         log("💥 Bug de núcleo DENTRO da MV <strong>" + vm.name + "</strong>: o núcleo " +
           "que falhou é o convidado DELA. As outras MVs e o hipervisor seguem " +
-          "intactos — <strong>falha contida</strong>.");
+          "intactos: <strong>falha contida</strong>.");
         to(function () {
           vm.down = false;
           log("🔄 MV " + vm.name + " reiniciada a partir de seu próprio SO convidado.");
@@ -696,12 +697,12 @@ SD.demos["virtualizacao"] = (function () {
         state.ctDown = true;
         state.ctKernelFail = true;
         log("💥 Bug de núcleo disparado pelo contêiner <strong>" + state.cts[j].name +
-          "</strong>: o núcleo que falhou é o do HOSPEDEIRO — compartilhado por " +
+          "</strong>: o núcleo que falhou é o do HOSPEDEIRO, compartilhado por " +
           "todos. <strong>Os " + state.cts.length + " contêineres caíram juntos.</strong> " +
           "Um núcleo só = um destino só.");
         to(function () {
           state.ctDown = false;
-          log("🔄 Hospedeiro reiniciado; contêineres de volta (rápido — mas caíram " +
+          log("🔄 Hospedeiro reiniciado; contêineres de volta (rápido, mas caíram " +
             "TODOS). MVs para isolar, contêineres para empacotar: a nuvem usa os dois " +
             "(Tópico 11).");
           if (state.stage === 5) renderStage5();
@@ -716,12 +717,12 @@ SD.demos["virtualizacao"] = (function () {
 
     var STAGES = [
       {
-        title: "Etapa 1 — Monte o servidor (threads e vazão)",
+        title: "Etapa 1: Monte o servidor (threads e vazão)",
         instructions: "Requisições custam 2 ms de CPU + 8 ms de disco. Comece com 1 " +
           "thread e vá girando os botões: threads, cache, CPUs. Observe a vazão E o " +
-          "gargalo — ele muda de lugar a cada otimização.",
-        goalText: "Meta: reproduzir os quatro marcos do livro — 100, 125, 400 e " +
-          "500 req/s.",
+          "gargalo: ele muda de lugar a cada otimização.",
+        goalText: "Meta: reproduzir os quatro marcos do livro (100, 125, 400 e " +
+          "500 req/s).",
         setup: function () {},
         render: renderStage1,
         goalMet: function () {
@@ -729,7 +730,7 @@ SD.demos["virtualizacao"] = (function () {
         }
       },
       {
-        title: "Etapa 2 — A escada dos custos",
+        title: "Etapa 2: A escada dos custos",
         instructions: "Cinco mecanismos de invocação, embaralhados. Ordene do mais " +
           "barato ao mais caro (erros são explicados). Depois, abra o raio-X da RPC na " +
           "LAN e rode o experimento dos 32 KB.",
@@ -742,7 +743,7 @@ SD.demos["virtualizacao"] = (function () {
         }
       },
       {
-        title: "Etapa 3 — Truques de memória (copy-on-write e LRPC)",
+        title: "Etapa 3: Truques de memória (copy-on-write e LRPC)",
         instructions: "Faça o fork e veja o contador de cópias marcar zero; escreva em " +
           "duas páginas do filho e observe o que é copiado. Depois rode a mesma " +
           "invocação por RPC local e por LRPC e compare os tiles.",
@@ -760,9 +761,9 @@ SD.demos["virtualizacao"] = (function () {
         }
       },
       {
-        title: "Etapa 4 — Capture a instrução (Popek & Goldberg)",
+        title: "Etapa 4: Capture a instrução (Popek & Goldberg)",
         instructions: "Você é o hipervisor (anel 0); o convidado roda no anel 1. Rode o " +
-          "lote de instruções e observe as armadilhas — e a instrução que escapa. " +
+          "lote de instruções e observe as armadilhas, e a instrução que escapa. " +
           "Depois ligue a paravirtualização, rode de novo e compare o custo com a " +
           "simulação total.",
         goalText: "Meta: ver a instrução sensível escapar (x86), consertar com a " +
@@ -774,7 +775,7 @@ SD.demos["virtualizacao"] = (function () {
         }
       },
       {
-        title: "Etapa 5 — MV × contêiner: empacote o servidor",
+        title: "Etapa 5: MV × contêiner, empacote o servidor",
         instructions: "Dois racks de 8 GB e seis serviços. Empacote como MV até faltar " +
           "memória; empacote os seis como contêineres. Depois dispare um bug de núcleo " +
           "em cada mundo e compare o estrago.",
@@ -796,7 +797,7 @@ SD.demos["virtualizacao"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
       if (state.stage === STAGES.length && st.goalMet()) els.summary.hidden = false;
     }
@@ -806,7 +807,7 @@ SD.demos["virtualizacao"] = (function () {
       var st = STAGES[n - 1];
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
       els.instructions.textContent = st.instructions;
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
       st.setup();
       st.render();
       updateNav();

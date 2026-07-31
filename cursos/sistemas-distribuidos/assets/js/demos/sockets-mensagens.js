@@ -99,8 +99,8 @@ SD.demos["sockets-mensagens"] = (function () {
       "retransmissão e filtro de duplicatas</strong> → protocolos requisição-resposta e a " +
       "semântica de invocação <em>at-least-once</em> × <em>at-most-once</em> (Tópico 5). " +
       "<strong>Multicast confiável e totalmente ordenado</strong> → comunicação em grupo " +
-      "(Tópicos 6 e 10). A comunicação entre processos é o porão de TODO o resto do curso " +
-      "— e agora você sabe o que tem lá embaixo.</p>" +
+      "(Tópicos 6 e 10). A comunicação entre processos é o porão de TODO o resto do curso, " +
+      "e agora você sabe o que tem lá embaixo.</p>" +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
       '    <p class="demo-cf-log-title">O que está acontecendo:</p>' +
@@ -161,7 +161,7 @@ SD.demos["sockets-mensagens"] = (function () {
         '  <div class="demo-sm-machine">' +
         '    <p class="demo-sm-machine-title">🖥️ Computador B · 10.0.0.2</p>' +
         '    <div class="demo-sm-port" data-port="6789" data-bound="' + state.bound + '">' +
-        "porta <strong>6789</strong> — " +
+        "porta <strong>6789</strong>: " +
         (state.bound ? "soquete de S ✔ (UDP)" : "<em>sem soquete vinculado</em>") + "</div>" +
         '    <div class="demo-sm-proc">S <span>' +
         (state.bound ? "recebendo na 6789" : "ainda sem soquete") + "</span></div>" +
@@ -188,14 +188,14 @@ SD.demos["sockets-mensagens"] = (function () {
         state.bound = !state.bound;
         log(state.bound
           ? "🔌 S criou um soquete UDP e o <strong>vinculou</strong> a (10.0.0.2, porta 6789). " +
-            "Agora a porta tem exatamente UM destino — e pode ter muitos remetentes."
-          : "🔒 S <strong>fechou</strong> o soquete — a porta 6789 voltou a ficar sem destino.");
+            "Agora a porta tem exatamente UM destino, e pode ter muitos remetentes."
+          : "🔒 S <strong>fechou</strong> o soquete: a porta 6789 voltou a ficar sem destino.");
         renderStage1();
         updateNav();
       });
       els.controls.querySelector(".demo-sm-bind2").addEventListener("click", function () {
         state.bindErrSeen = true;
-        log("✗ <strong>Erro: endereço já em uso.</strong> S2 não pode vincular a porta 6789 — " +
+        log("✗ <strong>Erro: endereço já em uso.</strong> S2 não pode vincular a porta 6789: " +
           "processos do mesmo computador NÃO compartilham portas (a exceção é o multicast IP).");
         renderStage1();
       });
@@ -206,7 +206,7 @@ SD.demos["sockets-mensagens"] = (function () {
       state.busy1 = true;
       renderStage1();
       var srcPort = c === "C1" ? 41230 : 41231;
-      log("✉️ " + c + " (10.0.0.1:" + srcPort + ") enviou para 10.0.0.2:6789 — o send " +
+      log("✉️ " + c + " (10.0.0.1:" + srcPort + ") enviou para 10.0.0.2:6789. O send " +
         "retornou na hora: para " + c + ", está tudo certo.");
       to(function () {
         if (!state.bound) {
@@ -310,9 +310,9 @@ SD.demos["sockets-mensagens"] = (function () {
       state[p] = op;
       var name = p.toUpperCase();
       log(op === "recv"
-        ? "⏸️ <strong>" + name + "</strong> executou receive — comunicação síncrona: fica " +
+        ? "⏸️ <strong>" + name + "</strong> executou receive. Comunicação síncrona: fica " +
           "<strong>bloqueado</strong> até a mensagem chegar."
-        : "⏸️ <strong>" + name + "</strong> executou send — síncrono: fica <strong>bloqueado</strong> " +
+        : "⏸️ <strong>" + name + "</strong> executou send. Síncrono: fica <strong>bloqueado</strong> " +
           "até o receive correspondente do outro lado.");
       renderControls2();
       renderProcs();
@@ -335,7 +335,7 @@ SD.demos["sockets-mensagens"] = (function () {
           state[tr.to] = "run";
           state.exchanges++;
           bump("delivered");
-          log("✅ Entregue: " + tr.to.toUpperCase() + " recebeu e os DOIS desbloquearam — é a " +
+          log("✅ Entregue: " + tr.to.toUpperCase() + " recebeu e os DOIS desbloquearam: é a " +
             "sincronização a cada mensagem.");
           if (state.stage === 2) { renderControls2(); renderProcs(); }
           updateNav();
@@ -353,8 +353,8 @@ SD.demos["sockets-mensagens"] = (function () {
           state.deadlock = true;
           state.deadlockSeen = true;
           log("💀 <strong>Deadlock!</strong> " + (state.a === "recv"
-            ? "A espera mensagem de B, e B espera mensagem de A — ninguém envia."
-            : "A e B esperam um receive que nunca virá — ninguém recebe.") +
+            ? "A espera mensagem de B, e B espera mensagem de A: ninguém envia."
+            : "A e B esperam um receive que nunca virá: ninguém recebe.") +
             " Sem timeout, ficariam assim para sempre. Desbloqueie e refaça: um deles " +
             "precisa ENVIAR primeiro.");
           renderControls2();
@@ -371,7 +371,7 @@ SD.demos["sockets-mensagens"] = (function () {
       var tmo = state.expTimeout;
       var arrived = false, gaveUp = false;
       log("🧪 Experimento (UDP): A executa receive com <strong>timeout de " +
-        (tmo === 500 ? "0,5 s" : "5 s") + "</strong>; B envia — a mensagem leva 1,6 s.");
+        (tmo === 500 ? "0,5 s" : "5 s") + "</strong>; B envia: a mensagem leva 1,6 s.");
       to(function () {
         if (!arrived) {
           gaveUp = true;
@@ -383,12 +383,12 @@ SD.demos["sockets-mensagens"] = (function () {
         if (gaveUp) {
           bump("dropped");
           state.timeoutLost = true;
-          log("📭 A mensagem chegou 1,6 s depois — e não havia mais ninguém esperando: perdida " +
+          log("📭 A mensagem chegou 1,6 s depois, e não havia mais ninguém esperando: perdida " +
             "para esta troca. Timeout curto demais desiste do que ESTAVA a caminho (o dilema " +
             "da demo do Tópico 1).");
         } else {
           bump("delivered");
-          log("📬 A mensagem chegou dentro do prazo: recebida. Timeout longo cobre a viagem — " +
+          log("📬 A mensagem chegou dentro do prazo: recebida. Timeout longo cobre a viagem, " +
             "mas atrasa a detecção de falhas reais. Não existe valor perfeito.");
         }
         state.expBusy = false;
@@ -420,16 +420,16 @@ SD.demos["sockets-mensagens"] = (function () {
         "ASCII (1 byte/caractere)</span></p>" +
         '    <table class="demo-sm-struct" data-rx data-intact="" data-swapped="false">' +
         "<caption>recebido</caption>" +
-        '<tr><td>name</td><td data-rx-name>—</td></tr>' +
-        '<tr><td>place</td><td data-rx-place>—</td></tr>' +
-        '<tr><td>year</td><td data-rx-year>—</td></tr></table>' +
+        '<tr><td>name</td><td data-rx-name>n/d</td></tr>' +
+        '<tr><td>place</td><td data-rx-place>n/d</td></tr>' +
+        '<tr><td>year</td><td data-rx-year>n/d</td></tr></table>' +
         "  </div>" +
         "</div>" +
         '<pre class="demo-sm-bytes" data-bytes hidden></pre>' +
-        '<p class="demo-sm-sizes">tamanho da mensagem — ' +
-        'CDR: <strong data-size-cdr="' + s.cdr + '">' + (s.cdr || "—") + "</strong> bytes · " +
-        'JSON: <strong data-size-json="' + s.json + '">' + (s.json || "—") + "</strong> bytes · " +
-        'XML: <strong data-size-xml="' + s.xml + '">' + (s.xml || "—") + "</strong> bytes</p>";
+        '<p class="demo-sm-sizes">tamanho da mensagem: ' +
+        'CDR: <strong data-size-cdr="' + s.cdr + '">' + (s.cdr || "n/d") + "</strong> bytes · " +
+        'JSON: <strong data-size-json="' + s.json + '">' + (s.json || "n/d") + "</strong> bytes · " +
+        'XML: <strong data-size-xml="' + s.xml + '">' + (s.xml || "n/d") + "</strong> bytes</p>";
       els.controls.innerHTML =
         '<label><input type="radio" name="demo-sm-fmt" value="crus"' +
         (state.fmt === "crus" ? " checked" : "") + "> bytes crus</label>" +
@@ -485,14 +485,14 @@ SD.demos["sockets-mensagens"] = (function () {
           showRx("S□m□i□", "L□o□n□", YEAR_GARBLED, false, false);
           log("💥 B leu <strong>lixo</strong>: o inteiro 1984 virou <strong>" + YEAR_GARBLED +
             "</strong> (ordem de bytes trocada) e as strings ganharam caracteres nulos " +
-            "(Unicode de 2 bytes lido como ASCII). Nenhum bit se corrompeu na viagem — as " +
+            "(Unicode de 2 bytes lido como ASCII). Nenhum bit se corrompeu na viagem: as " +
             "MÁQUINAS é que discordam da representação.");
         } else if (f === "cdr") {
-          showBytes("CDR (Fig. 4.8 do Coulouris) — " + CDR_SIZE + " bytes:\n" + CDR_BYTES);
+          showBytes("CDR (Fig. 4.8 do Coulouris), " + CDR_SIZE + " bytes:\n" + CDR_BYTES);
           if (state.mismatch) {
             state.swappedSeen = true;
             showRx("London", "Smith", "1984", false, true);
-            log("⚠️ Os bytes chegaram INTACTOS — mas B esperava os campos na ordem " +
+            log("⚠️ Os bytes chegaram INTACTOS, mas B esperava os campos na ordem " +
               "<em>place, name, year</em>: leu name=“London” e place=“Smith”. O CDR não " +
               "carrega tipos nem nomes; <strong>violar o acordo (IDL) corrompe o " +
               "significado sem corromper um único byte</strong>.");
@@ -500,24 +500,24 @@ SD.demos["sockets-mensagens"] = (function () {
             state.sizes.cdr = CDR_SIZE;
             bump("delivered");
             showRx("Smith", "London", "1984", true, false);
-            log("✅ Íntegra em <strong>" + CDR_SIZE + " bytes</strong> — compacto porque a " +
+            log("✅ Íntegra em <strong>" + CDR_SIZE + " bytes</strong>, compacto porque a " +
               "mensagem só carrega VALORES: a ordem e os tipos vêm do acordo prévio (IDL) " +
               "das duas pontas.");
           }
         } else {
           var txt = f === "json" ? JSON_TXT : XML_TXT;
           state.sizes[f] = txt.length;
-          showBytes(f.toUpperCase() + " — " + txt.length + " bytes:\n" + txt);
+          showBytes(f.toUpperCase() + ", " + txt.length + " bytes:\n" + txt);
           bump("delivered");
           showRx("Smith", "London", "1984", true, false);
-          log("✅ Íntegra em <strong>" + txt.length + " bytes</strong> — " +
+          log("✅ Íntegra em <strong>" + txt.length + " bytes</strong>, " +
             (state.mismatch ? "e a ordem dos campos NEM IMPORTA: " : "") + "o formato é " +
             "<strong>autodescritivo</strong> (cada valor viaja rotulado), por isso é maior " +
             "que o CDR.");
         }
         if (state.sizes.cdr && state.sizes.json && state.sizes.xml) {
           log("📏 Compare: CDR " + state.sizes.cdr + " × JSON " + state.sizes.json + " × XML " +
-            state.sizes.xml + " bytes — o preço da autodescrição. (Buffers de protocolo e " +
+            state.sizes.xml + " bytes: o preço da autodescrição. (Buffers de protocolo e " +
             "afins buscam o meio-termo: binário compacto COM esquema.)");
         }
         state.busy3 = false;
@@ -531,12 +531,12 @@ SD.demos["sockets-mensagens"] = (function () {
     function refreshStage3() {
       var sizesEl = els.area.querySelector(".demo-sm-sizes");
       if (sizesEl) {
-        sizesEl.innerHTML = "tamanho da mensagem — " +
-          'CDR: <strong data-size-cdr="' + state.sizes.cdr + '">' + (state.sizes.cdr || "—") +
+        sizesEl.innerHTML = "tamanho da mensagem: " +
+          'CDR: <strong data-size-cdr="' + state.sizes.cdr + '">' + (state.sizes.cdr || "n/d") +
           "</strong> bytes · " +
-          'JSON: <strong data-size-json="' + state.sizes.json + '">' + (state.sizes.json || "—") +
+          'JSON: <strong data-size-json="' + state.sizes.json + '">' + (state.sizes.json || "n/d") +
           "</strong> bytes · " +
-          'XML: <strong data-size-xml="' + state.sizes.xml + '">' + (state.sizes.xml || "—") +
+          'XML: <strong data-size-xml="' + state.sizes.xml + '">' + (state.sizes.xml || "n/d") +
           "</strong> bytes";
       }
       var btn = els.controls.querySelector(".demo-sm-send3");
@@ -567,7 +567,7 @@ SD.demos["sockets-mensagens"] = (function () {
         '<div class="demo-sm-world">' +
         '  <div class="demo-sm-machine">' +
         '    <p class="demo-sm-machine-title">💻 Cliente</p>' +
-        '    <p class="demo-sm-note">última resposta: <strong data-client-view>—</strong></p>' +
+        '    <p class="demo-sm-note">última resposta: <strong data-client-view>n/d</strong></p>' +
         "  </div>" +
         '  <div class="demo-sm-machine">' +
         '    <p class="demo-sm-machine-title">🏦 Banco (servidor)</p>' +
@@ -579,9 +579,9 @@ SD.demos["sockets-mensagens"] = (function () {
         "</div>" +
         '<p class="demo-sm-status" data-double-seen="' + state.doubleSeen +
         '" data-filter-fix="' + state.filterFixSeen + '">se nada se perdesse, o saldo seria ' +
-        "R$ <strong data-esperado>" + state.esperado + "</strong> — " +
+        "R$ <strong data-esperado>" + state.esperado + "</strong> · " +
         '<span class="demo-sm-diverge" data-diverge></span></p>' +
-        '<p class="demo-sm-note">E com TCP? A duplicata some — mas se a CONEXÃO cair depois do ' +
+        '<p class="demo-sm-note">E com TCP? A duplicata some, mas se a CONEXÃO cair depois do ' +
         "envio, o cliente continua sem saber se o débito aconteceu. A incerteza muda de lugar, " +
         "não desaparece.</p>";
       els.controls.innerHTML =
@@ -611,7 +611,7 @@ SD.demos["sockets-mensagens"] = (function () {
         log("↺ Conta reaberta: saldo R$ 100 (o histórico do filtro foi limpo).");
         bankUpdate();
         var cv = els.area.querySelector("[data-client-view]");
-        if (cv) cv.textContent = "—";
+        if (cv) cv.textContent = "n/d";
       });
       bankUpdate();
     }
@@ -632,13 +632,13 @@ SD.demos["sockets-mensagens"] = (function () {
           ": saldo agora R$ " + state.saldo + ".");
         if (isRetx && !state.filterOn) {
           state.doubleSeen = true;
-          log("💥 A MESMA operação executou <strong>duas vezes</strong> — a retransmissão virou " +
+          log("💥 A MESMA operação executou <strong>duas vezes</strong>: a retransmissão virou " +
             "requisição nova. Débito não é idempotente: o saldo divergiu.");
         }
       } else {
         resp = "saldo R$ " + state.saldo;
         if (isRetx) {
-          log("🔁 Consulta #" + id + " reexecutada — <strong>idempotente</strong>: ler duas vezes " +
+          log("🔁 Consulta #" + id + " reexecutada, <strong>idempotente</strong>: ler duas vezes " +
             "não muda nada.");
         }
       }
@@ -678,7 +678,7 @@ SD.demos["sockets-mensagens"] = (function () {
       if (lossLeg === "req") {
         to(function () {
           bump("dropped");
-          log("💥 A <strong>requisição</strong> #" + id + " se perdeu no caminho — o servidor " +
+          log("💥 A <strong>requisição</strong> #" + id + " se perdeu no caminho: o servidor " +
             "nem ficou sabendo.");
         }, (t += 700));
         to(function () {
@@ -697,7 +697,7 @@ SD.demos["sockets-mensagens"] = (function () {
       if (lossLeg === "resp") {
         to(function () {
           bump("dropped");
-          log("💥 A <strong>resposta</strong> de #" + id + " se perdeu — o cliente não sabe que " +
+          log("💥 A <strong>resposta</strong> de #" + id + " se perdeu: o cliente não sabe que " +
             "a operação JÁ foi executada.");
         }, (t += 500));
         to(function () {
@@ -722,7 +722,7 @@ SD.demos["sockets-mensagens"] = (function () {
       if (wasRetx && state.filterOn && kind === "debito" &&
           state.execs - execsBefore === 1) {
         state.filterFixSeen = true;
-        log("✅ Perda + reenvio COM filtro: o débito executou UMA vez só — o reenvio foi " +
+        log("✅ Perda + reenvio COM filtro: o débito executou UMA vez só, o reenvio foi " +
           "reconhecido, não reexecutado. É a semântica <strong>at-most-once</strong>.");
       }
       state.busy4 = false;
@@ -775,7 +775,7 @@ SD.demos["sockets-mensagens"] = (function () {
         ">📢📢 Duas origens: +10 e ×2</button>" +
         '<label class="demo-sm-filterlabel"><input type="checkbox" class="demo-sm-rel"' +
         (state.reliable ? " checked" : "") +
-        "> multicast confiável + totalmente ordenado (caixa-preta — Tópico 10)</label>" +
+        "> multicast confiável + totalmente ordenado (caixa-preta, Tópico 10)</label>" +
         '<button type="button" class="btn-ghost demo-sm-rreset">↺ Reiniciar réplicas (valor 10)' +
         "</button>";
       els.controls.querySelector(".demo-sm-mc1").addEventListener("click", mc1);
@@ -810,7 +810,7 @@ SD.demos["sockets-mensagens"] = (function () {
           state.reps = state.reps.map(function (v, i) { return i + 1 === miss ? v : v + 10; });
           bump("dropped");
           log("💥 Falha por omissão: <strong>R" + miss + " não recebeu</strong> a atualização " +
-            "(buffer cheio) — as outras aplicaram. Alguns recebem, outros não: é o modelo de " +
+            "(buffer cheio). As outras aplicaram. Alguns recebem, outros não: é o modelo de " +
             "falhas do multicast IP.");
           if (!allEqual5()) state.divLoss = true;
         }
@@ -831,7 +831,7 @@ SD.demos["sockets-mensagens"] = (function () {
         if (state.reliable) {
           state.reps = state.reps.map(function (v) { return (v + 10) * 2; });
           bump("delivered");
-          log("✅ Ordem TOTAL: todos entregaram +10 antes de ×2 — as réplicas aplicaram a mesma " +
+          log("✅ Ordem TOTAL: todos entregaram +10 antes de ×2, as réplicas aplicaram a mesma " +
             "sequência e continuam iguais.");
         } else {
           var flip = 1 + Math.floor(rand() * 3);
@@ -839,7 +839,7 @@ SD.demos["sockets-mensagens"] = (function () {
             return i + 1 === flip ? v * 2 + 10 : (v + 10) * 2;
           });
           bump("delivered");
-          log("💥 Sem perda nenhuma — mas <strong>R" + flip + " recebeu ×2 antes de +10</strong> " +
+          log("💥 Sem perda nenhuma, mas <strong>R" + flip + " recebeu ×2 antes de +10</strong> " +
             "e as outras, o contrário. Ordens diferentes, estados diferentes: réplicas divergem " +
             "SEM perder uma única mensagem.");
           if (!allEqual5()) state.divOrder = true;
@@ -855,8 +855,8 @@ SD.demos["sockets-mensagens"] = (function () {
 
     var STAGES = [
       {
-        title: "Etapa 1 — Caixas postais (portas e soquetes)",
-        instructions: "O servidor S deveria atender em 10.0.0.2:6789 — mas ninguém vinculou o " +
+        title: "Etapa 1: Caixas postais (portas e soquetes)",
+        instructions: "O servidor S deveria atender em 10.0.0.2:6789, mas ninguém vinculou o " +
           "soquete ainda. Envie uma mensagem ANTES de vincular; depois vincule, envie dos dois " +
           "clientes e tente vincular S2 à mesma porta.",
         goalText: "Meta: 1 mensagem descartada em silêncio + soquete vinculado + entregas de C1 e C2.",
@@ -867,7 +867,7 @@ SD.demos["sockets-mensagens"] = (function () {
         }
       },
       {
-        title: "Etapa 2 — Bloqueio (send e receive síncronos)",
+        title: "Etapa 2: Bloqueio (send e receive síncronos)",
         instructions: "Você decide a ordem das operações de A e B. Comece com os DOIS em receive " +
           "e veja no que dá; desbloqueie e complete uma troca. Depois rode o experimento do " +
           "timeout com 0,5 s.",
@@ -882,10 +882,10 @@ SD.demos["sockets-mensagens"] = (function () {
         }
       },
       {
-        title: "Etapa 3 — Empacotar (representação externa de dados)",
+        title: "Etapa 3: Empacotar (representação externa de dados)",
         instructions: "A máquina A (big-endian, Unicode) envia a struct Person à máquina B " +
-          "(little-endian, ASCII). Envie primeiro em bytes crus; depois compare CDR, JSON e XML " +
-          "— e experimente violar o acordo de ordem do CDR.",
+          "(little-endian, ASCII). Envie primeiro em bytes crus; depois compare CDR, JSON e XML, " +
+          "e experimente violar o acordo de ordem do CDR.",
         goalText: "Meta: ver os bytes crus chegarem adulterados e entregar a struct íntegra em " +
           "CDR, JSON e XML.",
         setup: function () { state.busy3 = false; },
@@ -896,18 +896,18 @@ SD.demos["sockets-mensagens"] = (function () {
         }
       },
       {
-        title: "Etapa 4 — A requisição duplicada",
+        title: "Etapa 4: A requisição duplicada",
         instructions: "Requisição-resposta sobre UDP: respostas se perdem e o cliente retransmite " +
           "por timeout. Faça um débito SEM o filtro e observe o saldo; depois ligue o filtro de " +
           "duplicatas e debite de novo.",
-        goalText: "Meta: ver um débito executar DUAS vezes — e depois um reenvio com filtro " +
+        goalText: "Meta: ver um débito executar DUAS vezes, e depois um reenvio com filtro " +
           "manter o saldo certo.",
         setup: function () { state.busy4 = false; },
         render: renderStage4,
         goalMet: function () { return state.doubleSeen && state.filterFixSeen; }
       },
       {
-        title: "Etapa 5 — Multicast para as réplicas",
+        title: "Etapa 5: Multicast para as réplicas",
         instructions: "Três réplicas guardam o mesmo valor. Com multicast IP, veja a omissão e a " +
           "ordem quebrarem a igualdade; depois reinicie as réplicas, ligue as garantias e repita " +
           "as duas jogadas.",
@@ -928,7 +928,7 @@ SD.demos["sockets-mensagens"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
       if (state.stage === STAGES.length && st.goalMet()) els.summary.hidden = false;
     }
@@ -938,7 +938,7 @@ SD.demos["sockets-mensagens"] = (function () {
       var st = STAGES[n - 1];
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
       els.instructions.textContent = st.instructions;
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
       st.setup();
       st.render();
       updateNav();

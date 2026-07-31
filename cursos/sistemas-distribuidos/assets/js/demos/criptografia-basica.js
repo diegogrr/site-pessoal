@@ -77,17 +77,17 @@ SD.demos["criptografia-basica"] = (function () {
 
   /* ---- Peças do aperto de mãos TLS (etapa 5) ---- */
   var TLS_STEPS = [
-    { id: "hello", name: "Olá — negociar o conjunto de cifras",
+    { id: "hello", name: "Olá: negociar o conjunto de cifras",
       why: "cliente e servidor combinam versão e algoritmos ANTES de qualquer " +
         "segredo. Nada aqui é secreto ainda." },
     { id: "cert", name: "Certificado do servidor (validado na AC pré-instalada)",
       why: "a chave pública do servidor só vale depois de conferida contra a " +
-        "autoridade que já veio de fábrica — senão você a pegaria de Mallory." },
+        "autoridade que já veio de fábrica, senão você a pegaria de Mallory." },
     { id: "premaster", name: "Segredo pré-mestre cifrado com a chave do certificado",
       why: "só faz sentido DEPOIS de validar o certificado: mandá-lo antes " +
         "entregaria o segredo ao homem no meio." },
     { id: "session", name: "Derivar as chaves de sessão (uma por direção)",
-      why: "as chaves simétricas nascem do pré-mestre — é preciso ter o " +
+      why: "as chaves simétricas nascem do pré-mestre: é preciso ter o " +
         "pré-mestre primeiro." },
     { id: "changecipher", name: "Trocar a especificação de cifra (ChangeCipherSpec)",
       why: "a partir daqui tudo viaja cifrado; anunciar isso antes de ter as " +
@@ -210,7 +210,7 @@ SD.demos["criptografia-basica"] = (function () {
       var tapClass = s.intercepted ? "is-reading" : "";
       var tapLabel = s.intercepted
         ? "Eve lê em claro: <strong>" + s.wire.text + "</strong>"
-        : "Eve no grampo — clique em <em>Interceptar</em>";
+        : "Eve no grampo: clique em <em>Interceptar</em>";
       var inboxHtml = s.inbox.length
         ? s.inbox.map(function (m) {
             return '<li data-forged="' + (m.forged ? "true" : "false") +
@@ -231,11 +231,11 @@ SD.demos["criptografia-basica"] = (function () {
         '  <div><dt>Ataques executados</dt><dd data-attacks>' +
         [s.intercepted, s.injected, s.altered].filter(Boolean).length + "/3</dd></div>" +
         '  <div><dt>Intromissão</dt><dd data-a-int>' +
-        (s.intercepted ? "✓" : "—") + "</dd></div>" +
+        (s.intercepted ? "✓" : "✗") + "</dd></div>" +
         '  <div><dt>Mascaramento</dt><dd data-a-inj>' +
-        (s.injected ? "✓" : "—") + "</dd></div>" +
+        (s.injected ? "✓" : "✗") + "</dd></div>" +
         '  <div><dt>Falsificação</dt><dd data-a-alt>' +
-        (s.altered ? "✓" : "—") + "</dd></div>" +
+        (s.altered ? "✓" : "✗") + "</dd></div>" +
         "</dl>";
       els.controls.innerHTML =
         '<button type="button" class="btn-ghost demo-sg-next-msg">▶ Alice envia outra mensagem</button>' +
@@ -260,7 +260,7 @@ SD.demos["criptografia-basica"] = (function () {
         s.inbox.unshift({ text: "Pague R$ 9.000 à conta 0007", forged: true,
           tag: "“de Alice” (forjada)" });
         log("🎭 <strong>Mascaramento</strong> (classe: <em>falsificação</em>): você forjou " +
-          "uma mensagem <em>“de Alice”</em> e Bob a aceitou como genuína — o remetente é " +
+          "uma mensagem <em>“de Alice”</em> e Bob a aceitou como genuína: o remetente é " +
           "forjável quando nada autentica a origem.");
         renderStage1(); updateNav();
       });
@@ -275,7 +275,7 @@ SD.demos["criptografia-basica"] = (function () {
         s.wire = { kind: s.wire.kind, text: after, amount: 9000 };
         s.inbox.unshift({ text: after, forged: true, tag: "alterada em trânsito" });
         log("✂️ <strong>Falsificação de mensagem</strong> (classe: <em>adulteração/" +
-          "vandalismo</em>): você alterou a mensagem em trânsito — de “" + before +
+          "vandalismo</em>): você alterou a mensagem em trânsito, de “" + before +
           "” para “<strong>" + after + "</strong>”. Bob não percebe: nada garante a " +
           "integridade.");
         renderStage1(); updateNav();
@@ -295,7 +295,7 @@ SD.demos["criptografia-basica"] = (function () {
 
     function crackRow(label, open) {
       return '<li data-open="' + (open ? "true" : "false") + '">' +
-        (open ? "🔴 EM ABERTO" : "🟢 fechada") + " — " + label + "</li>";
+        (open ? "🔴 EM ABERTO" : "🟢 fechada") + ": " + label + "</li>";
     }
 
     function renderStage2() {
@@ -304,7 +304,7 @@ SD.demos["criptografia-basica"] = (function () {
         ? "🔐 {" + scramble("Pagar R$ 500") + "}<sub>K<sub>AB</sub></sub>"
         : "✉️ Pagar R$ 500 ao fornecedor";
       var tapLabel = s.keyExposed
-        ? "Mallory tem K<sub>AB</sub> — lê tudo <strong>de novo</strong>: “Pagar R$ 500”"
+        ? "Mallory tem K<sub>AB</sub>, lê tudo <strong>de novo</strong>: “Pagar R$ 500”"
         : (s.cipherOn ? "Eve só vê <strong>texto cifrado</strong> (ruído)"
                       : "Eve lê em claro");
       els.area.innerHTML =
@@ -317,18 +317,18 @@ SD.demos["criptografia-basica"] = (function () {
         '<div class="demo-sg-cracks">' +
         '  <p class="demo-sg-cracks-title">Rachaduras que a cifra <em>não</em> fecha:</p>' +
         "  <ul>" +
-        crackRow("Distribuição da chave — como K<sub>AB</sub> chegou até Bob?" +
+        crackRow("Distribuição da chave: como K<sub>AB</sub> chegou até Bob?" +
           (s.keyExposed ? " <em>(demonstrada: a chave viajou em claro!)</em>" : "") +
-          " — só a chave pública fecha (etapa 3)", true) +
-        crackRow("Repetição (replay) — reenviar a mensagem cifrada sem ter a chave",
+          " Só a chave pública fecha (etapa 3)", true) +
+        crackRow("Repetição (replay): reenviar a mensagem cifrada sem ter a chave",
           !s.replayBlocked) +
         "  </ul>" +
         "</div>" +
         '<dl class="demo-cf-metrics">' +
-        '  <div><dt>Cifra simétrica</dt><dd data-cipher>' + (s.cipherOn ? "ligada" : "—") +
+        '  <div><dt>Cifra simétrica</dt><dd data-cipher>' + (s.cipherOn ? "ligada" : "desligada") +
         "</dd></div>" +
         '  <div><dt>Bob pagou</dt><dd data-paycount>' + s.payCount + "×</dd></div>" +
-        '  <div><dt>Nonce/frescor</dt><dd data-nonce>' + (s.nonceOn ? "ligado" : "—") +
+        '  <div><dt>Nonce/frescor</dt><dd data-nonce>' + (s.nonceOn ? "ligado" : "desligado") +
         "</dd></div>" +
         "</dl>";
       els.controls.innerHTML =
@@ -351,7 +351,7 @@ SD.demos["criptografia-basica"] = (function () {
         s.cipherOn = ev.target.checked;
         log(s.cipherOn
           ? "🔐 Cifra simétrica <strong>ligada</strong>: Alice e Bob compartilham " +
-            "K<sub>AB</sub>. O grampo de Eve passa a ver só texto cifrado — segredo " +
+            "K<sub>AB</sub>. O grampo de Eve passa a ver só texto cifrado: segredo " +
             "e integridade protegidos pela soma de verificação."
           : "🔓 Cifra desligada: de volta ao texto em claro.");
         renderStage2(); updateNav();
@@ -359,7 +359,7 @@ SD.demos["criptografia-basica"] = (function () {
       els.controls.querySelector(".demo-sg-tamper").addEventListener("click", function () {
         s.tamperDetected = true;
         log("🛡️ Você mexeu num byte do texto cifrado. Ao decifrar, Bob obteve " +
-          "<strong>lixo</strong> e a <strong>soma de verificação não bate</strong> — " +
+          "<strong>lixo</strong> e a <strong>soma de verificação não bate</strong>: " +
           "adulteração detectada e descartada. Injetar/alterar deixou de funcionar.");
         renderStage2(); updateNav();
       });
@@ -388,7 +388,7 @@ SD.demos["criptografia-basica"] = (function () {
       to(function () {
         s.keyExposed = true; s.busy = false;
         log("💥 Com K<sub>AB</sub> em mãos, Mallory <strong>volta a ler tudo</strong>. " +
-          "Cifrar não resolveu a <strong>distribuição da chave</strong> — é o que a " +
+          "Cifrar não resolveu a <strong>distribuição da chave</strong>: é o que a " +
           "chave pública vai consertar (etapa 3).");
         if (state.stage === 2) renderStage2();
         updateNav();
@@ -405,13 +405,13 @@ SD.demos["criptografia-basica"] = (function () {
       to(function () {
         s.payCount += 1;
         if (state.stage === 2) renderStage2();
-        log("📼 Mallory NÃO tem a chave — mas <strong>copia os bits cifrados</strong> e os " +
+        log("📼 Mallory NÃO tem a chave, mas <strong>copia os bits cifrados</strong> e os " +
           "reenvia. É o ataque de <strong>repetição</strong>.");
       }, 800);
       to(function () {
         if (s.nonceOn) {
           s.replayBlocked = true;
-          log("🎫 A cópia chega com o nonce <code>#" + n + "</code> — que Bob JÁ viu. " +
+          log("🎫 A cópia chega com o nonce <code>#" + n + "</code>, que Bob JÁ viu. " +
             "<strong>Frescor recusa a repetição.</strong> Bob paga <strong>uma só vez</strong>. " +
             "Rachadura do replay fechada.");
         } else {
@@ -419,7 +419,7 @@ SD.demos["criptografia-basica"] = (function () {
           s.replaySeen = true;
           log("🚨 Sem prova de frescor, Bob acha que é um novo pedido legítimo e " +
             "<strong>paga DE NOVO</strong>: total <strong>" + s.payCount + "×</strong>. Uma " +
-            "mensagem cifrada E autêntica foi reaproveitada sem a chave — ligue o nonce e " +
+            "mensagem cifrada E autêntica foi reaproveitada sem a chave: ligue o nonce e " +
             "reenvie.");
         }
         s.busy = false;
@@ -437,9 +437,9 @@ SD.demos["criptografia-basica"] = (function () {
       if (bits < 512) return { txt: "dias a meses (viável a atacantes)", hard: false };
       if (bits < 768) return { txt: "≈ 512 bits JÁ foram fatorados (2003, 174 dígitos)",
         hard: true };
-      if (bits < 2048) return { txt: "inviável hoje — mínimo recomendado ≥ 768 bits",
+      if (bits < 2048) return { txt: "inviável hoje: mínimo recomendado ≥ 768 bits",
         hard: true };
-      return { txt: "2.048 bits em uso — fora de alcance da força bruta conhecida",
+      return { txt: "2.048 bits em uso: fora de alcance da força bruta conhecida",
         hard: true };
     }
 
@@ -459,11 +459,11 @@ SD.demos["criptografia-basica"] = (function () {
         "    <div><span>c (pública, publique)</span><strong data-c>" + RSA.c + "</strong></div>" +
         "  </div>" +
         '  <p class="demo-sg-mural">📢 Mural público: chave de cifragem ⟨c=' + RSA.c +
-        ", N=" + RSA.N + "⟩ — qualquer um cifra; só quem tem <strong>d=" + RSA.d +
+        ", N=" + RSA.N + "⟩: qualquer um cifra; só quem tem <strong>d=" + RSA.d +
         "</strong> decifra.</p>" +
         '  <div class="demo-sg-rsa-run">' +
         "    <p>Mensagem M = <strong data-m>" + s.msg + "</strong> " +
-        '(0–220)</p>' +
+        '(0-220)</p>' +
         "    <p>Cifrar: C = M<sup>" + RSA.c + "</sup> mod " + RSA.N +
         ' = <strong data-cipher-out>' + (s.cipher === null ? "?" : s.cipher) +
         "</strong></p>" +
@@ -477,7 +477,7 @@ SD.demos["criptografia-basica"] = (function () {
         "  <p data-factored=\"" + s.factored + "\">" +
         (s.factored
           ? "Contra N=221 o fatorador achou <strong>13 × 17</strong> num instante, " +
-            "recuperou Z=192 e derivou <strong>d=5</strong> — sua chave privada. Números " +
+            "recuperou Z=192 e derivou <strong>d=5</strong>: sua chave privada. Números " +
             "de brinquedo não protegem nada."
           : "Contra este N minúsculo, fatorar é trivial. Clique para quebrar.") + "</p>" +
         '  <label>dígitos/bits de N: <input type="range" class="demo-sg-bits" min="16" ' +
@@ -485,7 +485,7 @@ SD.demos["criptografia-basica"] = (function () {
         " bits</output></label>" +
         '  <p class="demo-sg-est" data-hard="' + est.hard + '">Tempo estimado p/ fatorar: ' +
         "<strong>" + est.txt + "</strong></p>" +
-        '  <p class="demo-sg-cost">💸 Cifrar com RSA custa <strong>100–1.000×</strong> a ' +
+        '  <p class="demo-sg-cost">💸 Cifrar com RSA custa <strong>100 a 1.000×</strong> a ' +
         "cifra simétrica: ótimo para ABRIR o canal, ruim para conversar (etapa 5).</p>" +
         "</div>";
       els.controls.innerHTML =
@@ -508,7 +508,7 @@ SD.demos["criptografia-basica"] = (function () {
       els.controls.querySelector(".demo-sg-encrypt").addEventListener("click", function () {
         s.cipher = modpow(s.msg, RSA.c, RSA.N); s.decrypted = null; s.roundTrip = false;
         log("🔒 M=" + s.msg + " cifrada com a chave PÚBLICA: C = " + s.msg + "^" + RSA.c +
-          " mod " + RSA.N + " = <strong>" + s.cipher + "</strong>. Publicável — só d " +
+          " mod " + RSA.N + " = <strong>" + s.cipher + "</strong>. Publicável: só d " +
           "reverte.");
         renderStage3(); updateNav();
       });
@@ -518,12 +518,12 @@ SD.demos["criptografia-basica"] = (function () {
         s.roundTrip = s.decrypted === s.msg;
         log("🔓 Decifrando com a chave PRIVADA d=" + RSA.d + ": " + s.cipher + "^" + RSA.d +
           " mod " + RSA.N + " = <strong>" + s.decrypted + "</strong>" +
-          (s.roundTrip ? " — voltou exatamente ao M. Alçapão: fácil com d." : "") + ".");
+          (s.roundTrip ? ", de volta exatamente ao M. Alçapão: fácil com d" : "") + ".");
         renderStage3(); updateNav();
       });
       els.controls.querySelector(".demo-sg-eve").addEventListener("click", function () {
         log("🕵️ Eve tem só ⟨c=" + RSA.c + ", N=" + RSA.N + "⟩. Para achar d ela teria que " +
-          "<strong>fatorar N</strong> — trivial para 221, <strong>inviável</strong> para os " +
+          "<strong>fatorar N</strong>: trivial para 221, <strong>inviável</strong> para os " +
           "primos de verdade (> 10<sup>100</sup>). Ela não volta.");
       });
       els.controls.querySelector(".demo-sg-factorbtn").addEventListener("click", factor3);
@@ -533,8 +533,8 @@ SD.demos["criptografia-basica"] = (function () {
         if (s.bits >= 512) {
           if (!s.sawGrowth) {
             log("📈 Com " + s.bits + " bits, fatorar já é <strong>" + e.txt + "</strong>. " +
-              "O custo cresce exponencialmente: cada bloco de bits multiplica o esforço — " +
-              "é o tamanho da chave que compra a segurança.");
+              "O custo cresce exponencialmente: cada bloco de bits multiplica o esforço, " +
+              "e é o tamanho da chave que compra a segurança.");
           }
           s.sawGrowth = true;
         }
@@ -573,10 +573,10 @@ SD.demos["criptografia-basica"] = (function () {
         (s.certBlocked
           ? "🔒 Com <strong>certificado</strong>: a chave de Bob vem assinada por Fred " +
             "(autoridade pré-instalada). O certificado FORJADO de Mallory falha a " +
-            "verificação — o ataque morre e Alice usa a chave REAL de Bob."
+            "verificação: o ataque morre e Alice usa a chave REAL de Bob."
           : (s.mitmSeen
             ? "💥 <strong>Homem no meio</strong>: Mallory respondeu com a chave DELE. " +
-              "Alice e Bob “conversam normalmente” — nenhum erro em lado nenhum — enquanto " +
+              "Alice e Bob “conversam normalmente” (nenhum erro em lado nenhum) enquanto " +
               "Mallory <strong>decifra e recifra em silêncio</strong> cada mensagem."
             : "Alice vai pedir “a chave pública de Bob” pela rede. Sem autenticação, quem " +
               "responde primeiro vence.")) +
@@ -594,7 +594,7 @@ SD.demos["criptografia-basica"] = (function () {
             "[H]<sub>d</sub><sup>c</sup> = " + recovered + " vs H(M)=" + current + " → " +
             (sigValid
               ? "<strong>✅ assinatura VÁLIDA</strong> (documento íntegro)"
-              : "<strong>🚨 assinatura INVÁLIDA</strong> — o documento foi adulterado!") +
+              : "<strong>🚨 assinatura INVÁLIDA</strong>: o documento foi adulterado!") +
             "</p>"
           : "") +
         "</div>";
@@ -622,7 +622,7 @@ SD.demos["criptografia-basica"] = (function () {
         s.doc = s.doc.replace("500", "900");
         log("✂️ Você trocou “500” por “900” no documento JÁ assinado. O resumo mudou de " +
           digest("Transferir R$ 500 para Bob") + " para <strong>" + digest(s.doc) +
-          "</strong>, mas a assinatura ainda decifra para o resumo ANTIGO — " +
+          "</strong>, mas a assinatura ainda decifra para o resumo ANTIGO: " +
           "<strong>verificação falha na hora</strong>. Assinatura detecta adulteração.");
         renderStage4(); updateNav();
       });
@@ -630,7 +630,7 @@ SD.demos["criptografia-basica"] = (function () {
         s.certOn = ev.target.checked;
         log(s.certOn
           ? "📜 Agora a chave de Bob só é aceita dentro de um <strong>certificado assinado " +
-            "por Fred</strong> — a autoridade cuja chave veio de fábrica com Alice."
+            "por Fred</strong>: a autoridade cuja chave veio de fábrica com Alice."
           : "📜 Certificado dispensado (de volta à confiança cega).");
         renderStage4(); updateNav();
       });
@@ -644,13 +644,13 @@ SD.demos["criptografia-basica"] = (function () {
       to(function () {
         if (s.certOn) {
           s.certBlocked = true;
-          log("📜 Mallory tenta injetar a chave DELE num certificado forjado — mas não sabe " +
+          log("📜 Mallory tenta injetar a chave DELE num certificado forjado, mas não sabe " +
             "assinar como Fred. A verificação contra a AC pré-instalada <strong>rejeita</strong>. " +
             "Alice recebe a chave REAL de Bob. Homem no meio derrotado.");
         } else {
           s.mitmSeen = true;
           log("🎭 Mallory responde PRIMEIRO com a chave dele. Daqui em diante ele lê e " +
-            "reescreve tudo <strong>sem erro visível</strong> — violação silenciosa, como a " +
+            "reescreve tudo <strong>sem erro visível</strong>: violação silenciosa, como a " +
             "corrupção da demo 4.");
         }
         s.busy = false;
@@ -735,12 +735,12 @@ SD.demos["criptografia-basica"] = (function () {
         return;
       }
       s.placed.push(i);
-      log("✓ Passo " + s.placed.length + ": <strong>" + TLS_STEPS[i].name + "</strong> — " +
+      log("✓ Passo " + s.placed.length + ": <strong>" + TLS_STEPS[i].name + "</strong>, " +
         TLS_STEPS[i].why);
       if (s.placed.length >= TLS_STEPS.length) {
         s.lockOn = true; s.everLocked = true;
         log("🔒 <strong>Cadeado aceso!</strong> Cada peça respondeu a um ataque que você " +
-          "mesmo executou. Isto é o <code>https:</code> — todo o tópico em milissegundos.");
+          "mesmo executou. Isto é o <code>https:</code>, todo o tópico em milissegundos.");
       }
       renderStage5();
       updateNav();
@@ -752,32 +752,32 @@ SD.demos["criptografia-basica"] = (function () {
       els.summary.innerHTML =
         '<p class="callout-title">🎓 Mallory fora da linha</p>' +
         "<p>Cada ameaça que você executou na etapa 1 foi fechada por uma defesa que você " +
-        "construiu — e todas se encontram no aperto de mãos do TLS:</p>" +
+        "construiu, e todas se encontram no aperto de mãos do TLS:</p>" +
         '<ul class="demo-sg-synth">' +
         "  <li><strong>Intromissão / vazamento</strong> ← cifra (etapa 2)</li>" +
-        "  <li><strong>Distribuição de chave</strong> ← alçapão RSA + certificado (etapas 3–4)</li>" +
+        "  <li><strong>Distribuição de chave</strong> ← alçapão RSA + certificado (etapas 3 e 4)</li>" +
         "  <li><strong>Repetição (replay)</strong> ← nonce / frescor (etapa 2)</li>" +
-        "  <li><strong>Mascaramento / falsificação</strong> ← assinatura e MAC (etapas 4–5)</li>" +
+        "  <li><strong>Mascaramento / falsificação</strong> ← assinatura e MAC (etapas 4 e 5)</li>" +
         "  <li><strong>Homem no meio</strong> ← certificado de autoridade (etapa 4)</li>" +
         "</ul>" +
-        "<p>Tudo montado no <strong>handshake do TLS</strong> (etapa 5) — o mesmo cadeado do " +
-        "navegador. No texto do tópico: Needham–Schroeder e Kerberos generalizam o nonce/" +
+        "<p>Tudo montado no <strong>handshake do TLS</strong> (etapa 5): o mesmo cadeado do " +
+        "navegador. No texto do tópico: Needham-Schroeder e Kerberos generalizam o nonce/" +
         "frescor; o WEP mostra o que dá errado quando se erra o projeto. Na prática moderna, " +
         "é assim que se protegem os serviços.</p>" +
         '<p class="demo-sg-honesty">⚠️ Todas as cifras desta demo são de <strong>brinquedo</strong>, ' +
         "inseguras de propósito (RSA com N=221; “cifra” e “resumo” visuais). Não use nada " +
-        "aqui como referência de implementação — use AES/SHA/TLS reais.</p>";
+        "aqui como referência de implementação: use AES/SHA/TLS reais.</p>";
     }
 
     /* ============ Etapas ============ */
 
     var STAGES = [
       {
-        title: "Etapa 1 — Escute a rede (você é Eve/Mallory)",
+        title: "Etapa 1: Escute a rede (você é Eve/Mallory)",
         instructions: "Alice fala com Bob por uma rede insegura, em claro. Opere o grampo: " +
           "intercepte (leia), injete uma mensagem forjada e altere uma em trânsito. Cada " +
           "ataque aparece no log com seu método e sua classe.",
-        goalText: "Meta: executar os três ataques — interceptar, injetar e alterar.",
+        goalText: "Meta: executar os três ataques (interceptar, injetar e alterar).",
         setup: function () {},
         render: renderStage1,
         goalMet: function () {
@@ -785,9 +785,9 @@ SD.demos["criptografia-basica"] = (function () {
         }
       },
       {
-        title: "Etapa 2 — Cifre e feche as rachaduras",
+        title: "Etapa 2: Cifre e feche as rachaduras",
         instructions: "Ligue a cifra simétrica: o grampo passa a ver ruído e adulterar não " +
-          "cola mais. Mas duas rachaduras sobram — descubra como a chave chegou a Bob e " +
+          "cola mais. Mas duas rachaduras sobram: descubra como a chave chegou a Bob e " +
           "assista ao replay pagar duas vezes; depois ligue o nonce para fechá-lo.",
         goalText: "Meta: cifrar + detectar adulteração + ver a chave exposta + ver o replay " +
           "duplicar o pagamento e bloqueá-lo com o nonce.",
@@ -800,7 +800,7 @@ SD.demos["criptografia-basica"] = (function () {
         }
       },
       {
-        title: "Etapa 3 — O alçapão dos primos (RSA de brinquedo)",
+        title: "Etapa 3: O alçapão dos primos (RSA de brinquedo)",
         instructions: "Bancada com os números do livro: P=13, Q=17 → N=221, Z=192, d=5, c=77. " +
           "Cifre uma mensagem com a chave pública e decifre com a privada; mande o fatorador " +
           "quebrar N=221 e arraste os bits de N para ver o custo explodir.",
@@ -813,7 +813,7 @@ SD.demos["criptografia-basica"] = (function () {
         }
       },
       {
-        title: "Etapa 4 — O homem no meio e o cartório",
+        title: "Etapa 4: O homem no meio e o cartório",
         instructions: "Sem autenticação, Mallory se passa pela chave de Bob e lê tudo em " +
           "silêncio. Construa as defesas: assine um documento e adultere um byte para ver a " +
           "verificação acusar; depois exija o certificado da autoridade e repita o pedido.",
@@ -826,10 +826,10 @@ SD.demos["criptografia-basica"] = (function () {
         }
       },
       {
-        title: "Etapa 5 — O aperto de mãos (monte o TLS)",
+        title: "Etapa 5: O aperto de mãos (monte o TLS)",
         instructions: "Ordene as peças do handshake TLS, da negociação de cifras aos dados " +
           "com MAC. A peça fora de ordem é recusada e explicada. Complete a linha e o cadeado " +
-          "acende — o grampo de Mallory só verá ruído.",
+          "acende: o grampo de Mallory só verá ruído.",
         goalText: "Meta: montar o handshake na ordem certa e acender o cadeado.",
         setup: function () { state.s5.busy = false; },
         render: renderStage5,
@@ -844,7 +844,7 @@ SD.demos["criptografia-basica"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
       if (state.stage === STAGES.length && st.goalMet()) {
         fillSummary();
@@ -858,7 +858,7 @@ SD.demos["criptografia-basica"] = (function () {
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
       els.instructions.textContent = st.instructions;
       els.summary.hidden = true;
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
       st.setup();
       st.render();
       updateNav();

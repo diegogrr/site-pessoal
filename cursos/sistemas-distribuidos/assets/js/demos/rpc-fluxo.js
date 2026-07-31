@@ -43,7 +43,7 @@ SD.demos["rpc-fluxo"] = (function () {
       role: "empacota a invocação e finge ser o objeto",
       needFirst: null,
       failMsg: "sem stub, a chamada nem SAI do cliente: a aplicação teria de " +
-        "empacotar bytes à mão — você já fez isso na demo do Tópico 4." },
+        "empacotar bytes à mão. Você já fez isso na demo do Tópico 4." },
     { id: "desp", name: "Despachante", side: "servidor",
       role: "seleciona o método pelo operationId",
       needFirst: "stub",
@@ -57,7 +57,7 @@ SD.demos["rpc-fluxo"] = (function () {
     { id: "serv", name: "Servente", side: "servidor",
       role: "o objeto de verdade, que executa",
       needFirst: "esq",
-      failMsg: "tudo pronto no encanamento — mas <strong>não há servente</strong>: " +
+      failMsg: "tudo pronto no encanamento, mas <strong>não há servente</strong>: " +
         "nenhuma instância dá corpo ao objeto remoto banco." }
   ];
 
@@ -90,7 +90,7 @@ SD.demos["rpc-fluxo"] = (function () {
                     busy1: false, failSeen: false, wrongOrderSeen: false,
                     call8Done: false, lastReturn: null,
       /* etapa 2 */ sem: "talvez", saldo2: 100, esperado2: 100, execs2: 0,
-                    hist2: 0, opSeq2: 0, busy2: false, clientView2: "—",
+                    hist2: 0, opSeq2: 0, busy2: false, clientView2: "n/d",
                     talvezSeen: false, doubleSeen: false, fixSeen: false,
                     cheapSeen: false, scrTalvez: false, scrALO: false,
                     scrAMO: false, scrCon: false,
@@ -129,7 +129,7 @@ SD.demos["rpc-fluxo"] = (function () {
       '  </dl>' +
       '  <div class="demo-cf-summary callout" hidden>' +
       '    <p class="callout-title">🎓 A linha carrega tudo</p>' +
-      "    <p><code>banco.creditar(10)</code> parece uma linha inocente — mas agora você " +
+      "    <p><code>banco.creditar(10)</code> parece uma linha inocente, mas agora você " +
       "sabe o que ela carrega: um <strong>contrato</strong> (a interface, com stub e " +
       "despachante gerados a partir dela), uma <strong>promessa</strong> (a semântica de " +
       "chamada que alguém escolheu), um <strong>custo</strong> (viagens de rede, bytes " +
@@ -137,7 +137,7 @@ SD.demos["rpc-fluxo"] = (function () {
       "vinculador, referências contadas, leases). De onde vêm os nomes → Tópico 9. Quem " +
       "mantém o serviço quando um servidor cai → Tópico 10. Quem gerencia processos e " +
       "threads que atendem invocações → Tópico 6. E o herdeiro que você vai usar no " +
-      "trabalho: <strong>gRPC</strong> — IDL, stubs gerados e requisição-resposta, como " +
+      "trabalho: <strong>gRPC</strong>, com IDL, stubs gerados e requisição-resposta, como " +
       "em 1984.</p>" +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
@@ -225,7 +225,7 @@ SD.demos["rpc-fluxo"] = (function () {
       els.controls.querySelector(".demo-rf-unmount").addEventListener("click", function () {
         state.line = { stub: false, desp: false, esq: false, serv: false };
         state.lastReturn = null;
-        log("↺ Linha desmontada — a chamada volta a não ter por onde passar.");
+        log("↺ Linha desmontada: a chamada volta a não ter por onde passar.");
         renderStage1();
         updateNav();
       });
@@ -237,7 +237,7 @@ SD.demos["rpc-fluxo"] = (function () {
         var need = LINE.filter(function (p) { return p.id === piece.needFirst; })[0];
         state.wrongOrderSeen = true;
         log("✗ <strong>Ordem errada:</strong> o " + piece.name.toLowerCase() +
-          " depende do <strong>" + need.name.toLowerCase() + "</strong> — é ele quem " +
+          " depende do <strong>" + need.name.toLowerCase() + "</strong>: é ele quem " +
           (need.id === "stub" ? "origina a requisição" :
            need.id === "desp" ? "entrega a requisição ao método certo" :
            "desempacota os argumentos") + ". Instale primeiro o " +
@@ -246,7 +246,7 @@ SD.demos["rpc-fluxo"] = (function () {
         return;
       }
       state.line[id] = true;
-      log("🔧 <strong>" + piece.name + "</strong> instalado no " + piece.side + " — " +
+      log("🔧 <strong>" + piece.name + "</strong> instalado no " + piece.side + ": " +
         piece.role + ". (Ninguém escreve isso à mão: o compilador de interface gera.)");
       renderStage1();
     }
@@ -261,7 +261,7 @@ SD.demos["rpc-fluxo"] = (function () {
       if (state.busy1) return;
       state.busy1 = true;
       renderStage1();
-      log("▶ O cliente executou <code>banco.consultar()</code> — para ele, uma chamada " +
+      log("▶ O cliente executou <code>banco.consultar()</code>: para ele, uma chamada " +
         "comum.");
       /* percorre a linha até a primeira peça ausente */
       var missing = null;
@@ -273,7 +273,7 @@ SD.demos["rpc-fluxo"] = (function () {
         if (missing.id !== "stub") {
           to(function () {
             bump("msgs");
-            log("1/8 — stub empacota operationId + argumentos e envia a requisição…");
+            log("1/8: stub empacota operationId + argumentos e envia a requisição…");
           }, (t0 += 500));
         }
         to(function () {
@@ -286,18 +286,18 @@ SD.demos["rpc-fluxo"] = (function () {
         return;
       }
       var steps = [
-        { st: "stub", txt: "1/8 — o <strong>stub</strong> empacota operationId=consultar " +
+        { st: "stub", txt: "1/8: o <strong>stub</strong> empacota operationId=consultar " +
           "+ argumentos (empacotamento automático)." },
-        { st: "stub", txt: "2/8 — o módulo de comunicação envia a <strong>requisição</strong> " +
+        { st: "stub", txt: "2/8: o módulo de comunicação envia a <strong>requisição</strong> " +
           "(requestId #" + (state.calls + 1) + ").", msg: true },
-        { st: "desp", txt: "3/8 — o <strong>despachante</strong> recebe e seleciona o método " +
+        { st: "desp", txt: "3/8: o <strong>despachante</strong> recebe e seleciona o método " +
           "pelo operationId." },
-        { st: "esq", txt: "4/8 — o <strong>esqueleto</strong> desempacota os argumentos." },
-        { st: "serv", txt: "5/8 — o <strong>servente</strong> executa consultar() → 100.",
+        { st: "esq", txt: "4/8: o <strong>esqueleto</strong> desempacota os argumentos." },
+        { st: "serv", txt: "5/8: o <strong>servente</strong> executa consultar() → 100.",
           exec: true },
-        { st: "esq", txt: "6/8 — o esqueleto empacota o resultado na <strong>resposta</strong>." },
-        { st: "stub", txt: "7/8 — a resposta viaja de volta ao cliente.", msg: true },
-        { st: "stub", txt: "8/8 — o stub desempacota e retorna: <strong>saldo = 100</strong>. " +
+        { st: "esq", txt: "6/8: o esqueleto empacota o resultado na <strong>resposta</strong>." },
+        { st: "stub", txt: "7/8: a resposta viaja de volta ao cliente.", msg: true },
+        { st: "stub", txt: "8/8: o stub desempacota e retorna: <strong>saldo = 100</strong>. " +
           "O código do cliente nunca soube da viagem." }
       ];
       var t = 0;
@@ -366,7 +366,7 @@ SD.demos["rpc-fluxo"] = (function () {
         '" data-double-seen="' + state.doubleSeen + '" data-fix-seen="' + state.fixSeen +
         '" data-cheap-seen="' + state.cheapSeen +
         '">se nada se perdesse, o saldo seria R$ <strong data-esperado2>' +
-        state.esperado2 + '</strong> — <span class="demo-rf-diverge" data-div2></span></p>';
+        state.esperado2 + '</strong> · <span class="demo-rf-diverge" data-div2></span></p>';
       els.controls.innerHTML =
         '<span class="demo-rf-semrow">promessa: ' +
         ["talvez", "alo", "amo"].map(function (s) {
@@ -375,9 +375,9 @@ SD.demos["rpc-fluxo"] = (function () {
             "> " + SEM_LABEL[s] + "</label>";
         }).join("") + "</span>" +
         '<button type="button" class="btn demo-rf-cred"' +
-        (state.busy2 ? " disabled" : "") + ">💰 creditar(10) — não idempotente</button>" +
+        (state.busy2 ? " disabled" : "") + ">💰 creditar(10): não idempotente</button>" +
         '<button type="button" class="btn btn-secondary demo-rf-cons"' +
-        (state.busy2 ? " disabled" : "") + ">🔍 consultar() — idempotente</button>" +
+        (state.busy2 ? " disabled" : "") + ">🔍 consultar(): idempotente</button>" +
         '<button type="button" class="btn-ghost demo-rf-reopen"' +
         (state.busy2 ? " disabled" : "") + ">↺ Reabrir conta (R$ 100)</button>";
       els.controls.querySelectorAll('[name="demo-rf-sem"]').forEach(function (rb) {
@@ -385,11 +385,11 @@ SD.demos["rpc-fluxo"] = (function () {
           state.sem = rb.value;
           var why = {
             talvez: "nenhuma medida de tolerância: sem novas tentativas, sem filtro. " +
-              "Barato — e sem garantia nenhuma.",
+              "Barato, e sem garantia nenhuma.",
             alo: "o middleware retransmite até obter resposta, SEM filtrar duplicatas: " +
               "a operação pode executar mais de uma vez.",
             amo: "retransmissão + filtro de duplicatas + histórico: cada chamada executa " +
-              "no máximo uma vez — pagando com estado retido no servidor."
+              "no máximo uma vez, pagando com estado retido no servidor."
           };
           log("🎚️ Promessa trocada para <strong>" + SEM_LABEL[state.sem] + "</strong>: " +
             why[state.sem]);
@@ -401,7 +401,7 @@ SD.demos["rpc-fluxo"] = (function () {
       els.controls.querySelector(".demo-rf-cons").addEventListener("click", function () { op2("cons"); });
       els.controls.querySelector(".demo-rf-reopen").addEventListener("click", function () {
         state.saldo2 = 100; state.esperado2 = 100; state.execs2 = 0; state.hist2 = 0;
-        state.clientView2 = "—";
+        state.clientView2 = "n/d";
         log("↺ Conta reaberta: saldo R$ 100 (execuções e histórico zerados).");
         bank2Update();
       });
@@ -423,7 +423,7 @@ SD.demos["rpc-fluxo"] = (function () {
           (isRetx ? " <strong>DE NOVO</strong>" : "") + ": saldo R$ " + state.saldo2 + ".");
         if (isRetx) {
           state.doubleSeen = true;
-          log("💥 A retransmissão virou <strong>execução dupla</strong> — creditar não é " +
+          log("💥 A retransmissão virou <strong>execução dupla</strong>: creditar não é " +
             "idempotente e o saldo divergiu. Foi o middleware que retransmitiu: a " +
             "promessa era só “pelo menos uma vez”.");
         }
@@ -432,9 +432,9 @@ SD.demos["rpc-fluxo"] = (function () {
         bump("execs");
         if (isRetx) {
           state.cheapSeen = true;
-          log("🔁 consultar() #" + id + " reexecutada — <strong>idempotente</strong>: ler " +
+          log("🔁 consultar() #" + id + " reexecutada, <strong>idempotente</strong>: ler " +
             "duas vezes não muda nada. Para interfaces assim, “pelo menos uma vez” " +
-            "basta — e dispensa o custo do histórico.");
+            "basta, e dispensa o custo do histórico.");
         }
       }
       if (state.sem === "amo" && !isRetx) {
@@ -473,7 +473,7 @@ SD.demos["rpc-fluxo"] = (function () {
       bump("msgs");
       if (lossLeg === "req") {
         to(function () {
-          log("💥 A <strong>requisição</strong> #" + id + " se perdeu — o servidor nem " +
+          log("💥 A <strong>requisição</strong> #" + id + " se perdeu: o servidor nem " +
             "ficou sabendo.");
         }, (t += 600));
         if (state.sem === "talvez") {
@@ -497,7 +497,7 @@ SD.demos["rpc-fluxo"] = (function () {
       if (lossLeg === "resp") {
         to(function () {
           bump("msgs");
-          log("💥 A <strong>resposta</strong> de #" + id + " se perdeu — a operação JÁ " +
+          log("💥 A <strong>resposta</strong> de #" + id + " se perdeu: a operação JÁ " +
             "executou, mas o cliente não sabe.");
         }, (t += 500));
         if (state.sem === "talvez") {
@@ -513,7 +513,7 @@ SD.demos["rpc-fluxo"] = (function () {
             if (state.sem === "amo" && kind === "cred") {
               state.fixSeen = true;
               log("✅ Perda + reenvio sob “no máximo uma vez”: o crédito executou UMA " +
-                "vez só — o filtro reconheceu o reenvio e respondeu pelo histórico.");
+                "vez só: o filtro reconheceu o reenvio e respondeu pelo histórico.");
             }
             finishOk2(kind, id);
           }, (t += 500));
@@ -528,7 +528,7 @@ SD.demos["rpc-fluxo"] = (function () {
       if (kind === "cred" && executou) state.talvezSeen = true;
       log("❌ <strong>EXCEÇÃO</strong> na chamada #" + id + ": nenhum resultado " +
         "(“talvez”: sem novas tentativas). Raio-X: a operação <strong>" +
-        (executou ? "EXECUTOU" : "NÃO executou") + "</strong> — o cliente é que " +
+        (executou ? "EXECUTOU" : "NÃO executou") + "</strong>. O cliente é que " +
         "nunca saberá a diferença.");
       state.busy2 = false;
       if (state.stage === 2) { renderStage2(); }
@@ -560,7 +560,7 @@ SD.demos["rpc-fluxo"] = (function () {
         '  <div class="demo-rf-machine' + (state.roundActive ? " demo-rf-covered" : "") +
         '" data-covered="' + state.roundActive + '">' +
         '    <p class="demo-rf-machine-title">🏦 Banco (servidor)' +
-        (state.serverUp ? "" : " — 💀 fora do ar") + "</p>" +
+        (state.serverUp ? "" : " · 💀 fora do ar") + "</p>" +
         '    <p class="demo-rf-big">saldo: R$ <strong data-saldo3>' + state.saldo3 +
         "</strong></p>" +
         '    <p class="demo-rf-note">execuções: <strong data-execs3>' + state.execs3 +
@@ -587,7 +587,7 @@ SD.demos["rpc-fluxo"] = (function () {
       els.controls.querySelector(".demo-rf-round").addEventListener("click", startRound3);
       els.controls.querySelector(".demo-rf-local").addEventListener("click", function () {
         log("✅ Chamada <strong>local</strong>: retornou na hora, executou <strong>exatamente " +
-          "uma vez</strong>. Sem rede não há ambiguidade — esse é o mundo de onde a RPC " +
+          "uma vez</strong>. Sem rede não há ambiguidade: esse é o mundo de onde a RPC " +
           "tenta importar a sintaxe.");
       });
       var yes = els.area.querySelector(".demo-rf-bet-yes");
@@ -607,22 +607,22 @@ SD.demos["rpc-fluxo"] = (function () {
         : scripted[Math.floor(rand() * 3)];
       state.scenario = "run";
       renderStage3();
-      log("— 🎲 rodada " + (state.round + 1) + ": o cliente chama creditar(10); o servidor " +
-        "está <strong>encoberto</strong> até a aposta —");
+      log("🎲 rodada " + (state.round + 1) + ": o cliente chama creditar(10); o servidor " +
+        "está <strong>encoberto</strong> até a aposta.");
       log("✉️ Requisição enviada… ⏳ esperando resposta…");
       bump("msgs");
       var sc = state.scenarioReal;
       if (sc === "reqlost") {
-        state.events3.push("a requisição se perdeu na rede — o servidor nunca a recebeu");
+        state.events3.push("a requisição se perdeu na rede: o servidor nunca a recebeu");
       } else {
         state.events3.push("a requisição chegou; o servidor executou creditar(10)");
         state.saldo3 += 10;
         state.execs3++;
         bump("execs");
         if (sc === "resplost") {
-          state.events3.push("a resposta foi enviada — e se perdeu na volta");
+          state.events3.push("a resposta foi enviada, e se perdeu na volta");
         } else {
-          state.events3.push("o servidor COLAPSOU logo depois de executar — sem resposta");
+          state.events3.push("o servidor COLAPSOU logo depois de executar, sem resposta");
           state.serverUp = false;
         }
       }
@@ -650,14 +650,14 @@ SD.demos["rpc-fluxo"] = (function () {
       xray.setAttribute("data-scenario", state.scenarioReal);
       xray.innerHTML =
         "<p><strong>Raio-X da rodada:</strong> " + CENARIO_LABEL[state.scenarioReal] +
-        ". Seu palpite: <em>" + (saidYes ? "executou" : "não executou") + "</em> — " +
+        ". Seu palpite: <em>" + (saidYes ? "executou" : "não executou") + "</em>. " +
         (right ? "✅ acerto." : "❌ erro.") + "</p>" +
         "<ul>" + state.events3.map(function (e) { return "<li>" + e + "</li>"; }).join("") +
         "</ul>" +
         "<p>Do lado do cliente, as três situações são <strong>a mesma exceção</strong>. " +
         "É por isso que a diferença local × remoto precisa aparecer na " +
-        "<strong>interface</strong> — e por que “no máximo uma vez” existe.</p>";
-      log("🩻 Raio-X: " + CENARIO_LABEL[state.scenarioReal] + " — palpite " +
+        "<strong>interface</strong>, e por que “no máximo uma vez” existe.</p>";
+      log("🩻 Raio-X: " + CENARIO_LABEL[state.scenarioReal] + ", palpite " +
         (right ? "certo" : "errado") + " (acertos: " + state.hits + "/" + state.round + ").");
       if (!state.serverUp) {
         state.serverUp = true;
@@ -674,7 +674,7 @@ SD.demos["rpc-fluxo"] = (function () {
     /* ============ Etapa 4 — Referência ou cópia ============ */
 
     function fig(color) {
-      return color === null ? "—"
+      return color === null ? "n/d"
         : (color === "azul" ? "🔵" : "🔴") + " círculo " + color;
     }
 
@@ -710,7 +710,7 @@ SD.demos["rpc-fluxo"] = (function () {
         '<p class="demo-rf-status" data-div4="' + state.div4 + '" data-conv4="' +
         state.conv4 + '">bytes copiados: <strong data-bytes-copied>' + state.bytesCopied +
         "</strong> · viagens de rede por acesso remoto: <strong data-trips>" + state.trips +
-        '</strong> — <span class="demo-rf-diverge ' + (eq ? "is-ok" : "is-bad") + '">' +
+        '</strong> · <span class="demo-rf-diverge ' + (eq ? "is-ok" : "is-bad") + '">' +
         (eq ? "✓ todos veem a mesma figura" : "✗ estados DIVERGENTES") + "</span></p>";
       els.controls.innerHTML =
         '<button type="button" class="btn demo-rf-copy"' +
@@ -739,7 +739,7 @@ SD.demos["rpc-fluxo"] = (function () {
       if (state.busy4 || state.hasCopy) return;
       state.busy4 = true;
       renderStage4();
-      log("📦 A chama getFigura() — o objeto NÃO é remoto, então viaja <strong>por " +
+      log("📦 A chama getFigura(). O objeto NÃO é remoto, então viaja <strong>por " +
         "valor</strong>: o servidor serializa a figura inteira…");
       bump("msgs");
       to(function () {
@@ -750,7 +750,7 @@ SD.demos["rpc-fluxo"] = (function () {
         state.trips++;
         bump("calls");
         log("📬 " + COPY_BYTES + " bytes depois, um objeto <strong>novo</strong> nasceu no " +
-          "processo de A — uma cópia. Daqui em diante, os estados são independentes.");
+          "processo de A: uma cópia. Daqui em diante, os estados são independentes.");
         state.busy4 = false;
         if (state.stage === 4) renderStage4();
         updateNav();
@@ -762,7 +762,7 @@ SD.demos["rpc-fluxo"] = (function () {
       state.colorA = "vermelho";
       if (state.colorSrv !== state.colorA) {
         state.div4 = true;
-        log("🎨 A pintou a cópia: acesso <strong>local</strong>, zero viagens — mas só a " +
+        log("🎨 A pintou a cópia: acesso <strong>local</strong>, zero viagens, mas só a " +
           "cópia mudou. O servidor e B continuam vendo " + fig(state.colorSrv) +
           ": <strong>os estados divergiram</strong>, exatamente como o texto avisa.");
       } else {
@@ -776,14 +776,14 @@ SD.demos["rpc-fluxo"] = (function () {
       if (state.busy4) return;
       state.busy4 = true;
       renderStage4();
-      log("🔗 A invoca pintar(“vermelho”) na <strong>referência de objeto remoto</strong> — " +
+      log("🔗 A invoca pintar(“vermelho”) na <strong>referência de objeto remoto</strong>: " +
         "a mensagem leva só a referência + argumentos…");
       bump("msgs");
       to(function () {
         bump("execs");
         state.colorSrv = "vermelho";
         state.colorB = "vermelho";
-        log("🗄️ O servente executou pintar(): a figura DO SERVIDOR mudou — e B vê na hora. " +
+        log("🗄️ O servente executou pintar(): a figura DO SERVIDOR mudou, e B vê na hora. " +
           "Um único estado, compartilhado.");
       }, 700);
       to(function () {
@@ -791,7 +791,7 @@ SD.demos["rpc-fluxo"] = (function () {
         state.trips++;
         bump("calls");
         log("📬 Resposta OK. Custo do modo referência: <strong>1 viagem de rede por " +
-          "acesso</strong> (latência ordens de grandeza acima da local — os números " +
+          "acesso</strong> (latência ordens de grandeza acima da local, os números " +
           "estão no cap. 7 do Coulouris), em troca de nunca copiar nem divergir.");
         state.busy4 = false;
         if (state.stage === 4) renderStage4();
@@ -807,10 +807,10 @@ SD.demos["rpc-fluxo"] = (function () {
       return state.holders.length
         ? state.holders.map(function (h) {
             return "<li>" + h + (state.leaseOn
-              ? " — lease: " + (state.clientDead
+              ? " · lease: " + (state.clientDead
                 ? Math.max(0, Math.ceil(state.leaseLeft / 1000)) + "s (sem renovação!)"
                 : "renovado ✓")
-              : " — sem lease") + "</li>";
+              : " · sem lease") + "</li>";
           }).join("")
         : "<li><em>vazio" + (state.collected ? " → objeto coletado 🗑️" : "") + "</em></li>";
     }
@@ -820,7 +820,7 @@ SD.demos["rpc-fluxo"] = (function () {
         '<div class="demo-rf-world">' +
         '  <div class="demo-rf-machine" data-dead="' + state.clientDead + '">' +
         '    <p class="demo-rf-machine-title">💻 Cliente' +
-        (state.clientDead ? " — 💀 morto (sem desregistrar)" : "") + "</p>" +
+        (state.clientDead ? " · 💀 morto (sem desregistrar)" : "") + "</p>" +
         '    <p class="demo-rf-note" data-proxy5>' +
         (state.lookup5 ? "proxy do banco criado ✓" : "<em>ainda sem referência</em>") + "</p>" +
         '    <p class="demo-rf-note">consultas vazias (polling): <strong data-polls>' +
@@ -884,7 +884,7 @@ SD.demos["rpc-fluxo"] = (function () {
           state.leaseLeft = LEASE_MS;
           state.renewLogged = false;
           log("📜 <strong>Arrendamento ligado</strong>: cada referência agora vale por " +
-            Math.round(LEASE_MS / 1000) + " s; clientes vivos renovam sozinhos — quem " +
+            Math.round(LEASE_MS / 1000) + " s; clientes vivos renovam sozinhos: quem " +
             "some, expira.");
         } else {
           log("🚫 Arrendamento desligado: referências valem para sempre (por sua conta e " +
@@ -928,10 +928,10 @@ SD.demos["rpc-fluxo"] = (function () {
       if (!state.lookup5 || state.clientDead || state.collected) return;
       state.polls++;
       bump("msgs"); bump("msgs");
-      log("🔁 Polling nº " + state.polls + ": “alguma novidade?” — <em>não</em>. Duas " +
+      log("🔁 Polling nº " + state.polls + ": “alguma novidade?” <em>Não</em>. Duas " +
         "mensagens gastas para descobrir que nada mudou" +
-        (state.polls >= 2 ? " (e o servidor atende TODOS os curiosos assim — há um jeito " +
-          "melhor: o callback)" : "") + ".");
+        (state.polls >= 2 ? " (e o servidor atende TODOS os curiosos assim, quando há um " +
+          "jeito melhor: o callback)" : "") + ".");
       renderStage5();
     }
 
@@ -951,20 +951,20 @@ SD.demos["rpc-fluxo"] = (function () {
         bump("msgs");
         state.cbNotified = true;
         log("📞 O servidor invocou o <strong>callback</strong> do cliente: notificado na " +
-          "hora, com UMA mensagem — sem nenhuma consulta vazia.");
+          "hora, com UMA mensagem, sem nenhuma consulta vazia.");
       } else if (state.clientDead && !state.leaseOn) {
         state.leakSeen = true;
         if (state.cbOn) {
           bump("msgs");
           log("💥 O servidor tentou o callback do cliente MORTO: erro. E B.holders ainda o " +
-            "lista — o servidor segue <strong>preso a um fantasma</strong>, guardando " +
+            "lista: o servidor segue <strong>preso a um fantasma</strong>, guardando " +
             "objeto e registro para ninguém.");
         } else {
-          log("🕳️ Ninguém registrado para avisar — e B.holders ainda lista o cliente morto: " +
+          log("🕳️ Ninguém registrado para avisar, e B.holders ainda lista o cliente morto: " +
             "o objeto não pode ser coletado. <strong>Vazamento</strong> à vista.");
         }
       } else if (state.clientDead && state.leaseOn) {
-        log("⏳ Cliente morto, mas o lease dele está correndo — o sistema vai se limpar " +
+        log("⏳ Cliente morto, mas o lease dele está correndo: o sistema vai se limpar " +
           "sozinho.");
       } else {
         log("🕳️ Ninguém registrou callback: quem faz polling só descobrirá na próxima " +
@@ -978,7 +978,7 @@ SD.demos["rpc-fluxo"] = (function () {
       if (!state.lookup5 || state.clientDead) return;
       state.clientDead = true;
       if (state.leaseOn) state.leaseLeft = LEASE_MS;
-      log("💀 O cliente morreu <strong>sem desregistrar nada</strong> — nem removeRef, nem " +
+      log("💀 O cliente morreu <strong>sem desregistrar nada</strong>: nem removeRef, nem " +
         "deregister do callback. O servidor não fica sabendo… a menos que algo expire.");
       renderStage5();
     }
@@ -990,7 +990,7 @@ SD.demos["rpc-fluxo"] = (function () {
         state.leaseLeft = LEASE_MS;
         if (!state.renewLogged) {
           state.renewLogged = true;
-          log("🔄 O cliente (vivo) renovou o lease antes de expirar — é responsabilidade " +
+          log("🔄 O cliente (vivo) renovou o lease antes de expirar: é responsabilidade " +
             "de quem usa o recurso.");
           renderStage5();
         }
@@ -1006,7 +1006,7 @@ SD.demos["rpc-fluxo"] = (function () {
         log("⌛ <strong>Lease expirado</strong> sem renovação: o servidor removeu o cliente " +
           "de B.holders e descartou o callback morto.");
         log("🗑️ B.holders vazio → o coletor de lixo <strong>recolheu o objeto banco</strong>. " +
-          "Nenhum protocolo perguntou “você ainda está aí?” — o tempo respondeu.");
+          "Nenhum protocolo perguntou “você ainda está aí?”, o tempo respondeu.");
         renderStage5();
         updateNav();
       }
@@ -1016,7 +1016,7 @@ SD.demos["rpc-fluxo"] = (function () {
 
     var STAGES = [
       {
-        title: "Etapa 1 — Raio-X da chamada",
+        title: "Etapa 1: Raio-X da chamada",
         instructions: "O código do cliente tem UMA linha: saldo = banco.consultar(). " +
           "Chame ANTES de montar a linha e veja onde a chamada morre; depois instale " +
           "stub, despachante, esqueleto e servente (a ordem importa) e chame de novo.",
@@ -1027,12 +1027,12 @@ SD.demos["rpc-fluxo"] = (function () {
         goalMet: function () { return state.failSeen && state.call8Done; }
       },
       {
-        title: "Etapa 2 — Escolha a promessa (semânticas de chamada)",
-        instructions: "Agora o middleware trabalha sozinho — mas a PROMESSA é escolha sua. " +
+        title: "Etapa 2: Escolha a promessa (semânticas de chamada)",
+        instructions: "Agora o middleware trabalha sozinho, mas a PROMESSA é escolha sua. " +
           "Credite sob “talvez”; depois sob “pelo menos uma vez”; depois sob “no máximo " +
           "uma vez”. Compare também uma consulta sob “pelo menos uma vez”.",
-        goalText: "Meta: viver as três promessas — a exceção ambígua do talvez, o crédito " +
-          "em dobro do pelo menos uma vez e a correção (com custo) do no máximo uma vez.",
+        goalText: "Meta: viver as três promessas (a exceção ambígua do talvez, o crédito " +
+          "em dobro do pelo menos uma vez e a correção, com custo, do no máximo uma vez).",
         setup: function () { state.busy2 = false; },
         render: renderStage2,
         goalMet: function () {
@@ -1040,7 +1040,7 @@ SD.demos["rpc-fluxo"] = (function () {
         }
       },
       {
-        title: "Etapa 3 — Caiu ou executou?",
+        title: "Etapa 3: Caiu ou executou?",
         instructions: "A cada rodada, uma chamada remota termina em exceção com o servidor " +
           "encoberto. Aposte se a operação executou; o raio-X revela. Compare com a " +
           "chamada local de controle.",
@@ -1052,7 +1052,7 @@ SD.demos["rpc-fluxo"] = (function () {
         goalMet: function () { return state.round >= 3; }
       },
       {
-        title: "Etapa 4 — Referência ou cópia",
+        title: "Etapa 4: Referência ou cópia",
         instructions: "O servidor guarda uma figura de quadro branco. Receba-a como cópia " +
           "serializável, pinte a SUA cópia e veja quem fica sabendo; depois invoque " +
           "pintar() pela referência remota e compare os custos.",
@@ -1063,7 +1063,7 @@ SD.demos["rpc-fluxo"] = (function () {
         goalMet: function () { return state.div4 && state.conv4; }
       },
       {
-        title: "Etapa 5 — Do lookup ao lease",
+        title: "Etapa 5: Do lookup ao lease",
         instructions: "Monte o ciclo de vida: fábrica + rebind, lookup, callback no lugar " +
           "do polling. Depois mate o cliente sem desregistrar, dispare um evento e veja o " +
           "vazamento; ligue o arrendamento e espere o sistema se limpar.",
@@ -1084,7 +1084,7 @@ SD.demos["rpc-fluxo"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
       if (state.stage === STAGES.length && st.goalMet()) els.summary.hidden = false;
     }
@@ -1094,7 +1094,7 @@ SD.demos["rpc-fluxo"] = (function () {
       var st = STAGES[n - 1];
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
       els.instructions.textContent = st.instructions;
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
       st.setup();
       st.render();
       updateNav();

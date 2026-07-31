@@ -69,9 +69,9 @@ SD.demos["camadas-rede"] = (function () {
 
   /* ---- Etapa 3: rodadas do "seja o roteador" ---- */
   var ROUNDS = [
-    { dest: "C", start: "A", label: "Pacote 1 — destino: rede 10.5, do servidor web (ligada a C)" },
-    { dest: "D", start: "C", label: "Pacote 2 — destino: rede ligada a D" },
-    { dest: "DEF", start: "A", label: "Pacote 3 — destino: 203.0.113.9 (Internet — não está na tabela!)" }
+    { dest: "C", start: "A", label: "Pacote 1: destino rede 10.5, do servidor web (ligada a C)" },
+    { dest: "D", start: "C", label: "Pacote 2: destino rede ligada a D" },
+    { dest: "DEF", start: "A", label: "Pacote 3: destino 203.0.113.9 (Internet, não está na tabela!)" }
   ];
 
   /* ---- Etapa 5: mensagem fragmentada ---- */
@@ -132,13 +132,13 @@ SD.demos["camadas-rede"] = (function () {
       '  <div class="demo-cf-summary callout" hidden>' +
       '    <p class="callout-title">🎓 O que você acabou de viver</p>' +
       '    <p><strong>Encapsulamento</strong> é mecânico e tem direção: cada camada embrulha a de ' +
-      'cima e rotula o conteúdo. Na rede local não há roteamento — <strong>ARP</strong> + broadcast ' +
+      'cima e rotula o conteúdo. Na rede local não há roteamento: <strong>ARP</strong> + broadcast ' +
       'resolvem. Entre redes, cada roteador decide sozinho o <strong>próximo salto</strong> com uma ' +
       'tabela parcial (e <strong>rotas default</strong> cobrem o resto). Quando um enlace cai, o ' +
-      '<strong>vetor de distância</strong> reconverge trocando tabelas — errando no meio do caminho. ' +
+      '<strong>vetor de distância</strong> reconverge trocando tabelas, errando no meio do caminho. ' +
       'E como o IP entrega "no <strong>melhor esforço</strong>" (perda, desordem, duplicata), a ' +
       'confiabilidade é construída <strong>nas pontas</strong>: sequenciamento, confirmação e ' +
-      'retransmissão do <strong>TCP</strong>. É o princípio fim-a-fim em ação — e o porão da demo ' +
+      'retransmissão do <strong>TCP</strong>. É o princípio fim-a-fim em ação, e o porão da demo ' +
       'do Tópico 1.</p>' +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
@@ -235,7 +235,7 @@ SD.demos["camadas-rede"] = (function () {
           l.id + '"' + (used ? " disabled" : "") + "><strong>" + l.label +
           "</strong><span>" + l.desc + "</span></button>";
       }).join("");
-      var envelope = '<p class="demo-cr-envelope-hint">— clique nas camadas na ordem certa —</p>';
+      var envelope = '<p class="demo-cr-envelope-hint">clique nas camadas na ordem certa</p>';
       if (state.wrapped.length) {
         envelope = "";
         /* aninha do mais externo (último aplicado) para o mais interno */
@@ -256,17 +256,17 @@ SD.demos["camadas-rede"] = (function () {
           var layer = LAYERS.filter(function (x) { return x.id === btn.getAttribute("data-layer"); })[0];
           if (layer.order === state.wrapped.length) {
             state.wrapped.push(layer.id);
-            log("✓ <strong>" + layer.label + "</strong> — " + layer.why + ".");
+            log("✓ <strong>" + layer.label + "</strong>: " + layer.why + ".");
             if (state.wrapped.length === LAYERS.length) {
               log("📦 Quadro completo: envelope dentro de envelope, pronto para a rede física.");
             }
             renderStage1();
             updateNav();
           } else if (layer.order < state.wrapped.length) {
-            log("⚠️ " + layer.label + " já foi aplicada — siga para a camada de fora.");
+            log("⚠️ " + layer.label + " já foi aplicada. Siga para a camada de fora.");
           } else {
             var expected = LAYERS[state.wrapped.length];
-            log("✗ Ainda não: <strong>" + layer.label + "</strong> embrulha o que vem de cima — " +
+            log("✗ Ainda não: <strong>" + layer.label + "</strong> embrulha o que vem de cima, " +
               "e ainda falta <strong>" + expected.label + "</strong>.");
             var env = els.area.querySelector(".demo-cr-envelope");
             env.classList.remove("is-shake");
@@ -288,7 +288,7 @@ SD.demos["camadas-rede"] = (function () {
           '<span class="demo-cr-station-note" data-note></span></div>';
       }).join("");
       els.area.innerHTML =
-        '<div class="demo-cr-lanview"><p class="demo-cr-lanview-title">Ethernet local — ' +
+        '<div class="demo-cr-lanview"><p class="demo-cr-lanview-title">Ethernet local: ' +
         "rede 10.1 (um único segmento; sem roteamento)</p>" +
         '<div class="demo-cr-stations">' + cards + "</div>" +
         '<p class="demo-cr-arpcache" data-cached="' + state.arpCached + '">cache ARP do cliente: ' +
@@ -315,12 +315,12 @@ SD.demos["camadas-rede"] = (function () {
       var t = 0;
       if (!state.arpCached) {
         to(function () {
-          log("❓ O cliente sabe o IP 10.1.0.7, mas não o MAC — <strong>ARP em broadcast</strong>: " +
-            "“quem tem 10.1.0.7?”");
+          log("❓ O cliente sabe o IP 10.1.0.7, mas não o MAC. Entra o <strong>ARP em " +
+            "broadcast</strong>: “quem tem 10.1.0.7?”");
           STATIONS.forEach(function (s) { stationNote(s.ip, "recebeu o broadcast", "is-flash"); });
         }, (t += 200));
         to(function () {
-          stationNote("10.1.0.6", "IP não é meu — ignora", "");
+          stationNote("10.1.0.6", "IP não é meu: ignora", "");
           stationNote("10.1.0.7", "sou eu! responde: MAC 02:C3", "is-target");
           log("🙋 Só <strong>10.1.0.7</strong> responde, com seu MAC. Os demais ignoram.");
         }, (t += 900));
@@ -329,11 +329,11 @@ SD.demos["camadas-rede"] = (function () {
           var badge = els.area.querySelector(".demo-cr-arpcache");
           badge.setAttribute("data-cached", "true");
           badge.innerHTML = "cache ARP do cliente: <code>10.1.0.7 ⇒ 02:C3</code>";
-          log("🗃️ Par (IP, MAC) guardado no <strong>cache ARP</strong> — o broadcast não se repete.");
+          log("🗃️ Par (IP, MAC) guardado no <strong>cache ARP</strong>. O broadcast não se repete.");
         }, (t += 800));
       } else {
         to(function () {
-          log("🗃️ MAC de 10.1.0.7 já está no <strong>cache ARP</strong> — quadro direto, sem broadcast.");
+          log("🗃️ MAC de 10.1.0.7 já está no <strong>cache ARP</strong>: quadro direto, sem broadcast.");
         }, (t += 200));
       }
       to(function () {
@@ -358,7 +358,7 @@ SD.demos["camadas-rede"] = (function () {
         var e = t[d];
         var out = e === "local" ? "local" : (e === "gateway" ? "→ Internet (gateway)" :
           "enlace " + e.l);
-        var cost = (e && e.c !== undefined) ? e.c : "—";
+        var cost = (e && e.c !== undefined) ? e.c : "n/d";
         return "<tr" + (d === dest ? ' data-dest-row="1"' : "") + "><td>" + DEST_LABEL[d] +
           "</td><td>" + out + "</td><td>" + cost + "</td></tr>";
       }).join("");
@@ -371,7 +371,7 @@ SD.demos["camadas-rede"] = (function () {
       if (state.roundIdx >= ROUNDS.length) {
         els.area.innerHTML = renderSvg({}) +
           '<p class="demo-cr-round">🏁 Os três pacotes chegaram. Repare: nenhum roteador conhecia ' +
-          "o caminho inteiro — só o próximo salto.</p>";
+          "o caminho inteiro, só o próximo salto.</p>";
         els.controls.innerHTML = "";
         return;
       }
@@ -402,18 +402,18 @@ SD.demos["camadas-rede"] = (function () {
       state.packetAt = next;
       if (correct) {
         log("✓ Saltou por <strong>enlace " + l + "</strong> até <strong>" + next +
-          "</strong> — era o que a tabela de " + at + " mandava.");
+          "</strong>: era o que a tabela de " + at + " mandava.");
       } else {
         log("🚧 A tabela de " + at + " apontava o <strong>enlace " + entry.l +
           "</strong>, mas o pacote foi pelo " + l + " e parou em <strong>" + next +
-          "</strong> — agora é a tabela DELE que decide.");
+          "</strong>. Agora é a tabela DELE que decide.");
       }
       var arrived = (r.dest !== "DEF" && next === r.dest) ||
         (r.dest === "DEF" && next === "E");
       if (arrived) {
         if (r.dest === "DEF") {
           log("🌐 Em E, a rota <strong>padrão</strong> aponta o gateway: o pacote segue para a " +
-            "Internet. Ninguém aqui conhecia 203.0.113.9 — e não precisava.");
+            "Internet. Ninguém aqui conhecia 203.0.113.9, e não precisava.");
         } else {
           log("🏁 Chegou à rede de <strong>" + next + "</strong>: entrega local (como na etapa 2).");
         }
@@ -424,7 +424,7 @@ SD.demos["camadas-rede"] = (function () {
         metric("hops", 0);
         if (state.roundIdx < ROUNDS.length) {
           state.packetAt = currentRound().start;
-          log("— " + currentRound().label + " —");
+          log("▶ " + currentRound().label);
         }
       }
       renderStage3();
@@ -473,10 +473,10 @@ SD.demos["camadas-rede"] = (function () {
       state.rounds++;
       if (changed) {
         state.converged = false;
-        log("🔁 Rodada " + state.rounds + ": tabelas trocadas — rotas para a rede de C mudaram.");
+        log("🔁 Rodada " + state.rounds + ": tabelas trocadas, rotas para a rede de C mudaram.");
       } else {
         state.converged = true;
-        log("🟢 Rodada " + state.rounds + ": nada mudou — as tabelas <strong>convergiram</strong>.");
+        log("🟢 Rodada " + state.rounds + ": nada mudou, as tabelas <strong>convergiram</strong>.");
       }
       renderStage4();
       updateNav();
@@ -497,7 +497,7 @@ SD.demos["camadas-rede"] = (function () {
       }
       if (ok) {
         log("🏁 Entregue: <strong>" + path.join(" → ") + "</strong> (" + (path.length - 1) +
-          " saltos)" + (state.linkDown ? " — rota alternativa, sem passar pelo enlace 2." : "."));
+          " saltos)" + (state.linkDown ? ". Rota alternativa, sem passar pelo enlace 2." : "."));
         bump("delivered");
         if (state.linkDown && state.converged) {
           state.deliveredAfterConv = true;
@@ -514,7 +514,7 @@ SD.demos["camadas-rede"] = (function () {
       var rows = Object.keys(state.vectors).map(function (n) {
         var v = state.vectors[n];
         var txt = v === "local" ? "local (é a rede dela)" :
-          (v.c >= INFC ? "∞ — sem rota" : "enlace " + v.l + ", custo " + v.c);
+          (v.c >= INFC ? "∞ (sem rota)" : "enlace " + v.l + ", custo " + v.c);
         return '<tr data-router="' + n + '"><td>' + n + "</td><td data-vec>" + txt + "</td></tr>";
       }).join("");
       els.area.innerHTML = renderSvg({}) +
@@ -523,11 +523,11 @@ SD.demos["camadas-rede"] = (function () {
         "<thead><tr><th>Roteador</th><th>Próximo salto</th></tr></thead><tbody>" + rows +
         "</tbody></table>" +
         '<p class="demo-cr-round" data-converged="' + state.converged + '">Tabelas: <strong>' +
-        (state.converged ? "estáveis" : "instáveis — troque tabelas até convergir") +
+        (state.converged ? "estáveis" : "instáveis (troque tabelas até convergir)") +
         "</strong> · rodadas de troca: " + state.rounds + "</p>";
       els.controls.innerHTML =
         '<button type="button" class="btn btn-secondary demo-cr-break"' +
-        (state.linkDown ? " disabled" : "") + ">💥 Derrubar enlace 2 (B–C)</button>" +
+        (state.linkDown ? " disabled" : "") + ">💥 Derrubar enlace 2 (B-C)</button>" +
         '<button type="button" class="btn btn-secondary demo-cr-exchange">🔁 Trocar tabelas ' +
         "(1 rodada)</button>" +
         '<button type="button" class="btn demo-cr-test">✉️ Testar entrega (A → servidor)</button>';
@@ -535,8 +535,8 @@ SD.demos["camadas-rede"] = (function () {
         state.linkDown = true;
         state.converged = false;
         state.vectors.B = { l: 2, c: INFC };
-        log("💥 Enlace 2 (B–C) caiu. B marca a rota pela saída 2 com <strong>custo ∞</strong> " +
-          "(ações Envia/Recebe do RIP). Teste uma entrega agora — e depois troque tabelas.");
+        log("💥 Enlace 2 (B-C) caiu. B marca a rota pela saída 2 com <strong>custo ∞</strong> " +
+          "(ações Envia/Recebe do RIP). Teste uma entrega agora, e depois troque tabelas.");
         renderStage4();
         updateNav();
       });
@@ -583,7 +583,7 @@ SD.demos["camadas-rede"] = (function () {
         "está cheia; uma retransmissão gera duplicata.</p>" +
         '<div class="demo-cr-rx"><p>Recebido no servidor (rede 10.5):</p>' +
         '<div class="demo-cr-slots" data-done="0">' + slots + "</div>" +
-        '<p class="demo-cr-apptext">O que a aplicação leu: <strong data-apptext data-intact="">—' +
+        '<p class="demo-cr-apptext">O que a aplicação leu: <strong data-apptext data-intact="">n/d' +
         "</strong></p></div>";
       renderControls5();
     }
@@ -597,8 +597,8 @@ SD.demos["camadas-rede"] = (function () {
         "retransmissão)</label>" +
         '<button type="button" class="btn demo-cr-send5"' + (state.busy ? " disabled" : "") +
         ">📨 Enviar mensagem</button>" +
-        '<span class="demo-cr-modes-done">enviado com: UDP ' + (state.sentUdp ? "✓" : "—") +
-        " · TCP " + (state.sentTcp ? "✓" : "—") + "</span>";
+        '<span class="demo-cr-modes-done">enviado com: UDP ' + (state.sentUdp ? "✓" : "✗") +
+        " · TCP " + (state.sentTcp ? "✓" : "✗") + "</span>";
       els.controls.querySelectorAll('[name="demo-cr-mode"]').forEach(function (rb) {
         rb.addEventListener("change", function () { state.mode = rb.value; });
       });
@@ -632,9 +632,9 @@ SD.demos["camadas-rede"] = (function () {
             if (mode === "udp") {
               appOrder.push(ev.frag);
               s.classList.add("is-dup");
-              log("👯 Fragmento " + ev.frag + " chegou DE NOVO — o UDP entrega a duplicata à aplicação.");
+              log("👯 Fragmento " + ev.frag + " chegou DE NOVO: o UDP entrega a duplicata à aplicação.");
             } else {
-              log("🗑️ Fragmento " + ev.frag + " chegou de novo — mesmo nº de sequência: " +
+              log("🗑️ Fragmento " + ev.frag + " chegou de novo, mesmo nº de sequência: " +
                 "<strong>duplicata descartada</strong> pelo TCP.");
             }
             return;
@@ -642,14 +642,14 @@ SD.demos["camadas-rede"] = (function () {
           if (mode === "udp") {
             appOrder.push(ev.frag);
             s.classList.add("is-rx");
-            log("📥 Fragmento " + ev.frag + " chegou — UDP repassa à aplicação na hora.");
+            log("📥 Fragmento " + ev.frag + " chegou: UDP repassa à aplicação na hora.");
           } else {
             buffered[ev.frag] = true;
             s.classList.add("is-buf");
             var gap = ev.frag > deliveredUpTo + 1;
             log("📥 Fragmento " + ev.frag + " chegou" + (gap
-              ? " fora de ordem — fica no <strong>buffer</strong> esperando a lacuna."
-              : " — em ordem, entregue e <strong>confirmado</strong>."));
+              ? " fora de ordem: fica no <strong>buffer</strong> esperando a lacuna."
+              : ": em ordem, entregue e <strong>confirmado</strong>."));
             while (buffered[deliveredUpTo + 1]) {
               deliveredUpTo++;
               appOrder.push(deliveredUpTo);
@@ -662,7 +662,7 @@ SD.demos["camadas-rede"] = (function () {
       if (mode === "tcp") {
         to(function () {
           log("⏲️ Sem confirmação do fragmento " + state.lostFrag +
-            " no prazo — o remetente <strong>retransmite</strong>.");
+            " no prazo: o remetente <strong>retransmite</strong>.");
         }, (t += 500));
         to(function () {
           buffered[state.lostFrag] = true;
@@ -679,18 +679,18 @@ SD.demos["camadas-rede"] = (function () {
         var intact = text === FULL_MSG;
         var out = els.area.querySelector("[data-apptext]");
         out.textContent = "«" + (text || "(nada)") + "»" + (intact ? "" :
-          " — fora de ordem, com lacuna ou duplicata");
+          " (fora de ordem, com lacuna ou duplicata)");
         out.setAttribute("data-intact", String(intact));
         els.area.querySelector(".demo-cr-slots").setAttribute("data-done", "1");
         if (mode === "udp") {
           state.sentUdp = true;
           log("📄 UDP entregou o que chegou, como chegou: <strong>«" + text + "»</strong>. " +
-            "Rápido e barato — mas a aplicação que se vire.");
+            "Rápido e barato, mas a aplicação que se vire.");
         } else {
           state.sentTcp = true;
           state.tcpIntact = intact;
           bump("delivered");
-          log("📄 TCP entregou <strong>«" + text + "»</strong> — íntegra e em ordem. A rede " +
+          log("📄 TCP entregou <strong>«" + text + "»</strong>, íntegra e em ordem. A rede " +
             "continuou perdendo e duplicando; quem consertou foram <strong>as pontas</strong>.");
         }
         state.busy = false;
@@ -703,7 +703,7 @@ SD.demos["camadas-rede"] = (function () {
 
     var STAGES = [
       {
-        title: "Etapa 1 — Empacotar (encapsulamento)",
+        title: "Etapa 1: Empacotar (encapsulamento)",
         instructions: "O navegador em 10.1.0.5 quer pedir uma página ao servidor 10.5.0.80. " +
           "Monte o pacote clicando as camadas NA ORDEM: cada uma embrulha a de cima.",
         goalText: "Meta: fechar o quadro completo (4 camadas na ordem certa).",
@@ -714,8 +714,8 @@ SD.demos["camadas-rede"] = (function () {
         goalMet: function () { return state.wrapped.length === LAYERS.length; }
       },
       {
-        title: "Etapa 2 — Entrega local (mesma Ethernet)",
-        instructions: "Antes de cruzar o mundo: um destino na MESMA rede local. Sem roteamento — " +
+        title: "Etapa 2: Entrega local (mesma Ethernet)",
+        instructions: "Antes de cruzar o mundo: um destino na MESMA rede local. Sem roteamento, " +
           "mas o cliente só conhece o IP do destino, não o MAC. Envie duas vezes e compare.",
         goalText: "Meta: enviar 2 vezes (a segunda sem precisar de ARP).",
         setup: function () { state.busy = false; },
@@ -723,14 +723,14 @@ SD.demos["camadas-rede"] = (function () {
         goalMet: function () { return state.sends >= 2; }
       },
       {
-        title: "Etapa 3 — Seja o roteador",
+        title: "Etapa 3: Seja o roteador",
         instructions: "Agora o pacote cruza a inter-rede. Em cada roteador, leia a tabela e " +
-          "escolha o enlace de saída. Ninguém conhece o caminho inteiro — só o próximo salto.",
+          "escolha o enlace de saída. Ninguém conhece o caminho inteiro, só o próximo salto.",
         goalText: "Meta: entregar os 3 pacotes (o último só sai pela rota padrão).",
         setup: function () {
           if (state.roundIdx === 0 && state.packetAt === null) {
             state.packetAt = ROUNDS[0].start;
-            log("— " + ROUNDS[0].label + " —");
+            log("▶ " + ROUNDS[0].label);
           }
           state.hops = 0;
           metric("hops", 0);
@@ -739,8 +739,8 @@ SD.demos["camadas-rede"] = (function () {
         goalMet: function () { return state.delivered3 >= ROUNDS.length; }
       },
       {
-        title: "Etapa 4 — A rede muda (falha e reconvergência)",
-        instructions: "A rota preferida para o servidor passa pelo enlace 2 (B–C). Derrube-o, " +
+        title: "Etapa 4: A rede muda (falha e reconvergência)",
+        instructions: "A rota preferida para o servidor passa pelo enlace 2 (B-C). Derrube-o, " +
           "teste uma entrega no meio do caos, troque tabelas até convergir e entregue de novo.",
         goalText: "Meta: derrubar o enlace 2, reconvergir as tabelas e entregar por rota alternativa.",
         setup: function () { if (!state.vectors) initVectors(); },
@@ -748,9 +748,9 @@ SD.demos["camadas-rede"] = (function () {
         goalMet: function () { return state.linkDown && state.converged && state.deliveredAfterConv; }
       },
       {
-        title: "Etapa 5 — Melhor esforço × TCP",
+        title: "Etapa 5: Melhor esforço × TCP",
         instructions: "Uma mensagem de 4 fragmentos enfrenta a rede real: perda, desordem e " +
-          "duplicata. Envie com UDP e depois com TCP — os MESMOS acidentes, finais diferentes.",
+          "duplicata. Envie com UDP e depois com TCP: os MESMOS acidentes, finais diferentes.",
         goalText: "Meta: enviar com UDP e com TCP (e receber a mensagem íntegra no TCP).",
         setup: function () { state.busy = false; },
         render: renderStage5,
@@ -765,7 +765,7 @@ SD.demos["camadas-rede"] = (function () {
       els.next.disabled = state.stage === STAGES.length || !st.goalMet();
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
-          (state.stage < STAGES.length ? " — avance!" : "") + "</strong>"
+          (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"
         : "");
       if (state.stage === STAGES.length && st.goalMet()) els.summary.hidden = false;
       metric("hops", state.hops);
@@ -776,7 +776,7 @@ SD.demos["camadas-rede"] = (function () {
       var st = STAGES[n - 1];
       els.title.innerHTML = "<strong>" + st.title + "</strong>";
       els.instructions.textContent = st.instructions;
-      log("— " + st.title + " —");
+      log("▶ " + st.title);
       st.setup();
       st.render();
       updateNav();
