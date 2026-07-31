@@ -285,3 +285,9 @@
 
   .header-nav { display: none; }
 }
+
+/* Telas estreitas: o chip de códigos (SLTSIDO · SLTSISD) sai do cabeçalho para a
+   marca não estourar a largura. Os códigos seguem no rodapé e em "Sobre a disciplina". */
+@media (max-width: 620px) {
+  .header-brand .brand-code { display: none; }
+}

@@ -69,9 +69,12 @@ SD.layout = (function () {
 
   function renderFooter() {
     var footer = document.getElementById("app-footer");
+    var offerings = SD.course.offerings.map(function (o) {
+      return o.code + " (" + o.programShort + ", " + o.semester + ")";
+    }).join(" · ");
+
     footer.innerHTML =
-      "<p>" + SD.course.code + " · " + SD.course.name + " · " +
-      SD.course.institution + " · " + SD.course.program + "</p>";
+      "<p>" + SD.course.name + " · " + SD.course.institution + " · " + offerings + "</p>";
   }
 
   /** Destaca o link ativo no menu do cabeçalho. */

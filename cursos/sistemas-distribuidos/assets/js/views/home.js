@@ -54,7 +54,8 @@ SD.views.home = function () {
   view.innerHTML = SD.layout.viewContainer(
     '<section class="hero">' +
     "<div>" +
-    '<p class="eyebrow hero-eyebrow">' + SD.course.institution + " · " + SD.course.semester + "</p>" +
+    '<p class="eyebrow hero-eyebrow">' + SD.course.institution + " · " +
+    SD.course.program + "</p>" +
     '<h1>A rede é o <span class="hero-em">computador</span>.</h1>' +
     '<p class="hero-lead">' + SD.course.description + "</p>" +
     '<div class="hero-cta">' +

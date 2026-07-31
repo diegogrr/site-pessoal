@@ -5,18 +5,36 @@
    tópicos. Para reordenar, renomear ou adicionar tópicos,
    edite APENAS este arquivo e crie/renomeie o arquivo
    correspondente em content/topics/.
-   Os 12 tópicos derivam do conteúdo programático do plano de
-   ensino SLTSIDO (máx. 15 tópicos).
+   A mesma disciplina é ofertada em dois cursos do Campus Salto
+   (ADS e BCC), com planos de ensino de conteúdo programático
+   equivalente. As ofertas ficam em `offerings[]`; os campos
+   agregados (code, program, semester) são derivados dela no fim
+   deste arquivo, para que as views continuem simples.
+   Os 12 tópicos derivam do conteúdo programático desses planos
+   (máx. 15 tópicos).
    ============================================================ */
 
 window.SD = window.SD || {};
 
 SD.course = {
-  code: "SLTSIDO",
   name: "Sistemas Distribuídos",
   institution: "IFSP Campus Salto",
-  program: "Tecnologia em Análise e Desenvolvimento de Sistemas",
-  semester: "5º semestre",
+
+  /* ---- Ofertas da disciplina (planos de ensino em PlanoEnsino/) ---- */
+  offerings: [
+    {
+      code: "SLTSIDO",
+      program: "Tecnologia em Análise e Desenvolvimento de Sistemas",
+      programShort: "ADS",
+      semester: "5º semestre"
+    },
+    {
+      code: "SLTSISD",
+      program: "Bacharelado em Ciência da Computação",
+      programShort: "BCC",
+      semester: "6º semestre"
+    }
+  ],
   description:
     "Plataforma de apoio ao ensino de Sistemas Distribuídos: características, " +
     "questões de projeto, comunicação, replicação, segurança e computação em nuvem. " +
@@ -112,5 +130,20 @@ SD.course = {
 
   getTopicIndex: function (id) {
     return this.topics.findIndex(function (t) { return t.id === id; });
+  },
+
+  /* Rótulos curtos das ofertas, ex.: "ADS · BCC" ou "ADS (5º semestre)". */
+  offeringLabels: function (withSemester) {
+    return this.offerings.map(function (o) {
+      return withSemester ? o.programShort + " (" + o.semester + ")" : o.programShort;
+    });
   }
 };
+
+/* ---- Campos agregados derivados das ofertas (compatibilidade das views) ---- */
+(function (course) {
+  "use strict";
+  course.code = course.offerings.map(function (o) { return o.code; }).join(" · ");
+  course.program = course.offeringLabels(false).join(" e ");
+  course.semester = course.offeringLabels(true).join(" · ");
+})(SD.course);

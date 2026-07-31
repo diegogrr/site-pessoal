@@ -191,7 +191,8 @@
   margin-bottom: var(--space-4);
 }
 .section-head h2 { margin-bottom: 0; }
-.section-head .hint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.section-head .hint,
+p.hint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
 
 /* Grade de cards de tópicos na home */
 .topic-grid {

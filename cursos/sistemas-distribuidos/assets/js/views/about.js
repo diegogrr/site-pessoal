@@ -1,7 +1,8 @@
 /* ============================================================
    views/about.js — Sobre a disciplina
-   Identificação, ementa/objetivos, bibliografia (do plano de
-   ensino SLTSIDO) e gestão do progresso salvo.
+   Identificação das duas ofertas (SLTSIDO/ADS e SLTSISD/BCC),
+   ementa/objetivos, bibliografia dos planos de ensino e gestão
+   do progresso salvo.
    Namespace global: SD.views.about
    ============================================================ */
 
@@ -20,15 +21,21 @@ SD.views.about = function () {
       "</ul>";
   }
 
+  var offeringsList = list(SD.course.offerings.map(function (o) {
+    return "<strong>" + o.code + "</strong> · " + o.program +
+      " (" + o.programShort + "), " + o.semester;
+  }));
+
   view.innerHTML = SD.layout.viewContainer(
     "<h1>Sobre a disciplina</h1>" +
 
     '<section class="card">' +
     "<h2>Identificação</h2>" +
-    "<p><strong>Componente curricular:</strong> " + SD.course.name + " (" + SD.course.code + ")<br>" +
-    "<strong>Curso:</strong> " + SD.course.program + "<br>" +
-    "<strong>Campus:</strong> " + SD.course.institution + "<br>" +
-    "<strong>Semestre:</strong> " + SD.course.semester + "</p>" +
+    "<p><strong>Componente curricular:</strong> " + SD.course.name + "<br>" +
+    "<strong>Campus:</strong> " + SD.course.institution + "</p>" +
+    "<p>A mesma disciplina é ofertada em dois cursos, com conteúdo programático " +
+    "equivalente. Esta plataforma atende às duas turmas:</p>" +
+    offeringsList +
     "</section>" +
 
     '<section class="card">' +
@@ -39,6 +46,9 @@ SD.views.about = function () {
     '<section class="card">' +
     "<h2>Bibliografia básica</h2>" + list(bib.basic) +
     "<h2>Bibliografia complementar</h2>" + list(bib.complementary) +
+    '<p class="hint">Bibliografia comum aos dois planos de ensino. O plano do BCC ' +
+    "(SLTSISD) acrescenta FREIRE, P. <em>Extensão ou Comunicação</em> (Paz e Terra, 2013) " +
+    "e MORIMOTO, Carlos E. <em>Servidores Linux: guia prático</em> (Sul, 2008).</p>" +
     "</section>" +
 
     '<section class="card">' +
