@@ -211,7 +211,7 @@ SD.notas["chronyc-tracking"] = {
 SD.notas["problema-n-mais-1"] = {
   termo: "Problema N+1",
   html:
-    "<p>O nome vem do padrão que você acabou de medir: para montar uma resposta com N " +
+    "<p>O nome vem do padrão que você acabou de medir. Para montar uma resposta com N " +
     "itens, o programa faz <strong>uma consulta por item</strong>. No padrão clássico " +
     "ainda existe uma consulta a mais, para descobrir quais são os itens, e é dela que " +
     "vem o <strong>+1</strong> do nome. Aqui a lista já era conhecida, então, com 30 " +
@@ -219,18 +219,19 @@ SD.notas["problema-n-mais-1"] = {
     "<p>O que torna esse defeito traiçoeiro é que ele <strong>não aparece enquanto tudo " +
     "mora junto</strong>. No arranjo de duas camadas, as mesmas 30 consultas custaram " +
     "cerca de 2 ms somadas, porque cada uma é uma leitura em um arquivo no disco local. " +
-    "Ninguém revisa código por causa de 2 ms. Quando o banco muda de máquina, o mesmo " +
-    "código passa a pagar conexão, requisição, resposta e espera 30 vezes, e a conta " +
-    "salta para dezenas de milissegundos. O código não piorou: o arranjo mudou.</p>" +
+    "Ninguém revisa código por causa de 2 ms.</p>" +
+    "<p>Quando o banco muda de máquina, o mesmo código passa a pagar conexão, " +
+    "requisição, resposta e espera 30 vezes, e a conta salta para dezenas de " +
+    "milissegundos. O código não piorou. O que mudou foi o arranjo em volta dele.</p>" +
     "<p>É por isso que o resumo do <code>sd tempo</code> imprime a linha " +
-    "<code>idas e voltas</code>. Ela é a métrica que prevê o problema antes de ele " +
-    "acontecer: <strong>o custo de um pedido é o número de rodadas vezes o preço de uma " +
-    "rodada</strong>. O tamanho dos dados quase nunca é o que manda.</p>" +
-    "<p>A correção que você experimentou com <code>--lote</code> é a de sempre: pedir " +
-    "tudo de uma vez. Em SQL isso costuma virar um <code>JOIN</code> ou um " +
-    "<code>WHERE id IN (...)</code>; em uma API, um parâmetro que aceita uma lista. A " +
-    "arquitetura de três camadas continua exatamente a mesma. O que mudou foi a conversa " +
-    "que ela precisa manter.</p>",
+    "<code>idas e voltas</code>, que é a métrica capaz de prever o problema antes de " +
+    "ele acontecer. O custo de um pedido é o número de rodadas multiplicado pelo preço " +
+    "de uma rodada, e o tamanho dos dados quase nunca é o que manda.</p>" +
+    "<p>A correção que você experimentou com <code>--lote</code> é a de sempre, que é " +
+    "pedir tudo de uma vez. Em SQL isso costuma virar um <code>JOIN</code> ou um " +
+    "<code>WHERE id IN (...)</code>. Numa API, vira um parâmetro que aceita uma lista. " +
+    "A arquitetura de três camadas continua exatamente a mesma, e o que mudou foi a " +
+    "conversa que ela precisa manter.</p>",
   leia: [
     { rotulo: "Sistemas Operacionais Distribuídos: o preço de cada chamada", topico: "06" }
   ]
@@ -239,34 +240,38 @@ SD.notas["problema-n-mais-1"] = {
 SD.notas["falha-bizantina"] = {
   termo: "Falha arbitrária (bizantina)",
   html:
-    "<p>Na taxonomia do Tópico 2, uma falha por <strong>omissão</strong> é aquela em que " +
-    "algo deixa de ser feito: o processo para, a mensagem se perde. É o tipo de falha em " +
-    "que o sistema deixa de responder. A falha <strong>arbitrária</strong> é a categoria " +
-    "que sobra: qualquer comportamento, inclusive responder na hora, com sucesso, e " +
-    "responder errado. É a pior semântica possível, porque nada no protocolo a denuncia.</p>" +
+    "<p>Na taxonomia do Tópico 2, uma falha por <strong>omissão</strong> é aquela em " +
+    "que algo deixa de ser feito. O processo para, ou a mensagem se perde. É o tipo de " +
+    "falha em que o sistema deixa de responder.</p>" +
+    "<p>A falha <strong>arbitrária</strong> é a categoria que sobra, e nela cabe " +
+    "qualquer comportamento, inclusive responder na hora, com sucesso, e responder " +
+    "errado. É a pior semântica possível, porque nada no protocolo a denuncia.</p>" +
     "<p>O apelido <em>bizantina</em> vem do problema dos generais bizantinos, publicado " +
-    "por Lamport, Shostak e Pease em 1982: generais cercando uma cidade precisam combinar " +
-    "atacar ou recuar, e alguns deles podem ser traidores que mandam ordens diferentes " +
-    "para cada colega. O termo técnico correto continua sendo <em>arbitrária</em>, mas o " +
-    "apelido pegou porque descreve bem o que você viu: não é um nó quebrado, é um nó " +
-    "convincente.</p>" +
+    "por Lamport, Shostak e Pease em 1982. Generais cercando uma cidade precisam " +
+    "combinar atacar ou recuar, e alguns deles podem ser traidores que mandam ordens " +
+    "diferentes para cada colega. O termo técnico correto continua sendo " +
+    "<em>arbitrária</em>, mas o apelido pegou porque descreve bem o que você viu. Não " +
+    "é um nó quebrado, é um nó convincente.</p>" +
     "<p>Repare no que falhou na sua tentativa de detectar. O teste de saúde perguntou " +
     "\"você está vivo?\" e recebeu a resposta certa. O rodízio perguntou \"deu erro?\" e " +
     "recebeu a resposta certa. Nenhum dos dois tinha como perguntar \"esse número está " +
     "certo?\", porque para saber isso seria preciso já ter a resposta.</p>" +
     "<p>Sobrou comparar réplicas, e é por aí mesmo que os sistemas reais atacam o " +
-    "problema. Só que duas réplicas em desacordo dão um empate: você fica sabendo que " +
-    "existe um mentiroso e não fica sabendo quem é. Com três réplicas e um mentiroso, " +
-    "quem pergunta às três e fica com a resposta da maioria já se protege: para votar " +
-    "sobre respostas independentes bastam <strong>2f + 1</strong> réplicas, que é o caso " +
-    "do terceiro voto que você pediu ao <code>sd conferir</code>.</p>" +
+    "problema. Só que duas réplicas em desacordo dão um empate. Você fica sabendo que " +
+    "existe um mentiroso e não fica sabendo quem é.</p>" +
+    "<p>Com três réplicas e um mentiroso, quem pergunta às três e fica com a resposta " +
+    "da maioria já se protege. Para votar sobre respostas independentes bastam " +
+    "<strong>2f + 1</strong> réplicas, que é o caso do terceiro voto que você pediu ao " +
+    "<code>sd conferir</code>.</p>" +
     "<p>Quando são as próprias réplicas que precisam concordar entre si antes de " +
-    "responder (a ordem das operações, o estado replicado), o limite fica mais duro: " +
-    "tolerar <em>f</em> nós arbitrários exige <strong>3f + 1</strong> réplicas, contra as " +
-    "f + 1 que bastariam se eles apenas parassem. É a regra que aparece no Tópico 10, e " +
-    "sair de duas para quatro máquinas por causa de um único mentiroso é exatamente o " +
-    "motivo pelo qual essa semântica é cara.</p>" +
-    "<p>Em canais, felizmente, ela é rara: uma soma de verificação transforma um pacote " +
+    "responder, como na ordem das operações e no estado replicado, o limite fica mais " +
+    "duro. Tolerar <em>f</em> nós arbitrários exige <strong>3f + 1</strong> réplicas, " +
+    "contra as <strong>2f + 1</strong> que bastariam se eles apenas parassem, porque aí " +
+    "basta a maioria concordar. É a regra que aparece no Tópico 10.</p>" +
+    "<p>Sair de três para quatro máquinas por causa de um único mentiroso é o preço " +
+    "dessa semântica. E f + 1 réplicas só bastam quando o objetivo é mascarar colapsos " +
+    "sem que as réplicas precisem acordar nada entre si.</p>" +
+    "<p>Em canais, felizmente, ela é rara. Uma soma de verificação transforma um pacote " +
     "corrompido em um pacote descartado, ou seja, converte a falha arbitrária em uma " +
     "falha por omissão, que a retransmissão já sabe mascarar.</p>",
   leia: [
@@ -310,5 +315,184 @@ SD.notas["relogio-monotonico"] = {
     "relógio melhor que o outro. Existe cada um no seu papel.</p>",
   leia: [
     { rotulo: "Modelos de Sistema: desvio de relógio e ordenação de eventos", topico: "02" }
+  ]
+};
+
+/* ---------- Notas da demo "Arquiteto de Sistemas" (Tópico 2) ----------
+   Camada 3 da tutoria: o conceito por trás de cada etapa, recolhido por
+   padrão e aberto no lugar, dentro da própria demo. Plano em
+   docs/demos/2026-08-03-demo-modelos-arquitetura-tutoria-plano.md */
+
+SD.notas["saturacao-e-tempo-de-resposta"] = {
+  termo: "Saturação: por que o tempo de resposta explode",
+  html:
+    "<p>A intuição diz que o dobro de usuários deveria custar o dobro de tempo. Não é o " +
+    "que acontece. Quem manda no tempo de resposta é a <strong>utilização</strong>, ou " +
+    "seja, a fração da capacidade do servidor que já está comprometida. Na demo, o " +
+    "tempo é <code>60 ms divididos pela folga que sobra</code>, e é essa divisão que " +
+    "muda tudo.</p>" +
+    "<ul>" +
+    "<li>Com metade da capacidade livre, o tempo é o dobro do tempo ocioso.</li>" +
+    "<li>Com 10% livre, é dez vezes o tempo ocioso.</li>" +
+    "<li>Sem folga nenhuma, não existe resposta. Chegam mais pedidos do que saem, a " +
+    "fila só cresce, e a espera cresce junto, sem limite.</li>" +
+    "</ul>" +
+    "<p>Repare no que a métrica <strong>Atendidos por segundo</strong> faz no momento " +
+    "da saturação. Ela trava na capacidade do servidor enquanto a demanda continua " +
+    "subindo. A diferença entre as duas não vira lentidão, vira trabalho que ficou " +
+    "para trás. Um sistema saturado não fica só devagar, ele passa a recusar parte do " +
+    "que lhe pedem.</p>" +
+    "<p>É por isso que \"resolvo com um servidor maior\" tem prazo de validade. A " +
+    "centralização não favorece aumento de escala além do limite da capacidade daquele " +
+    "computador e da largura de banda que o liga ao mundo. Uma máquina maior empurra o " +
+    "joelho da curva para a direita, e não muda o formato dela.</p>" +
+    "<p>Vale uma honestidade sobre o simulador. A fórmula é didática e os valores " +
+    "absolutos são fictícios. O que ela reproduz de verdade é o comportamento, com o " +
+    "crescimento não proporcional e a divergência na saturação. Nenhum número desta " +
+    "tela serve para dimensionar sistema real.</p>",
+  leia: [
+    { rotulo: "Modelos de Sistema: modelos de arquitetura e posicionamento", topico: "02" },
+    { rotulo: "Caracterização: escalabilidade e gargalos", topico: "01" }
+  ]
+};
+
+SD.notas["replicar-ou-particionar"] = {
+  termo: "Replicar ou particionar",
+  html:
+    "<p>As duas saídas colocam vários servidores no lugar de um, e param de se parecer " +
+    "no instante seguinte. A diferença está em <strong>quem guarda o quê</strong>.</p>" +
+    "<ul>" +
+    "<li><strong>Replicar</strong> significa que todos guardam os mesmos dados, e " +
+    "qualquer servidor atende qualquer pedido. Isso divide a leitura muito bem e " +
+    "equilibra a carga sozinho. O preço aparece na escrita, porque toda atualização " +
+    "precisa chegar a todas as cópias, e enquanto não chega existe divergência entre " +
+    "elas.</li>" +
+    "<li><strong>Particionar</strong> significa que cada servidor guarda uma fatia do " +
+    "conjunto e responde só por ela. É o que escala escrita e armazenamento, porque nem " +
+    "o volume de dados nem as atualizações precisam caber num nó só. O preço é o " +
+    "desequilíbrio, porque quando uma fatia é mais procurada que as outras o servidor " +
+    "dela satura sozinho enquanto os demais ficam ociosos.</li>" +
+    "</ul>" +
+    "<p>A etapa 2 da demo está construída em cima de uma conta que vale fazer à mão. " +
+    "Com 180 pedidos/s e uma fatia quente que concentra 70% da procura, essa fatia " +
+    "sozinha são 126 pedidos/s, e um servidor faz 100. Acrescentar servidores divide as " +
+    "fatias frias entre mais gente e <strong>não toca na quente</strong>. Com 4 " +
+    "servidores, o dono da fatia quente continua com os mesmos 126 pedidos/s. Nenhuma " +
+    "quantidade de máquinas resolve, porque o problema não é quantidade, é o corte.</p>" +
+    "<p>Daí as saídas reais serem outras. Dá para cortar a fatia quente em pedaços " +
+    "menores, reparticionando por uma chave que espalhe melhor, ou para replicar só " +
+    "ela, ou para pôr um cache na frente dela, que é a etapa seguinte. Na prática, " +
+    "sistemas grandes combinam as três coisas, com partições para caber, réplicas " +
+    "dentro de cada partição para aguentar leitura e sobreviver a falhas, e cache na " +
+    "frente de tudo.</p>" +
+    "<p>O capítulo traz dois exemplos clássicos. A Web é particionada, porque cada " +
+    "servidor responde pelo seu conjunto de páginas. O NIS é replicado, porque cada " +
+    "servidor tem uma cópia inteira do mapa de usuários.</p>",
+  leia: [
+    { rotulo: "Modelos de Sistema: posicionamento em vários servidores", topico: "02" },
+    { rotulo: "Replicação: manter cópias em dia e o que isso custa", topico: "10" }
+  ]
+};
+
+SD.notas["cache-e-atualidade"] = {
+  termo: "Cache: desempenho comprado com atualidade",
+  html:
+    "<p>Um cache é um armazém de objetos usados recentemente, colocado <strong>mais " +
+    "perto do cliente</strong> do que a fonte da verdade. Quando o pedido chega, " +
+    "olha-se primeiro ali. Se o objeto está lá e ainda vale, o que se chama de " +
+    "<em>acerto</em>, a resposta sai sem atravessar a rede até o servidor e sem " +
+    "consumir capacidade dele.</p>" +
+    "<p>O efeito é duplo, e a etapa 3 mostra os dois números ao mesmo tempo. A " +
+    "<strong>latência</strong> cai porque a resposta vem de perto. A " +
+    "<strong>carga</strong> no backend cai porque o pedido nem chega lá. Com 60% de " +
+    "acerto, os servidores passam a receber 40% do que recebiam, e é por isso que o " +
+    "cache chega a dispensar réplicas inteiras, atacando o mesmo problema por outro " +
+    "lado.</p>" +
+    "<p>O preço tem nome e está no contador da tela, que é o das <strong>respostas " +
+    "possivelmente desatualizadas</strong>. Quem respondeu não foi a fonte da verdade, " +
+    "foi uma cópia feita algum tempo atrás. Se o dado mudou desde então e o cache não " +
+    "soube, o cliente recebe o valor velho com toda a confiança do mundo. Navegadores e " +
+    "servidores proxy convivem com isso verificando a atualidade das cópias de tempos " +
+    "em tempos, o que estreita a janela sem nunca fechá-la de todo.</p>" +
+    "<p>Repare que um cache com 0% de acerto não é neutro. Ele vira um salto a mais no " +
+    "caminho, com todo o custo e nenhum benefício.</p>" +
+    "<p>E note o que isso implica sobre projeto. Cache resolve leitura repetida de dado " +
+    "que tolera atraso. Para dado que precisa estar certo no instante da leitura, a " +
+    "conversa é outra, e é a do Tópico 10.</p>",
+  leia: [
+    { rotulo: "Modelos de Sistema: cache e servidores proxy", topico: "02" },
+    { rotulo: "Replicação: modelos de consistência", topico: "10" }
+  ]
+};
+
+SD.notas["p2p-recursos-crescem"] = {
+  termo: "Peer-to-peer: os recursos crescem com os usuários",
+  html:
+    "<p>No cliente-servidor há uma assimetria permanente, porque quem chega só consome. " +
+    "Cada usuário novo é carga nova sobre uma capacidade que continua a mesma, e é por " +
+    "isso que a curva sobe até saturar.</p>" +
+    "<p>No peer-to-peer todos os processos executam o mesmo programa e oferecem as " +
+    "mesmas interfaces, de modo que cada participante é cliente e servidor ao mesmo " +
+    "tempo. Quem chega traz disco, banda e processador junto.</p>" +
+    "<p>Se cada peer traz mais capacidade do que consome, a utilização para de depender " +
+    "do tamanho da população. Ela fica onde está, com 10 ou com 1000 peers.</p>" +
+    "<p>É essa a frase mais importante da seção, e também a mais fácil de ler sem " +
+    "sentir o peso. Os recursos disponíveis para executar o serviço aumentam com o " +
+    "número de usuários.</p>" +
+    "<p>A conta não some, muda de lugar. O que era problema de capacidade vira problema " +
+    "de <strong>localização</strong>. Com os objetos espalhados por milhares de " +
+    "participantes, achar quem tem o que você quer custa uma sequência de saltos pela " +
+    "rede. Em redes de sobreposição estruturadas esse número cresce com o logaritmo do " +
+    "número de peers, que é o comportamento do contador da demo, com 7 saltos para 100 " +
+    "peers e 10 para 1000.</p>" +
+    "<p>Crescimento logarítmico é boa notícia, e não é gratuidade. Cada salto é uma " +
+    "viagem de rede a mais antes da primeira resposta.</p>" +
+    "<p>E há ainda o <em>churn</em>, que é a entrada e a saída de peers a qualquer " +
+    "momento, levando embora as cópias que eles guardavam. Manter o serviço de pé exige " +
+    "refazer réplicas o tempo todo, trabalho que não aparece no tempo de resposta e " +
+    "existe assim mesmo. Napster abriu o caminho e o BitTorrent é o exemplo moderno. " +
+    "Nos dois, a complexidade que sumiu do servidor reapareceu no protocolo.</p>",
+  leia: [
+    { rotulo: "Modelos de Sistema: papéis, cliente-servidor e peer-to-peer", topico: "02" },
+    { rotulo: "Serviços de Nomes: localizar recursos em escala", topico: "09" }
+  ]
+};
+
+SD.notas["camadas-fisicas-latencia"] = {
+  termo: "Camadas físicas: latência contra manutenibilidade",
+  html:
+    "<p>Cuidado com a palavra camada, que aparece em dois sentidos. Camadas " +
+    "<strong>lógicas</strong> são divisões do software, ou seja, apresentação, lógica " +
+    "da aplicação e dados, e existem em qualquer sistema bem organizado. Camadas " +
+    "<strong>físicas</strong> são divisões de máquina, isto é, quantos computadores " +
+    "diferentes o pedido atravessa. Só as segundas custam rede.</p>" +
+    "<ul>" +
+    "<li><strong>Duas camadas físicas</strong> são o cliente e o servidor, com o " +
+    "servidor cuidando da lógica da aplicação e dos dados. Um pedido é uma ida e volta. " +
+    "Em troca, a lógica da aplicação acaba <strong>dividida</strong> entre os dois " +
+    "lados, e mudar uma regra de negócio significa mexer no cliente e no servidor, e " +
+    "ainda distribuir a atualização para todo mundo.</li>" +
+    "<li><strong>Três camadas físicas</strong> são o cliente, o servidor de aplicação e " +
+    "o servidor de dados. A lógica passa a morar <strong>em um só lugar</strong>, o que " +
+    "é bem mais fácil de manter e de evoluir. O preço é o salto extra, porque o " +
+    "servidor de aplicação precisa conversar com o banco antes de responder.</li>" +
+    "</ul>" +
+    "<p>Na demo, o pedido custa 110 ms em duas camadas e 125 ms em três. Vale reparar " +
+    "de onde vêm esses 15 ms. Dez saem das duas pernas de rede local do centro de " +
+    "dados, e cinco saem do custo de atravessar a fronteira do processo do banco, com " +
+    "a conexão e a serialização que ela cobra. O trabalho de achar o dado existe nos " +
+    "dois arranjos, e por isso não entra na diferença.</p>" +
+    "<p>A rede local é barata perto da perna até o cliente, que custa 40 ms de cada " +
+    "lado, e é por isso que a terceira camada sai barata. Ela mora do lado de dentro. " +
+    "Uma terceira camada do outro lado do país seria conversa completamente " +
+    "diferente.</p>" +
+    "<p>O que faz esse custo doer é a repetição. Um salto extra por pedido é aceitável. " +
+    "O mesmo salto dentro de um laço, uma vez por item de uma lista, é o efeito N+1, e " +
+    "é ele que transforma 15 ms em segundos de espera quando a lista é grande. A " +
+    "fronteira entre camadas é barata de atravessar uma vez e cara de atravessar " +
+    "mil.</p>",
+  leia: [
+    { rotulo: "Modelos de Sistema: arquitetura de camadas físicas", topico: "02" },
+    { rotulo: "Objetos Distribuídos: o custo de cada invocação remota", topico: "05" }
   ]
 };

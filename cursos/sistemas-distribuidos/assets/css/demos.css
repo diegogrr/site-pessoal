@@ -305,7 +305,7 @@
   font-weight: 600;
 }
 
-.demo-ma-demand {
+.demo-cf .demo-ma-demand {
   margin-top: var(--space-1);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -366,7 +366,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.demo-ma-bar-note {
+.demo-cf .demo-ma-bar-note {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
@@ -374,7 +374,7 @@
 .demo-ma-chart {
   flex: 1;
   min-width: 220px;
-  height: 130px;
+  height: 158px;
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
   background-color: var(--color-bg-sunken);
@@ -401,7 +401,7 @@
 
 .demo-ma-chart-dot { fill: var(--color-brand); }
 
-.demo-ma-chart-caption {
+.demo-cf .demo-ma-chart-caption {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   margin-bottom: var(--space-3);
@@ -439,8 +439,8 @@
   align-items: flex-start;
 }
 
-.demo-ma-tier-path,
-.demo-ma-tier-badge {
+.demo-cf .demo-ma-tier-path,
+.demo-cf .demo-ma-tier-badge {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
@@ -456,6 +456,340 @@
 .demo-cf .btn-secondary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ============================================================
+   Camada de tutoria (demos/tutor.js)
+   Plano: docs/demos/2026-08-03-demo-modelos-arquitetura-tutoria-plano.md
+   Orçamento vertical: a lista de passos SUBSTITUI o parágrafo de
+   instrução e a nota nasce recolhida; o acréscimo líquido é o
+   painel de efeito.
+   ============================================================ */
+
+/* ---------- Passos da etapa ----------
+   Compactos de propósito: eles SUBSTITUEM o parágrafo de instrução,
+   não se somam a ele. */
+.demo-tutor-passos { margin-bottom: var(--space-2); }
+.demo-tutor-passos[hidden] { display: none; }
+
+.demo-cf .demo-tutor-passos-titulo {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.demo-tutor-passos-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.demo-tutor-passos-lista li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.demo-tutor-passos-lista li.is-feito {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-border);
+}
+
+.demo-tutor-marca {
+  color: var(--color-text-muted);
+  min-width: 1em;
+}
+
+.demo-tutor-passos-lista li.is-feito .demo-tutor-marca {
+  color: var(--color-success);
+}
+
+/* ---------- Previsão ----------
+   Uma linha que flui: pergunta e alternativas dividem a mesma faixa
+   e só quebram quando não cabem. Respondida, ela some (o veredito
+   passa a viver no painel de efeito). */
+.demo-tutor-previsao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px dashed var(--color-border);
+}
+
+.demo-tutor-previsao[hidden] { display: none; }
+
+.demo-cf .demo-tutor-previsao-pergunta {
+  font-size: var(--font-size-xs);
+  margin-bottom: 0;
+}
+
+.demo-tutor-previsao-selo {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-brand);
+}
+
+.demo-tutor-previsao-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.demo-tutor-opcao {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.demo-tutor-opcao.is-correta {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.demo-tutor-opcao.is-escolhida { font-weight: 600; }
+
+.demo-tutor-opcao:disabled { cursor: default; opacity: 1; }
+
+.demo-cf .demo-tutor-previsao-veredito {
+  flex-basis: 100%;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+}
+
+.demo-tutor-previsao-veredito.is-acerto { color: var(--color-success); }
+.demo-tutor-previsao-veredito.is-erro   { color: var(--color-warning); }
+
+/* ---------- Painel de efeito ----------
+   O núcleo da tutoria: fica logo abaixo dos controles, onde o olho
+   e o cursor já estão no instante do clique. */
+.demo-tutor-efeito {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-left: 3px solid var(--color-brand);
+  border-radius: var(--radius-md);
+  background-color: var(--color-brand-soft);
+  font-size: var(--font-size-sm);
+}
+
+.demo-tutor-efeito.is-aguardando {
+  background-color: var(--color-bg-sunken);
+  border-left-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.demo-tutor-efeito p { margin-bottom: 2px; }
+.demo-tutor-efeito p:last-child { margin-bottom: 0; }
+
+.demo-cf .demo-tutor-efeito-previsao {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-cf .demo-tutor-efeito-acao { font-weight: 600; }
+
+.demo-cf .demo-tutor-efeito-porque,
+.demo-cf .demo-tutor-efeito-olhe {
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.demo-tutor-efeito-nums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.demo-tutor-delta {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  border: var(--border-width) solid var(--color-border);
+}
+
+.demo-tutor-delta.is-melhor {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.demo-tutor-delta.is-pior {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* ---------- Conceito sob demanda (camada 3) ----------
+   Recolhido, divide a linha com a meta; aberto, toma a largura toda
+   (a classe vem do JS, que é quem sabe do estado do botão). */
+.demo-ma-goalrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.demo-ma-goalrow .demo-cf-goal { flex: 1 1 auto; }
+
+.demo-tutor-conceito { flex: 0 0 auto; }
+.demo-tutor-conceito.is-aberta { flex-basis: 100%; }
+.demo-tutor-conceito[hidden] { display: none; }
+
+.demo-tutor-conceito-btn {
+  font-size: var(--font-size-xs);
+  color: var(--color-brand);
+}
+
+.demo-tutor-conceito-btn::after {
+  content: " ▾";
+  font-size: var(--font-size-xs);
+}
+
+.demo-tutor-conceito-btn[aria-expanded="true"]::after { content: " ▴"; }
+
+.demo-tutor-nota {
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-sunken);
+  font-size: var(--font-size-sm);
+}
+
+.demo-tutor-nota > :last-child { margin-bottom: 0; }
+
+.demo-tutor-nota ul,
+.demo-tutor-nota ol {
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-4);
+}
+
+.demo-tutor-nota li { margin-bottom: var(--space-1); }
+
+.demo-cf .demo-tutor-nota-cabeca {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.demo-cf .demo-tutor-nota-leia {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.demo-tutor-nota-figura { margin: 0 0 var(--space-3); }
+
+.demo-tutor-nota-figura img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Log: o efeito ao lado da decisão ---------- */
+.demo-cf-log-diff { color: var(--color-brand); }
+
+/* ============================================================
+   Anotações de leitura da demo "Arquiteto de Sistemas"
+   ============================================================ */
+
+/* ---------- Barras: a régua inteira é a capacidade ---------- */
+.demo-cf .demo-ma-bars-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.demo-ma-bars-scale {
+  display: block;
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Estouro de régua: a barra cheia sozinha não distingue 100% de 250% */
+.demo-ma-bar-over {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  white-space: nowrap;
+}
+
+/* ---------- Gráfico: eixos, teto e curvas rotuladas ----------
+   Sem escala, a curva saturada encostava no teto e virava uma reta:
+   lia-se "estabilizou" onde o significado é "saiu da escala". */
+.demo-ma-chart-axis {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.demo-ma-chart-teto {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.demo-ma-chart-label {
+  font-size: 8px;
+  fill: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+}
+
+.demo-ma-chart-label.is-alvo { fill: var(--color-warning); }
+
+.demo-ma-chart-aviso {
+  font-size: 8px;
+  fill: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+}
+
+.demo-ma-chart-name {
+  font-size: 8px;
+  font-family: var(--font-family-mono);
+}
+
+.demo-ma-chart-name.is-ref { fill: var(--color-text-muted); }
+.demo-ma-chart-name.is-cur { fill: var(--color-brand); }
+
+.demo-ma-chart-now {
+  font-size: 8px;
+  font-family: var(--font-family-mono);
+  fill: var(--color-brand);
+}
+
+/* Trecho fora da escala: interrompido, para não parecer patamar */
+.demo-ma-chart-ref.is-fora,
+.demo-ma-chart-cur.is-fora {
+  stroke-dasharray: 4 3;
+}
+
+.demo-ma-chart-nota { color: var(--color-text-muted); }
+
+/* ---------- Etapa 5: o comparador não depende da carga ---------- */
+.demo-cf .demo-ma-tiers-aviso {
+  flex-basis: 100%;
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-warn-soft);
+  color: var(--color-text);
+}
+
+/* Controles de carga atenuados: nada ali significa alguma coisa para
+   a latência que o comparador mede, e competiam pela atenção. */
+.demo-ma.is-camadas .demo-ma-userrow,
+.demo-ma.is-camadas .demo-ma-world,
+.demo-ma.is-camadas .demo-ma-chart-caption,
+.demo-ma.is-camadas .demo-cf-metrics {
+  opacity: 0.4;
+  transition: opacity var(--transition-base);
 }
 
 /* ---------- Navegação de etapas ---------- */
