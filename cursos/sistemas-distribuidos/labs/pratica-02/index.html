@@ -167,7 +167,9 @@
           <tr>
             <td><strong>User data</strong></td>
             <td>Um script que a instância executa sozinha no primeiro boot. É como as três
-              máquinas vão nascer configuradas, sem você digitar nada dentro delas.</td>
+              máquinas vão nascer configuradas, sem você digitar nada dentro delas. O campo
+              aceita no máximo 16 KB, e por isso o que você vai colar nele é um carregador
+              curto, que baixa o script completo desta página.</td>
           </tr>
         </tbody>
       </table>
@@ -189,12 +191,14 @@
     <div class="callout">
       <p class="callout-title">💡 A ideia central desta prática</p>
       <p>
-        Repare no que acabou de acontecer: as três máquinas são idênticas e carregam o mesmo
+        Repare no que acabou de acontecer. As três máquinas são idênticas e carregam o mesmo
         código. <strong>Nenhuma delas sabe qual é a arquitetura do sistema.</strong> Duas
         camadas ou três, uma réplica ou duas, tudo isso vai ser decidido por quem chama, no
-        momento da chamada. A arquitetura não está no código: está no arranjo. É exatamente
-        por isso que ela merece um modelo próprio, e é o que o Tópico 2 chama de
-        <em>modelo de arquitetura</em>.
+        momento da chamada. O código fixa a <strong>organização lógica</strong>, e ela está
+        ali, sim, com as responsabilidades separadas e os papéis definidos. Quem decide a
+        <strong>realização física</strong> é o arranjo, e é essa segunda decisão que você
+        vai variar hoje. É exatamente por isso que ela merece um modelo próprio, e é o que
+        o Tópico 2 chama de <em>modelo de arquitetura</em>.
       </p>
     </div>
   </section>
@@ -205,7 +209,7 @@
   <section class="lab-step" id="ficha">
     <h2><span class="step-num is-accent">✎</span><span>Ficha do ambiente</span></h2>
     <p>
-      Preencha os cinco campos abaixo assim que tiver os endereços (passo 3). Todos os
+      Preencha os seis campos abaixo assim que tiver os endereços (passo 3). Todos os
       comandos desta página passam a mostrar os seus valores reais, e o botão
       <em>copiar</em> já leva o comando pronto. Os dados ficam só no seu navegador.
     </p>
@@ -216,6 +220,8 @@
         <input type="text" data-ficha="IP_A" placeholder="ex.: 172.31.20.15" autocomplete="off"></label>
       <label>IP privado do nó B
         <input type="text" data-ficha="IP_B" placeholder="ex.: 172.31.22.31" autocomplete="off"></label>
+      <label>IP público do nó B
+        <input type="text" data-ficha="IP_PUB_B" placeholder="ex.: 54.90.13.2" autocomplete="off"></label>
       <label>IP privado do nó C
         <input type="text" data-ficha="IP_C" placeholder="ex.: 172.31.40.22" autocomplete="off"></label>
       <label>IP público do nó C
@@ -362,8 +368,10 @@ chmod 400 labsuser.pem</pre>
             <code>sd-pratica02</code></li>
         </ul>
       </li>
-      <li>Abra <strong>Advanced details</strong>, role até o fim e cole o script no campo
-        <strong>User data</strong> (botão no fim deste passo).</li>
+      <li>Abra <strong>Advanced details</strong>, role até o fim e cole o
+        <strong>carregador</strong> no campo <strong>User data</strong> (botão na seção 3.3,
+        logo abaixo). São poucas linhas, e o motivo de não ser o script inteiro está
+        explicado lá.</li>
       <li>No painel <em>Summary</em>, à direita, mude <strong>Number of instances</strong>
         para <strong>2</strong> e clique em <strong>Launch instance</strong>.</li>
     </ul>
@@ -372,8 +380,8 @@ chmod 400 labsuser.pem</pre>
     <p>
       Repita o <strong>Launch instances</strong> com os mesmos campos, mudando duas coisas:
       <strong>Subnet</strong> para a sub-rede de <code>us-east-1b</code> e
-      <strong>Number of instances</strong> de volta para <strong>1</strong>. O user data é o
-      mesmo: cole outra vez.
+      <strong>Number of instances</strong> de volta para <strong>1</strong>. O carregador é o
+      mesmo, então cole o mesmo texto outra vez.
     </p>
 
     <div class="callout">
@@ -386,24 +394,96 @@ chmod 400 labsuser.pem</pre>
       </p>
     </div>
 
+    <h3>3.3 O que vai no campo User data</h3>
+    <p>
+      O script que provisiona o nó tem cerca de 25 KB, e o campo <strong>User data</strong>
+      aceita no máximo 16 KB. O limite vale para o conteúdo, não para a forma de colocá-lo
+      lá, então enviar o arquivo pelo botão <em>Choose file</em> esbarraria no mesmo teto.
+      O que você cola são estas linhas, que baixam o script completo e o executam dentro da
+      instância.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">campo "User data" do EC2</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar="user-data">copiar</button>
+      </div>
+      <pre id="user-data">#!/bin/bash
+# ============================================================
+# Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto
+# Carregador do script de inicializacao (campo "User data" do EC2).
+#
+# O campo "User data" aceita no maximo 16 KB, e o setup.sh da
+# pratica passa disso. Entao o que voce cola no console e apenas
+# este carregador. Ele baixa o setup.sh publicado no roteiro e o
+# executa. O conteudo baixado esta inteiro na pagina, para leitura
+# antes da execucao.
+#
+# Sem acentos de proposito: o user data executa antes do locale
+# estar definido. Testado em Amazon Linux 2023.
+# ============================================================
+set -x
+exec &gt; /var/log/sd-setup.log 2&gt;&amp;1
+
+URL=https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-02/setup.sh
+DESTINO=/opt/sd-setup.sh
+
+# A rede da instancia pode ficar pronta alguns segundos depois do
+# user data comecar. As tentativas cobrem essa janela.
+if ! curl -fsSL --retry 5 --retry-delay 3 --max-time 60 -o "$DESTINO" "$URL"; then
+  echo "FALHA: nao consegui baixar $URL"
+  echo "Remedio: copie o setup.sh da pagina do roteiro para dentro da"
+  echo "instancia e rode 'sudo bash setup.sh'."
+  exit 1
+fi
+
+# Identifica a copia baixada, para o caso de a publicada estar
+# atrasada em relacao ao roteiro que voce esta lendo.
+sha256sum "$DESTINO"
+
+bash "$DESTINO"</pre>
+    </div>
+
+    <p>
+      <button type="button" class="btn" data-copiar="user-data">⧉ Copiar o carregador</button>
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 A instância acabou de virar cliente de alguém</p>
+      <p>
+        Repare no que essas linhas fazem. A máquina nasce sem saber o que precisa rodar,
+        pergunta a um servidor e recebe de volta o código que vai executar. É uma interação
+        cliente-servidor completa, e ela existe por causa de um limite de tamanho na interface
+        do EC2. Restrição de interface empurrando trabalho para outro processo é justamente o
+        que produz uma camada nova, e foi o que aconteceu aqui antes mesmo de a máquina
+        terminar de ligar.
+      </p>
+    </div>
+
     <details class="dobra">
       <summary>Ver o script de inicialização antes de executá-lo (recomendado)</summary>
       <p>
-        Ele não instala nada de fora: escreve quatro programas Python que usam só a
-        biblioteca padrão, cria o catálogo em SQLite e sobe dois serviços. Ler o que você vai
-        executar é um hábito, não um exagero.
+        É este o arquivo que o carregador baixa. Ele não instala nada de fora. Escreve quatro
+        programas Python que usam só a biblioteca padrão, cria o catálogo em SQLite e sobe
+        dois serviços. Ler o que você vai executar é um hábito, não um exagero.
       </p>
       <div class="cmd">
         <div class="cmd-head">
-          <span class="onde">campo "User data" do EC2</span>
+          <span class="onde">baixado pelo carregador em /opt/sd-setup.sh</span>
           <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-baixar="setup-sh"
+            data-arquivo="setup.sh">baixar</button>
           <button type="button" class="btn-copiar" data-copiar="setup-sh">copiar</button>
         </div>
         <pre id="setup-sh">#!/bin/bash
 # ============================================================
 # Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto
-# Script de inicializacao dos tres nos (campo "User data" do EC2).
-# Roda uma unica vez, no primeiro boot da instancia.
+# Script de inicializacao dos tres nos.
+# Roda uma unica vez, no primeiro boot da instancia. Ele nao vai
+# colado no campo "User data", que aceita no maximo 16 KB e nao
+# comporta este arquivo. Quem vai colado la e o user-data.sh, um
+# carregador de poucas linhas que baixa este script e o executa.
 #
 # Os tres nos recebem o MESMO script e sobem os MESMOS dois
 # servicos: camada de dados na 8081 e camada de aplicacao na 8080.
@@ -415,7 +495,9 @@ chmod 400 labsuser.pem</pre>
 # estar definido. Testado em Amazon Linux 2023 (python3 da base).
 # ============================================================
 set -x
-exec &gt; /var/log/sd-setup.log 2&gt;&amp;1
+# Acrescenta ao log em vez de truncar: o carregador ja escreveu ali
+# a linha do download, e ela e a primeira coisa util no diagnostico.
+exec &gt;&gt; /var/log/sd-setup.log 2&gt;&amp;1
 
 mkdir -p /opt/sd
 
@@ -1012,7 +1094,8 @@ def cmd_conferir(argumentos):
     origem = flags.get("dados", "local")
     itens = int(flags.get("itens", 12))
 
-    print("Mesma pergunta, duas replicas: %d itens, dados em %s\n" % (itens, origem))
+    print("Mesma pergunta, %d replicas: %d itens, dados em %s\n" % (
+        len(hosts), itens, origem))
     respostas = []
     for host in hosts:
         try:
@@ -1038,10 +1121,31 @@ def cmd_conferir(argumentos):
         return
 
     print("  As respostas DIVERGEM em: %s" % ", ".join(divergentes))
-    print("  Nenhuma replica acusou erro e as duas responderam 200 OK.")
+    print("  Nenhuma replica acusou erro e todas responderam 200 OK.")
     print("  Elas leram o mesmo catalogo, entao a diferenca esta na aplicacao.")
-    print("  Com duas replicas voce descobre que ha desacordo,")
-    print("  mas nao descobre qual das duas esta errada.")
+
+    # Com 3 ou mais replicas a maioria ja aponta o mentiroso, que e o que a
+    # extensao "Um terceiro voto" ensina. Com 2, so da para saber que ha
+    # desacordo (achado D4 da auditoria de 2026-08-04).
+    if len(respostas) &lt; 3:
+        print("  Com duas replicas voce descobre que ha desacordo,")
+        print("  mas nao descobre qual das duas esta errada.")
+        return
+
+    contagem = {}
+    for r in respostas:
+        chave = "%.2f" % r["total"]
+        contagem[chave] = contagem.get(chave, 0) + 1
+    print("")
+    print("  Votos por total:")
+    for chave in sorted(contagem, key=lambda c: -contagem[c]):
+        print("    %14s   %d voto(s)" % (chave, contagem[chave]))
+    vencedor = max(contagem, key=lambda c: contagem[c])
+    if contagem[vencedor] &gt; len(respostas) / 2.0:
+        print("  O valor %s tem maioria e sobrevive a votacao." % vencedor)
+        print("  Com tres replicas e um mentiroso, a maioria aponta quem errou.")
+    else:
+        print("  Nenhum valor teve maioria: a votacao nao decide este caso.")
 
 
 def cmd_saude(argumentos):
@@ -1118,13 +1222,15 @@ systemctl enable --now sd-aplicacao
 
 echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre>
       </div>
+      <p>
+        O botão <strong>baixar</strong> salva o arquivo no seu computador. Ele não serve para
+        o campo User data, que não comportaria o script nem por upload, e sim para o caso de
+        o download falhar dentro da instância. Aí você copia o arquivo para lá e roda na mão,
+        com o comando da tabela de socorro no fim da página.
+      </p>
     </details>
 
-    <p>
-      <button type="button" class="btn" data-copiar="setup-sh">⧉ Copiar o script de inicialização</button>
-    </p>
-
-    <h3>3.3 Colher os endereços</h3>
+    <h3>3.4 Colher os endereços</h3>
     <p>
       Espere cerca de dois minutos (o script roda no primeiro boot) e, em
       <strong>EC2 &gt; Instances</strong>, anote de cada instância a
@@ -1183,6 +1289,7 @@ echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre
   <section class="lab-step" id="passo-4">
     <h2><span class="step-num">4</span><span>Entrar por SSH e ver as duas camadas</span><span class="step-time">7 min</span></h2>
 
+    <h3>4.1 Entrar nas duas máquinas</h3>
     <p>Na pasta onde está o <code>labsuser.pem</code>, abra <strong>duas janelas</strong> de
       terminal. Você vai alternar entre elas o tempo todo.</p>
 
@@ -1207,6 +1314,7 @@ echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre
     <p>Responda <code>yes</code> à pergunta sobre o <em>fingerprint</em>. Você entra sem
       digitar senha: quem provou a sua identidade foi a chave privada.</p>
 
+    <h3>4.2 Ver as duas camadas rodando lado a lado</h3>
     <p>No <strong>nó A</strong>, veja as duas camadas rodando lado a lado:</p>
 
     <div class="cmd">
@@ -1260,11 +1368,17 @@ curl -s localhost:8080/saude; echo</pre>
     <h3>4.3 O atalho que você vai usar daqui em diante</h3>
     <p>
       Os próximos passos não chamam mais o <code>curl</code> na mão. O user data instalou
-      <code>/usr/local/bin/sd</code>, um atalho com quatro subcomandos:
-      <code>tempo</code> (mede um pedido), <code>frota</code> (distribui pedidos entre
-      réplicas), <code>conferir</code> (compara réplicas) e <code>saude</code>. Digitar
-      <code>sd</code> sozinho imprime o uso, e isso também serve de conferência barata de que
-      o provisionamento terminou.
+      <code>/usr/local/bin/sd</code>, um atalho com quatro subcomandos.
+    </p>
+    <ul>
+      <li><code>tempo</code> mede quanto demora um pedido.</li>
+      <li><code>frota</code> distribui pedidos entre réplicas.</li>
+      <li><code>conferir</code> compara as respostas das réplicas.</li>
+      <li><code>saude</code> pergunta a um ou mais nós se eles estão vivos.</li>
+    </ul>
+    <p>
+      Digitar <code>sd</code> sozinho imprime o uso, e isso também serve de conferência
+      barata de que o provisionamento terminou.
     </p>
 
     <div class="cmd">
@@ -1276,12 +1390,42 @@ curl -s localhost:8080/saude; echo</pre>
       <pre>sd</pre>
     </div>
 
+    <p>
+      Agora pergunte aos <strong>outros dois nós</strong> se eles estão de pé. O nó B atende
+      o experimento 1 inteiro e metade dos outros dois, e é a única máquina em que você não
+      vai entrar. Vale conferir agora, enquanto sair caro é barato.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span></pre>
+    </div>
+
+    <p class="saida">Saude das replicas: a pergunta que um balanceador faria
+
+  172.31.22.31     SAUDAVEL   no ip-172-31-22-31    3.104 ms
+  172.31.40.22     SAUDAVEL   no ip-172-31-40-22    8.712 ms
+
+  Esta rota nao consulta a camada de dados e nao soma nada.
+  Ela responde "estou vivo", nunca "estou certo".</p>
+
+    <p>
+      Se algum dos dois não responder, resolva antes de seguir. Ir para o passo 5 com uma
+      réplica muda faz o sintoma aparecer lá na frente, disfarçado de erro de configuração
+      de rede. A tabela de socorro no fim da página tem a linha para o caso de o user data
+      não ter rodado, e é para isso que a ficha guarda o IP público do nó B.
+    </p>
+
     <div class="check">
       <input type="checkbox" id="p02-c4">
       <label for="p02-c4"><strong>Checkpoint 4.</strong> Estou conectado ao nó A em uma janela
         e ao nó C em outra, os dois <code>/saude</code> do nó A responderam, um dizendo
-        <code>dados</code> e o outro <code>aplicacao</code>, e o comando <code>sd</code>
-        imprimiu o uso.</label>
+        <code>dados</code> e o outro <code>aplicacao</code>, o comando <code>sd</code>
+        imprimiu o uso, e o <code>sd saude</code> confirmou que os nós B e C respondem.</label>
     </div>
   </section>
 
@@ -1693,13 +1837,13 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
       <pre>sd conferir <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 12</pre>
     </div>
 
-    <p class="saida">Mesma pergunta, duas replicas: 12 itens, dados em 172.31.20.15
+    <p class="saida">Mesma pergunta, 2 replicas: 12 itens, dados em 172.31.20.15
 
   no ip-172-31-22-31   us-east-1a   total      3020.82   itens  12   32.104 ms
   no ip-172-31-40-22   us-east-1b   total      2564.54   itens  12   35.660 ms
 
   As respostas DIVERGEM em: total
-  Nenhuma replica acusou erro e as duas responderam 200 OK.
+  Nenhuma replica acusou erro e todas responderam 200 OK.
   Elas leram o mesmo catalogo, entao a diferenca esta na aplicacao.
   Com duas replicas voce descobre que ha desacordo,
   mas nao descobre qual das duas esta errada.</p>
@@ -1772,10 +1916,11 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
     <div class="callout">
       <p class="callout-title">💡 Para que servem estes números</p>
       <p>
-        O questionário desta prática, no Moodle, pergunta sobre eles. Não pede o valor exato:
-        pede a <strong>faixa</strong> em que o seu resultado caiu, ou a comparação entre dois
-        deles. Quem não mediu não tem como responder. Use o botão <em>copiar meus
-        resultados</em> antes de encerrar o laboratório: a sessão apaga as máquinas.
+        O questionário desta prática, no Moodle, pergunta sobre eles. Ele não pede o valor
+        exato. Pede a <strong>faixa</strong> em que o seu resultado caiu, ou a comparação
+        entre dois deles. Quem não mediu responde às perguntas de conceito, e não às de
+        valor. Use o botão <em>copiar meus resultados</em> antes de encerrar o laboratório,
+        porque a sessão apaga as máquinas.
       </p>
     </div>
 
@@ -2049,11 +2194,23 @@ encerrar o laboratorio.</p>
               <em>Status check</em> está em 2/2.</td>
           </tr>
           <tr>
-            <td><code>sd: command not found</code></td>
-            <td>O <em>user data</em> não foi colado, ou foi colado com algum caractere a mais</td>
+            <td><code>sd: command not found</code>, e
+              <code>sudo tail -30 /var/log/sd-setup.log</code> mostra
+              <code>FALHA: nao consegui baixar</code></td>
+            <td>A instância subiu sem alcançar a internet, ou o endereço do script está fora
+              do ar. O carregador rodou, o download é que não veio</td>
+            <td>Salve o <code>setup.sh</code> pelo botão <strong>baixar</strong> da seção 3.3,
+              mande o arquivo para a instância com
+              <code>scp -i labsuser.pem setup.sh ec2-user@<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span>:~</code>
+              e rode lá dentro <code>sudo bash setup.sh</code>. Confira também se a instância
+              recebeu IP público, porque sem ele não há saída para a internet.</td>
+          </tr>
+          <tr>
+            <td><code>sd: command not found</code> e o log está vazio ou nem existe</td>
+            <td>O carregador não foi colado no campo <em>user data</em>, ou foi colado com
+              algum caractere a mais</td>
             <td>Confira <code>sudo tail -30 /var/log/sd-setup.log</code>. Em último caso,
-              copie o script para um arquivo na instância e rode
-              <code>sudo bash setup.sh</code>.</td>
+              aplique o mesmo remédio da linha acima.</td>
           </tr>
           <tr>
             <td>Todos os pedidos voltam com <code>ERRO 502</code></td>
@@ -2073,6 +2230,17 @@ encerrar o laboratorio.</p>
               <strong>privado</strong> (começa com <code>172.31.</code>) e que o grupo
               <code>sd-pratica02</code> tem a regra <em>All traffic</em> com origem nele
               mesmo. Depois repita o comando.</td>
+          </tr>
+          <tr>
+            <td>No <code>sd saude</code> do passo 4, um dos nós fica em
+              <code>SEM RESPOSTA</code> e os campos da ficha estão certos</td>
+            <td>Aquela réplica não provisionou. É o caso do nó B, em que você não entra
+              durante a prática, e por isso o sintoma só apareceria no passo 5</td>
+            <td>Entre nela com
+              <code>ssh -i labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_B">IP-PUBLICO-B</span></code>
+              e confira <code>sudo tail -30 /var/log/sd-setup.log</code>. Se o provisionamento
+              não rodou, aplique o remédio das linhas do <code>sd: command not found</code>.
+              Se a instância nem subiu, encerre-a e repita o passo 3 para ela.</td>
           </tr>
           <tr>
             <td><code>sd tempo</code> responde, mas <code>sd frota</code> só usa um dos nós</td>
@@ -2128,11 +2296,12 @@ encerrar o laboratorio.</p>
     <h3>Um terceiro voto</h3>
     <p>
       Ligue o defeito em C e rode <code>sd conferir</code> incluindo os três nós de aplicação,
-      A, B e C. Com três respostas e duas iguais, a maioria aponta o mentiroso. Anote quantas
-      réplicas o cliente precisaria consultar para a maioria ainda apontar a resposta certa
-      com <strong>dois</strong> mentirosos. Guarde também que esse número cresce quando não é
-      o cliente que vota, e sim as réplicas que precisam entrar em acordo entre si antes de
-      responder: essa conta tem nome e aparece no Tópico 10, quando o assunto for replicação
+      A, B e C. Com três respostas e duas iguais, o comando passa a imprimir a contagem de
+      votos por valor e diz qual deles sobrevive à votação. Anote quantas réplicas o cliente
+      precisaria consultar para a maioria ainda apontar a resposta certa com
+      <strong>dois</strong> mentirosos. Guarde também que esse número cresce quando não é o
+      cliente que vota, e sim as réplicas que precisam entrar em acordo entre si antes de
+      responder. Essa conta tem nome e aparece no Tópico 10, quando o assunto for replicação
       e quóruns.
     </p>
 

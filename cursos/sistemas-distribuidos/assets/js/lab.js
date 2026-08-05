@@ -3,7 +3,8 @@
    ------------------------------------------------------------
    Depende de core/store.js e ui/theme.js (mesmo tema do app).
    O que faz, tudo opcional e sem framework:
-     - botão copiar em cada bloco de comando;
+     - botão copiar em cada bloco de comando, e botão baixar nos
+       blocos que viram arquivo na máquina do aluno;
      - ficha do ambiente: o aluno digita os IPs uma vez e todos
        os comandos da página passam a mostrar o valor real;
      - abas Windows/PowerShell × macOS/Linux;
@@ -96,6 +97,38 @@ SD.lab = (function () {
           ? document.getElementById(alvo)
           : (bloco && bloco.querySelector("pre"));
         if (origem) copiar(origem.textContent.replace(/\s+$/, ""), botao);
+      });
+    });
+  }
+
+  /* ---------- Baixar um bloco como arquivo ----------
+     Serve ao script que não cabe no campo "User data" do EC2 (teto de
+     16 KB): o aluno salva o arquivo e o leva para dentro da instância
+     por scp quando o download automático falha. O conteúdo sai do
+     próprio <pre> da página, então nada é buscado na rede, e a quebra
+     de linha é sempre \n, que é o que o shell do Linux espera. */
+  function ligarBotoesBaixar() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-baixar]"), function (botao) {
+      var rotulo = botao.textContent.trim();
+      botao.addEventListener("click", function () {
+        var origem = document.getElementById(botao.getAttribute("data-baixar"));
+        if (!origem) return;
+        var texto = origem.textContent.replace(/\r\n/g, "\n").replace(/\s+$/, "") + "\n";
+        var url = URL.createObjectURL(
+          new Blob([texto], { type: "text/plain;charset=utf-8" }));
+        var ligacao = document.createElement("a");
+        ligacao.href = url;
+        ligacao.download = botao.getAttribute("data-arquivo") || "arquivo.txt";
+        document.body.appendChild(ligacao);
+        ligacao.click();
+        document.body.removeChild(ligacao);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        botao.textContent = "✓ baixado";
+        botao.classList.add("copiado");
+        setTimeout(function () {
+          botao.textContent = rotulo;
+          botao.classList.remove("copiado");
+        }, 1600);
       });
     });
   }
@@ -314,6 +347,7 @@ SD.lab = (function () {
     var alternador = document.getElementById("theme-toggle");
     if (alternador) alternador.addEventListener("click", SD.theme.toggle);
     ligarBotoesCopiar();
+    ligarBotoesBaixar();
     ligarFicha();
     ligarOS();
     ligarNotas();

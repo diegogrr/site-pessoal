@@ -1,8 +1,11 @@
 #!/bin/bash
 # ============================================================
 # Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto
-# Script de inicializacao dos tres nos (campo "User data" do EC2).
-# Roda uma unica vez, no primeiro boot da instancia.
+# Script de inicializacao dos tres nos.
+# Roda uma unica vez, no primeiro boot da instancia. Ele nao vai
+# colado no campo "User data", que aceita no maximo 16 KB e nao
+# comporta este arquivo. Quem vai colado la e o user-data.sh, um
+# carregador de poucas linhas que baixa este script e o executa.
 #
 # Os tres nos recebem o MESMO script e sobem os MESMOS dois
 # servicos: camada de dados na 8081 e camada de aplicacao na 8080.
@@ -14,7 +17,9 @@
 # estar definido. Testado em Amazon Linux 2023 (python3 da base).
 # ============================================================
 set -x
-exec > /var/log/sd-setup.log 2>&1
+# Acrescenta ao log em vez de truncar: o carregador ja escreveu ali
+# a linha do download, e ela e a primeira coisa util no diagnostico.
+exec >> /var/log/sd-setup.log 2>&1
 
 mkdir -p /opt/sd
 
@@ -611,7 +616,8 @@ def cmd_conferir(argumentos):
     origem = flags.get("dados", "local")
     itens = int(flags.get("itens", 12))
 
-    print("Mesma pergunta, duas replicas: %d itens, dados em %s\n" % (itens, origem))
+    print("Mesma pergunta, %d replicas: %d itens, dados em %s\n" % (
+        len(hosts), itens, origem))
     respostas = []
     for host in hosts:
         try:
@@ -637,10 +643,31 @@ def cmd_conferir(argumentos):
         return
 
     print("  As respostas DIVERGEM em: %s" % ", ".join(divergentes))
-    print("  Nenhuma replica acusou erro e as duas responderam 200 OK.")
+    print("  Nenhuma replica acusou erro e todas responderam 200 OK.")
     print("  Elas leram o mesmo catalogo, entao a diferenca esta na aplicacao.")
-    print("  Com duas replicas voce descobre que ha desacordo,")
-    print("  mas nao descobre qual das duas esta errada.")
+
+    # Com 3 ou mais replicas a maioria ja aponta o mentiroso, que e o que a
+    # extensao "Um terceiro voto" ensina. Com 2, so da para saber que ha
+    # desacordo (achado D4 da auditoria de 2026-08-04).
+    if len(respostas) < 3:
+        print("  Com duas replicas voce descobre que ha desacordo,")
+        print("  mas nao descobre qual das duas esta errada.")
+        return
+
+    contagem = {}
+    for r in respostas:
+        chave = "%.2f" % r["total"]
+        contagem[chave] = contagem.get(chave, 0) + 1
+    print("")
+    print("  Votos por total:")
+    for chave in sorted(contagem, key=lambda c: -contagem[c]):
+        print("    %14s   %d voto(s)" % (chave, contagem[chave]))
+    vencedor = max(contagem, key=lambda c: contagem[c])
+    if contagem[vencedor] > len(respostas) / 2.0:
+        print("  O valor %s tem maioria e sobrevive a votacao." % vencedor)
+        print("  Com tres replicas e um mentiroso, a maioria aponta quem errou.")
+    else:
+        print("  Nenhum valor teve maioria: a votacao nao decide este caso.")
 
 
 def cmd_saude(argumentos):
