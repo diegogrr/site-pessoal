@@ -64,6 +64,46 @@
   margin-bottom: var(--space-3);
 }
 
+/* ---------- Figura e tabela vindas da seção (slides[].ref) ---------- */
+/* Na projeção o que limita a figura é a altura da tela, não a largura: em 4:3
+   uma figura larga demais empurra o texto de apoio para fora do slide. Os
+   valores saíram de medição em 1024x768, o pior projetor de sala em uso. */
+.presentation-layer .figura svg {
+  max-width: 100%;
+  max-height: 46vh;
+}
+
+/* Slide que junta figura e texto: a figura cede altura para os dois caberem, e a
+   legenda sai. Ela foi escrita para quem lê e diria de novo o que os itens do
+   slide já dizem. Na figura sozinha a legenda fica, porque é o único comentário. */
+.presentation-layer .slide-misto .figura svg {
+  max-height: 32vh;
+}
+
+.presentation-layer .slide-misto .figura figcaption {
+  display: none;
+}
+
+/* A legenda e a tabela da leitura têm corpo fixo em rem (14px), pequeno demais
+   projetado. Aqui os dois acompanham o corpo ampliado do slide. A tabela ainda
+   fica menor que o texto, com linha mais justa, porque é o elemento mais alto
+   que um slide recebe. */
+.presentation-layer .figura figcaption {
+  font-size: 0.8em;
+}
+
+.presentation-layer .tabela-conteudo {
+  font-size: 0.7em;
+  /* A entrelinha de leitura (1.7) é generosa demais para dado tabular projetado, e
+     era ela, mais que o corpo, que fazia a tabela de seis linhas estourar o slide. */
+  line-height: 1.45;
+}
+
+.presentation-layer .tabela-conteudo th,
+.presentation-layer .tabela-conteudo td {
+  padding: 0.3em 0.5em;
+}
+
 /* Slide de capa do tópico */
 .slide-cover {
   text-align: center;

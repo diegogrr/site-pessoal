@@ -15,6 +15,53 @@ SD.presentation = (function () {
   var index = 0;
   var active = false;
 
+  /**
+   * Copia para o slide um elemento que já existe no HTML da seção (slides[].ref).
+   * A figura e a tabela vivem em um lugar só, na leitura; o slide as referencia
+   * por id. Corrigir o desenho corrige os dois.
+   * @returns {string} HTML do elemento, ou "" se o id não existir na seção.
+   */
+  function conteudoDaSecao(sectionHtml, ref) {
+    var caixa = document.createElement("div");
+    caixa.innerHTML = sectionHtml;
+    var candidatos = caixa.querySelectorAll("[id]");
+    for (var i = 0; i < candidatos.length; i++) {
+      if (candidatos[i].id === ref) {
+        reidentificar(candidatos[i], "slide-");
+        return candidatos[i].outerHTML;
+      }
+    }
+    return "";
+  }
+
+  /**
+   * Prefixa os ids de uma cópia. A página de leitura continua no DOM atrás da
+   * camada de apresentação, e id repetido tornaria ambígua a referência que o
+   * aria-labelledby da figura faz ao próprio <title>.
+   */
+  function reidentificar(raiz, prefixo) {
+    var mapa = {};
+    var nos = [raiz].concat(Array.prototype.slice.call(raiz.querySelectorAll("[id]")));
+    nos.forEach(function (no) {
+      if (no.id) {
+        mapa[no.id] = prefixo + no.id;
+        no.id = mapa[no.id];
+      }
+    });
+    ["aria-labelledby", "aria-describedby"].forEach(function (attr) {
+      var comAtributo = [raiz].concat(
+        Array.prototype.slice.call(raiz.querySelectorAll("[" + attr + "]"))
+      );
+      comAtributo.forEach(function (no) {
+        var valor = no.getAttribute(attr);
+        if (!valor) return;
+        no.setAttribute(attr, valor.split(/\s+/).map(function (id) {
+          return mapa[id] || id;
+        }).join(" "));
+      });
+    });
+  }
+
   function buildSlides(topicMeta, topicContent) {
     var list = [];
 
@@ -32,18 +79,23 @@ SD.presentation = (function () {
     );
 
     // Slides por seção. Preferência: slides autorais da seção
-    // (section.slides = [{ title, html }], texto enxuto pensado para
-    // projeção). Fallback: a seção inteira vira um único slide.
+    // (section.slides = [{ title, html, ref }], texto enxuto pensado para
+    // projeção mais, em ref, a figura ou tabela da própria seção).
+    // Fallback: a seção inteira vira um único slide.
     (topicContent.sections || []).forEach(function (section, si) {
       var number = chapter + "." + (si + 1);
       var perSection = (section.slides && section.slides.length)
         ? section.slides
         : [{ title: section.title, html: section.html }];
       perSection.forEach(function (slide) {
+        var referencia = slide.ref ? conteudoDaSecao(section.html, slide.ref) : "";
+        // Figura acompanhada de texto de apoio encolhe para os dois caberem.
+        var classe = referencia && slide.html ? "slide slide-misto" : "slide";
         list.push(
-          '<section class="slide">' +
+          '<section class="' + classe + '">' +
           "<h2>" + number + " " + (slide.title || section.title) + "</h2>" +
           (slide.html || "") +
+          referencia +
           "</section>"
         );
       });

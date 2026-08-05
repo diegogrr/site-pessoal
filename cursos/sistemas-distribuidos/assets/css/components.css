@@ -371,6 +371,73 @@ p.hint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
 .topic-main li { margin-bottom: var(--space-2); line-height: 1.7; }
 .topic-main h3 { margin-top: var(--space-5); }
 
+/* ---------- Figura e tabela dentro do texto do tópico ---------- */
+/* O diagrama é SVG embutido: acompanha os dois temas pelas variáveis, não depende de
+   ferramenta externa e é texto versionado (docs/redacao/README.md, seção 6). */
+.figura {
+  margin: var(--space-5) 0;
+}
+.figura svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+.figura svg text {
+  font-family: var(--font-family-base);
+  fill: var(--color-text);
+}
+.figura svg .rotulo-secundario { fill: var(--color-text-muted); }
+.figura svg .caixa {
+  fill: var(--color-bg-elevated);
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+}
+.figura svg .caixa-destaque {
+  fill: var(--color-brand-soft);
+  stroke: var(--color-brand);
+  stroke-width: 1.5;
+}
+.figura svg .traco {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+}
+/* Ponta de seta é preenchida. Precisa de classe própria porque o CSS vence o atributo
+   fill do próprio elemento, e a regra acima deixaria o triângulo vazado. */
+.figura svg .seta {
+  fill: var(--color-text-muted);
+  stroke: none;
+}
+.figura figcaption {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.tabela-conteudo {
+  width: 100%;
+  margin: var(--space-5) 0;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+.tabela-conteudo th,
+.tabela-conteudo td {
+  border: var(--border-width) solid var(--color-border);
+  padding: var(--space-3);
+  text-align: left;
+  vertical-align: top;
+}
+.tabela-conteudo th {
+  background: var(--color-bg-sunken);
+  font-weight: 700;
+}
+/* Tabela larga rola dentro do próprio bloco, nunca empurra a página. */
+.tabela-rolagem { overflow-x: auto; }
+
 /* paginação anterior/próximo */
 .topic-pager {
   display: flex;
