@@ -223,8 +223,8 @@ SD.notas["problema-n-mais-1"] = {
     "peças no pedido, a aplicação atravessou a fronteira 30 vezes.</p>" +
     "<p>O que torna esse defeito traiçoeiro é que ele <strong>não aparece enquanto tudo " +
     "mora junto</strong>. No arranjo de duas camadas, as mesmas 30 consultas custaram " +
-    "cerca de 2 ms somadas, porque cada uma é uma leitura em um arquivo no disco local. " +
-    "Ninguém revisa código por causa de 2 ms.</p>" +
+    "meio milissegundo somadas, porque cada uma é uma leitura em um arquivo no disco " +
+    "local. Ninguém revisa código por causa de meio milissegundo.</p>" +
     "<p>Quando o banco muda de máquina, o mesmo código passa a pagar conexão, " +
     "requisição, resposta e espera 30 vezes, e a conta salta para dezenas de " +
     "milissegundos. O código não piorou. O que mudou foi o arranjo em volta dele.</p>" +
@@ -232,8 +232,8 @@ SD.notas["problema-n-mais-1"] = {
     "<code>idas e voltas</code>, que é a métrica capaz de prever o problema antes de " +
     "ele acontecer. O custo de um pedido é o número de rodadas multiplicado pelo preço " +
     "de uma rodada, e o tamanho dos dados quase nunca é o que manda.</p>" +
-    "<p>A correção que você experimentou com <code>--lote</code> é a de sempre, que é " +
-    "pedir tudo de uma vez. Em SQL isso costuma virar um <code>JOIN</code> ou um " +
+    "<p>A correção é a de sempre, que é pedir tudo de uma vez, e você vai experimentá-la " +
+    "logo adiante com <code>--lote</code>. Em SQL isso costuma virar um <code>JOIN</code> ou um " +
     "<code>WHERE id IN (...)</code>. Numa API, vira um parâmetro que aceita uma lista. " +
     "A arquitetura de três camadas continua exatamente a mesma, e o que mudou foi a " +
     "conversa que ela precisa manter.</p>",

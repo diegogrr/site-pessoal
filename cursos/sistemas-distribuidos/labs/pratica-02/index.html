@@ -51,14 +51,16 @@
     <ul>
       <li>quanto custa separar a aplicação dos dados, e por que esse custo se multiplica;</li>
       <li>quanto a replicação esconde quando um nó cai, e qual é o preço desse disfarce;</li>
-      <li>o que acontece quando um nó não cai: continua no ar, responde depressa e responde errado.</li>
+      <li>o que acontece quando um nó não chega a cair, e em vez disso continua no ar,
+        responde depressa e responde errado.</li>
     </ul>
 
     <div class="callout is-warn">
       <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
       <p>
-        A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>:
-        instâncias, chave e configuração. Reserve o bloco inteiro de duas aulas. Se a sessão
+        A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>, o que
+        inclui as instâncias, a chave e a configuração. Reserve o bloco inteiro de duas
+        aulas. Se a sessão
         acabar no meio, refazer os passos 2 e 3 leva cerca de dez minutos, porque tudo aqui
         é feito por script.
       </p>
@@ -70,7 +72,7 @@
         <li><a href="#passo-1">Abrir o laboratório e preparar a chave</a></li>
         <li><a href="#passo-2">Criar o grupo de segurança</a></li>
         <li><a href="#passo-3">Subir os três nós</a></li>
-        <li><a href="#passo-4">Entrar por SSH e ver as duas camadas</a></li>
+        <li><a href="#passo-4">Entrar nas máquinas e ver as duas camadas</a></li>
         <li><a href="#passo-5">A fronteira entre camadas tem preço</a></li>
         <li><a href="#passo-6">Uma réplica cai</a></li>
         <li><a href="#passo-7">Uma réplica mente</a></li>
@@ -88,8 +90,10 @@
     <ul>
       <li>Acesso ao curso <strong>AWS Academy Cloud Foundations</strong>, no laboratório
         <strong>Sandbox</strong>.</li>
-      <li>Um terminal. No Windows, o <strong>PowerShell</strong> já traz o cliente SSH
-        instalado, e é o que vamos usar. No macOS ou Linux, o terminal do sistema.</li>
+      <li>Um terminal. No Windows, o <strong>PowerShell</strong> já traz instalado o cliente
+        de <em>secure shell</em> (<strong>SSH</strong>), que é o programa com que você vai
+        entrar nas máquinas remotas, e é o que vamos usar. No macOS ou Linux, serve o terminal
+        do sistema.</li>
       <li>Nada para instalar, nem no seu computador nem nas máquinas remotas.</li>
       <li>A prática 01 <strong>não é pré-requisito</strong>. Se você a fez, os passos 1 a 4
         são o mesmo caminho e você vai andar depressa neles.</li>
@@ -103,7 +107,7 @@
 
     <p>
       Alguns termos aparecem sublinhados e com um <strong>ⓘ</strong>. Clicar abre, ali mesmo,
-      uma nota explicando o termo. Essas notas são leitura opcional: os tempos anunciados em
+      uma nota explicando o termo. Essas notas são leitura opcional, e os tempos anunciados em
       cada passo valem para quem não abre nenhuma.
     </p>
 
@@ -143,26 +147,45 @@
           </tr>
           <tr>
             <td><strong>Zona de disponibilidade (AZ)</strong></td>
-            <td>Um data center, ou grupo de data centers, isolado dentro da região:
-              <code>us-east-1a</code>, <code>us-east-1b</code>. Ficam a alguns quilômetros um
-              do outro, e é por isso que dividir o sistema entre zonas protege contra a queda
-              de uma delas.</td>
+            <td>Um data center, ou grupo de data centers, fica isolado dos demais dentro da
+              região e recebe um nome próprio, como <code>us-east-1a</code> e
+              <code>us-east-1b</code>. As zonas ficam a alguns quilômetros umas das outras, e é
+              por isso que dividir o sistema entre elas protege contra a queda de uma.</td>
           </tr>
           <tr>
-            <td><strong>EC2 e instância</strong></td>
-            <td>O serviço de máquinas virtuais. Uma <em>instância</em> é uma máquina virtual
-              ligada. Vamos usar três, do tipo <code>t3.micro</code>.</td>
+            <td><strong>Nuvem privada virtual (VPC)</strong></td>
+            <td>Toda instância nasce dentro de uma rede virtual isolada, que é a VPC. A conta
+              do Sandbox já traz uma pronta, com uma sub-rede em cada zona, e você não precisa
+              criar nada. Ela importa aqui porque é ela que dá a cada máquina o endereço
+              privado que começa com <code>172.31.</code>, o endereço pelo qual os três nós
+              conversam entre si.</td>
+          </tr>
+          <tr>
+            <td><strong>Elastic Compute Cloud (EC2) e instância</strong></td>
+            <td>O EC2 é o serviço que aluga máquinas virtuais. Cada máquina ligada por ele se
+              chama <em>instância</em>. Vamos usar três, todas do tipo
+              <code>t3.micro</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Imagem de máquina da Amazon (AMI)</strong></td>
+            <td>A AMI define com que sistema a instância nasce, com o disco já montado e o
+              software de base instalado. Vamos usar o Amazon Linux 2023, que já traz o Python
+              de que a prática precisa e é a opção marcada por padrão no console.</td>
           </tr>
           <tr>
             <td><strong>Par de chaves</strong></td>
-            <td>Criptografia assimétrica: a parte pública fica na instância, a privada fica
-              com você, no arquivo <code>labsuser.pem</code>. É assim que o SSH prova que
-              você é você.</td>
+            <td>A entrada nas máquinas usa criptografia assimétrica, em que a parte pública da
+              chave fica na instância e a privada fica com você, no arquivo
+              <code>labsuser.pem</code>. A extensão vem de <em>privacy-enhanced mail</em>
+              (PEM), um formato antigo de correio seguro que sobreviveu como jeito padrão de
+              guardar chaves em texto. É assim que o SSH prova que você é você, sem nenhuma
+              senha viajar pela rede.</td>
           </tr>
           <tr>
             <td><strong>Grupo de segurança</strong></td>
-            <td>Um filtro de pacotes com estado, na porta de entrada da instância. Tudo é
-              bloqueado por padrão: só entra o que uma regra permitir explicitamente.</td>
+            <td>Um filtro de pacotes com estado protege a porta de entrada da instância. Ele
+              bloqueia tudo por padrão, e só deixa entrar o que uma regra permitir
+              explicitamente.</td>
           </tr>
           <tr>
             <td><strong>User data</strong></td>
@@ -181,11 +204,13 @@
       dois sobem em todas elas:
     </p>
     <ul>
-      <li><strong>Camada de dados</strong>, na porta <code>8081</code>: serve um catálogo de
-        200 peças e mais nada. Não soma, não decide, não valida. Só devolve linhas.</li>
-      <li><strong>Camada de aplicação</strong>, na porta <code>8080</code>: monta o total de
-        um pedido. Para isso precisa das peças, e é aí que ela escolhe: ler o catálogo no
-        próprio disco ou pedir a uma camada de dados pela rede.</li>
+      <li>A <strong>camada de dados</strong> atende na porta <code>8081</code> e serve um
+        catálogo de 200 peças, nada além disso. Ela não soma, não decide e não valida. Só
+        devolve linhas.</li>
+      <li>A <strong>camada de aplicação</strong> atende na porta <code>8080</code> e monta o
+        total de um pedido. Para isso ela precisa das peças, e é aí que faz a escolha que dá
+        nome a esta prática. Ou lê o catálogo no próprio disco, ou pede a uma camada de dados
+        pela rede.</li>
     </ul>
 
     <div class="callout">
@@ -213,21 +238,210 @@
       comandos desta página passam a mostrar os seus valores reais, e o botão
       <em>copiar</em> já leva o comando pronto. Os dados ficam só no seu navegador.
     </p>
+    <p>
+      As <strong>saídas de exemplo</strong> não acompanham. Elas vêm de uma execução nossa e
+      guardam os endereços e os tempos daquela sessão, então servem para você reconhecer o
+      formato da resposta, nunca para conferir dígito a dígito. Ver um endereço diferente do
+      seu logo abaixo de um comando já preenchido é o esperado.
+    </p>
     <div class="ficha">
       <label>IP público do nó A
-        <input type="text" data-ficha="IP_PUB_A" placeholder="ex.: 54.221.10.7" autocomplete="off"></label>
+        <input type="text" data-ficha="IP_PUB_A" placeholder="ex.: 13.219.77.84" autocomplete="off"></label>
       <label>IP privado do nó A
-        <input type="text" data-ficha="IP_A" placeholder="ex.: 172.31.20.15" autocomplete="off"></label>
+        <input type="text" data-ficha="IP_A" placeholder="ex.: 172.31.80.29" autocomplete="off"></label>
       <label>IP privado do nó B
-        <input type="text" data-ficha="IP_B" placeholder="ex.: 172.31.22.31" autocomplete="off"></label>
+        <input type="text" data-ficha="IP_B" placeholder="ex.: 172.31.89.12" autocomplete="off"></label>
       <label>IP público do nó B
-        <input type="text" data-ficha="IP_PUB_B" placeholder="ex.: 54.90.13.2" autocomplete="off"></label>
+        <input type="text" data-ficha="IP_PUB_B" placeholder="ex.: 54.166.71.33" autocomplete="off"></label>
       <label>IP privado do nó C
-        <input type="text" data-ficha="IP_C" placeholder="ex.: 172.31.40.22" autocomplete="off"></label>
+        <input type="text" data-ficha="IP_C" placeholder="ex.: 172.31.24.63" autocomplete="off"></label>
       <label>IP público do nó C
-        <input type="text" data-ficha="IP_PUB_C" placeholder="ex.: 3.88.201.44" autocomplete="off"></label>
+        <input type="text" data-ficha="IP_PUB_C" placeholder="ex.: 54.147.49.47" autocomplete="off"></label>
     </div>
     <p class="saida">A cada nova sessão do Sandbox os endereços mudam. Volte aqui e atualize.</p>
+  </section>
+
+  <!-- ============================================================
+       Diagrama de arquitetura de nuvem
+       ============================================================ -->
+  <section class="lab-step" id="diagrama">
+    <h2><span class="step-num is-accent">▦</span><span>Diagrama de arquitetura de nuvem</span></h2>
+
+    <p>
+      Os passos 2 e 3 criam uma regra de acesso e três máquinas virtuais. Vale ver antes o
+      desenho do que vai existir no fim, porque é mais fácil reconhecer cada peça na tela do
+      console depois de tê-la visto no lugar. Olhe para duas coisas na figura. Cada um dos
+      três nós sobe os <strong>mesmos dois serviços</strong>, com a camada de aplicação na
+      porta 8080 e a camada de dados na 8081. E <strong>nenhuma seta liga um nó ao
+      outro</strong>, o que não é esquecimento do desenho.
+    </p>
+
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg id="diagrama-pratica-02-infra" class="fig-pratica-02-infra" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1345 630" role="img" aria-labelledby="pratica-02-infra-titulo pratica-02-infra-desc">
+<title id="pratica-02-infra-titulo">Infraestrutura da Prática 02 na AWS</title>
+<desc id="pratica-02-infra-desc">Três instâncias EC2 t3.micro numa VPC da região us-east-1, duas na zona us-east-1a e uma na us-east-1b, todas no grupo de segurança sd-pratica02. Os três nós sobem os mesmos dois serviços, com a camada de aplicação na porta 8080 e a camada de dados na 8081. O notebook do aluno alcança o grupo de segurança pela internet, através do internet gateway, nas portas 22 e 8080. A porta 8081 não é aberta para fora, e só responde entre os nós do próprio grupo.</desc>
+<style>
+  .fig-pratica-02-infra{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-nuvem:#242F3E}
+  @media (prefers-color-scheme:dark){
+    .fig-pratica-02-infra{--diag-nuvem:#96a4b8}
+    .fig-pratica-02-infra .so-claro{display:none} .fig-pratica-02-infra .so-escuro{display:inline}
+  }
+  [data-theme="light"] .fig-pratica-02-infra{--diag-nuvem:#242F3E}
+  [data-theme="light"] .fig-pratica-02-infra .so-claro{display:inline}
+  [data-theme="light"] .fig-pratica-02-infra .so-escuro{display:none}
+  [data-theme="dark"] .fig-pratica-02-infra{--diag-nuvem:#96a4b8}
+  [data-theme="dark"] .fig-pratica-02-infra .so-claro{display:none}
+  [data-theme="dark"] .fig-pratica-02-infra .so-escuro{display:inline}
+  .fig-pratica-02-infra .so-escuro{display:none}
+  .fig-pratica-02-infra text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-02-infra .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-02-infra .grupo{fill:none;stroke-width:2}
+  .fig-pratica-02-infra .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-02-infra .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
+  .fig-pratica-02-infra .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
+  .fig-pratica-02-infra .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-02-infra .faixa{fill:none;stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-02-infra .apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.5;stroke-dasharray:4 3}
+  .fig-pratica-02-infra .seta{fill:none;stroke:var(--diag-linha);stroke-width:2;stroke-linejoin:round}
+  .fig-pratica-02-infra .seta-apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:5 4;stroke-linejoin:round}
+  .fig-pratica-02-infra .seta-api{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:11 4 2 4;stroke-linejoin:round}
+  .fig-pratica-02-infra .rotulo{font-size:13px}
+  .fig-pratica-02-infra .rotulo-grupo{font-size:14px;font-weight:600}
+  .fig-pratica-02-infra .rotulo-instancia{font-size:17px;font-weight:600}
+  .fig-pratica-02-infra .rotulo-tipo{font-size:12px;opacity:.75}
+  .fig-pratica-02-infra .rotulo-faixa{font-size:11px}
+  .fig-pratica-02-infra .rotulo-apoio{font-size:11.5px}
+  .fig-pratica-02-infra .rotulo-endereco{font-size:10.5px;fill:var(--diag-apagado)}
+  .fig-pratica-02-infra .rotulo-seta{font-size:12px;paint-order:stroke;stroke:var(--diag-fundo);
+       stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-02-infra .rotulo-sg{font-size:13px;font-weight:600;fill:#DD3522}
+  .fig-pratica-02-infra .legenda{font-size:11.5px;fill:var(--diag-apagado)}
+</style>
+<defs><marker id="pratica-02-infra-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-02-infra-ponta-fina" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker><symbol id="pratica-02-infra-ic-AWS-Cloud_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#242F3E" x="0" y="0" width="40" height="40"></rect>
+        <path d="M28.993,27.9952689 L11.487,27.9762689 C9.121,27.9742689 7.154,26.1292689 7.012,23.7752689 C7.004,23.6522689 7,23.5262689 7,23.3972689 C7,20.2992689 9.091,19.2872689 10.337,18.9592689 C10.577,18.8962689 10.735,18.6662689 10.707,18.4192689 C10.676,18.1492689 10.659,17.8752689 10.659,17.5962689 C10.659,15.1322689 12.308,12.4822689 14.415,11.5632689 C15.359,11.1502689 16.232,10.9862689 17.023,10.9862689 C19.276,10.9862689 20.867,12.3152689 21.561,13.0332689 C22.329,13.8262689 22.927,14.8382689 23.34,16.0422689 C23.4,16.2192689 23.555,16.3472689 23.74,16.3742689 C23.918,16.4012689 24.109,16.3232689 24.219,16.1712689 C24.807,15.3502689 25.766,14.9822689 26.659,15.2392689 C27.782,15.5602689 28.516,16.7272689 28.62,18.3072689 C28.578,18.5762689 28.759,18.8292689 29.027,18.8772689 C30.222,19.0892689 33,19.9572689 33,23.4402689 C33,27.5892689 29.114,27.9822689 28.993,27.9952689 M29.594,17.9742689 C29.379,16.0672689 28.4,14.6962689 26.934,14.2782689 C25.899,13.9822689 24.811,14.2452689 23.989,14.9502689 C23.553,13.9362689 22.979,13.0602689 22.28,12.3382689 C20.023,10.0052689 16.933,9.37226889 14.014,10.6462689 C11.531,11.7302689 9.659,14.7182689 9.659,17.5962689 C9.659,17.7702689 9.665,17.9432689 9.676,18.1142689 C8.319,18.5732689 6,19.8752689 6,23.3972689 C6,23.5492689 6.004,23.6962689 6.014,23.8382689 C6.188,26.7162689 8.593,28.9732689 11.486,28.9762689 L29.034,28.9932689 C29.084,28.9892689 34,28.5192689 34,23.4402689 C34,19.5022689 31.003,18.3142689 29.594,17.9742689" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Public-subnet_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#7AA116" x="0" y="0" width="40" height="40"></rect>
+        <path d="M19.536,22.049 C20.642,22.049 21.542,22.948 21.542,24.054 C21.542,25.16 20.642,26.06 19.536,26.06 C18.43,26.06 17.53,25.16 17.53,24.054 C17.53,22.948 18.43,22.049 19.536,22.049 L19.536,22.049 Z M19.012,27.007 L19.012,30.501 L20.012,30.501 L20.012,27.012 C21.442,26.782 22.542,25.549 22.542,24.054 C22.542,22.397 21.193,21.049 19.536,21.049 C17.879,21.049 16.53,22.397 16.53,24.054 C16.53,25.532 17.604,26.757 19.012,27.007 L19.012,27.007 Z M10,33.014 L29.012,33.014 L29.012,18 L10,18 L10,33.014 Z M14.046,12.484 C14.046,9.46 16.506,7 19.529,7 C22.553,7 25.012,9.46 25.012,12.484 L25.012,17 L14.046,17 L14.046,12.484 Z M29.512,17 L26.012,17 L26.012,12.484 C26.012,8.908 23.103,6 19.529,6 C15.954,6 13.046,8.908 13.046,12.484 L13.046,17 L9.5,17 C9.223,17 9,17.224 9,17.5 L9,33.514 C9,33.79 9.223,34.014 9.5,34.014 L29.512,34.014 C29.788,34.014 30.012,33.79 30.012,33.514 L30.012,17.5 C30.012,17.224 29.788,17 29.512,17 L29.512,17 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Region_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#00A4A6" x="0" y="0" width="40" height="40"></rect>
+        <path d="M14,20.026 L14,11.026 L29.293,11.026 L25.146,15.172 C24.951,15.368 24.951,15.684 25.146,15.88 L29.293,20.026 L14,20.026 Z M26.207,15.526 L30.854,10.88 C30.996,10.736 31.039,10.522 30.962,10.335 C30.885,10.148 30.702,10.026 30.5,10.026 L14,10.026 L14,8.97 C14.596,8.76 15.026,8.198 15.026,7.531 C15.026,6.687 14.34,6 13.495,6 C12.65,6 11.963,6.687 11.963,7.531 C11.963,8.201 12.398,8.766 13,8.973 L13,33.026 L10,33.026 L10,34.026 L17,34.026 L17,33.026 L14,33.026 L14,21.026 L30.5,21.026 C30.702,21.026 30.885,20.904 30.962,20.717 C31.039,20.53 30.996,20.316 30.854,20.172 L26.207,15.526 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_Amazon-EC2_Instance_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M9,39 L39,39 L39,9 L9,9 L9,39 Z M46,13 L46,11 L41,11 L41,8 C41,7.448 40.552,7 40,7 L37,7 L37,2 L35,2 L35,7 L31,7 L31,2 L29,2 L29,7 L25,7 L25,2 L23,2 L23,7 L19,7 L19,2 L17,2 L17,7 L13,7 L13,2 L11,2 L11,7 L8,7 C7.447,7 7,7.448 7,8 L7,11 L2,11 L2,13 L7,13 L7,17 L2,17 L2,19 L7,19 L7,23 L2,23 L2,25 L7,25 L7,29 L2,29 L2,31 L7,31 L7,35 L2,35 L2,37 L7,37 L7,40 C7,40.553 7.447,41 8,41 L11,41 L11,46 L13,46 L13,41 L17,41 L17,46 L19,46 L19,41 L23,41 L23,46 L25,46 L25,41 L29,41 L29,46 L31,46 L31,41 L35,41 L35,46 L37,46 L37,41 L40,41 C40.552,41 41,40.553 41,40 L41,37 L46,37 L46,35 L41,35 L41,31 L46,31 L46,29 L41,29 L41,25 L46,25 L46,23 L41,23 L41,19 L46,19 L46,17 L41,17 L41,13 L46,13 Z" fill="#ED7100"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M33.4312,35.1778 L31.9332,35.1778 L31.9332,17.5018 C31.9332,17.1088 31.7022,16.7518 31.3442,16.5908 L31.2522,16.5488 C29.2432,15.6418 27.1642,14.7028 24.1762,14.7028 C21.0532,14.7028 18.7612,15.7118 16.4952,16.8368 C16.1552,17.0058 15.9402,17.3528 15.9402,17.7328 L15.9402,35.1778 L14.4772,35.1778 L14.4772,16.3118 C16.9112,14.3328 20.4202,13.2048 24.1862,13.2048 C27.6872,13.2048 31.0252,14.2018 33.4312,15.9528 L33.4312,35.1778 Z M24.1862,11.2048 C19.7612,11.2048 15.6172,12.6238 12.8152,15.0998 C12.6002,15.2888 12.4772,15.5618 12.4772,15.8488 L12.4772,36.1778 C12.4772,36.7308 12.9242,37.1778 13.4772,37.1778 L16.9402,37.1778 C17.4932,37.1778 17.9402,36.7308 17.9402,36.1778 L17.9402,18.3558 C19.8592,17.4288 21.7192,16.7028 24.1762,16.7028 C26.5112,16.7028 28.2092,17.3778 29.9332,18.1488 L29.9332,36.1778 C29.9332,36.7308 30.3802,37.1778 30.9332,37.1778 L34.4312,37.1778 C34.9842,37.1778 35.4312,36.7308 35.4312,36.1778 L35.4312,15.4578 C35.4312,15.1538 35.2922,14.8658 35.0532,14.6748 C32.2792,12.4698 28.3182,11.2048 24.1862,11.2048 L24.1862,11.2048 Z M23.9542,43.9088 C12.9522,43.9088 3.9992,34.9568 3.9992,23.9538 C3.9992,12.9508 12.9522,3.9998 23.9542,3.9998 C34.9572,3.9998 43.9092,12.9508 43.9092,23.9538 C43.9092,34.9568 34.9572,43.9088 23.9542,43.9088 L23.9542,43.9088 Z M23.9542,1.9998 C11.8482,1.9998 1.9992,11.8488 1.9992,23.9538 C1.9992,36.0608 11.8482,45.9088 23.9542,45.9088 C36.0602,45.9088 45.9092,36.0608 45.9092,23.9538 C45.9092,11.8488 36.0602,1.9998 23.9542,1.9998 L23.9542,1.9998 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_Client_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_Client_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_Internet_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_Internet_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_User_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Res_User_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#242F3E"></path>
+    </g></symbol><symbol id="pratica-02-infra-ic-Virtual-private-cloud-VPC_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#8C4FFF" x="0" y="0" width="40" height="40"></rect>
+        <path d="M30.9707,21.0293596 L28.0267,19.7663596 L28.0267,30.2553596 C30.5717,29.9033596 30.9587,27.2873596 30.9747,27.1683596 L30.9707,21.0293596 Z M27.0267,30.2693596 L27.0267,19.7593596 L23.9917,21.0323596 L23.9917,27.2333596 C24.0047,27.2873596 24.4367,30.0003596 27.0267,30.2693596 L27.0267,30.2693596 Z M27.3327,18.5473596 C27.4567,18.4943596 27.5987,18.4953596 27.7237,18.5483596 L31.6677,20.2403596 C31.8517,20.3193596 31.9707,20.4993596 31.9707,20.6993596 L31.9707,27.2333596 C31.7877,28.6803596 30.6137,31.2963596 27.4437,31.2963596 C24.3687,31.2963596 23.1897,28.6843596 22.9957,27.3023596 L22.9917,20.6993596 C22.9917,20.4983596 23.1127,20.3163596 23.2977,20.2383596 L27.3327,18.5473596 Z M32.9827022,19.1843596 L27.5217,16.7783596 L21.9917,19.1053596 L21.9917,26.2333596 C21.9907,26.2753596 21.9377,29.1013596 23.6487,30.8563596 C24.5657,31.7973596 25.8427,32.2753596 27.4437,32.2753596 C29.0457,32.2753596 30.3307,31.7963596 31.2627,30.8533596 C32.9977,29.0953596 32.9827022,26.2683596 32.9827022,26.2403596 L32.9827022,19.1843596 Z M31.9797,31.5503596 C30.8527,32.6943596 29.3257,33.2753596 27.4437,33.2753596 C25.5597,33.2753596 24.0397,32.6943596 22.9267,31.5483596 C20.9217,29.4853596 20.9877,26.3513596 20.9917,26.2193596 L20.9917,18.7733596 C20.9917,18.5723596 21.1117,18.3903596 21.2967,18.3123596 L27.3317,15.7723596 C27.4587,15.7203596 27.6027,15.7193596 27.7277,15.7763596 L33.6837,18.4013596 C33.8657,18.4813596 33.9827,18.6603596 33.9827,18.8583596 L33.9827,26.2333596 C33.9847,26.3583596 34.0097,29.4883596 31.9797,31.5503596 L31.9797,31.5503596 Z M10.9917,24.2363596 L18.9917,24.2363596 L18.9917,25.2363596 L10.9917,25.2363596 C8.1807,25.2363596 6.1807,23.2203596 6.0127,20.2203596 C6.0007,20.1093596 5.9997,19.9753596 5.9997,19.8413596 C5.9997,17.3323596 7.3177,15.6183596 9.8167,14.8623596 C9.7977,14.6353596 9.7847,14.3963596 9.7847,14.2153596 C9.7847,11.2993596 11.3617,8.77035958 13.8017,7.77035958 C17.0997,6.42235958 20.8437,6.87635958 22.9077,8.87435958 C23.6527,9.59835958 24.2317,10.4163596 24.6677,11.3593596 C25.2767,10.9093596 26.0677,10.6983596 27.0167,10.7453596 C28.7967,10.8353596 30.1657,12.4583596 30.4497,14.7523596 C31.9477,14.8763596 32.9347,15.6353596 33.4597,17.0603596 L32.5227,17.4063596 C32.0947,16.2493596 31.3147,15.7333596 29.9917,15.7333596 C29.7267,15.7333596 29.5077,15.5273596 29.4917,15.2633596 C29.3537,12.9253596 28.0857,11.8003596 26.9657,11.7443596 C26.0207,11.6913596 25.3207,11.9633596 24.8867,12.5353596 C24.7757,12.6803596 24.6017,12.7523596 24.4137,12.7283596 C24.2337,12.7003596 24.0817,12.5773596 24.0187,12.4053596 C23.6147,11.3023596 23.0237,10.3823596 22.2117,9.59135958 C20.4237,7.86135958 17.1217,7.49235958 14.1807,8.69635958 C12.1177,9.54135958 10.7847,11.7073596 10.7847,14.2153596 C10.7847,14.4883596 10.8197,14.9113596 10.8507,15.1743596 C10.8807,15.4253596 10.7197,15.6583596 10.4747,15.7183596 C8.1687,16.2903596 6.9997,17.6773596 6.9997,19.8413596 C6.9997,19.9423596 6.9987,20.0423596 7.0087,20.1433596 C7.1497,22.6383596 8.7117,24.2363596 10.9917,24.2363596 L10.9917,24.2363596 Z" fill="#FFFFFF"></path>
+    </g></symbol></defs>
+<rect x="0" y="0" width="1345" height="630" class="fundo"/>
+<rect x="270" y="30" width="1050" height="574" class="grupo" stroke="var(--diag-nuvem)"/>
+<use href="#pratica-02-infra-ic-AWS-Cloud_32" x="270" y="30" width="34" height="34"/>
+<text x="316" y="53" class="rotulo-grupo" text-anchor="start" fill="var(--diag-nuvem)">Nuvem AWS</text>
+<rect x="290" y="75" width="1010" height="507" class="grupo" stroke="#00A4A6" stroke-dasharray="8 6"/>
+<use href="#pratica-02-infra-ic-Region_32" x="290" y="75" width="34" height="34"/>
+<text x="336" y="98" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">Região us-east-1</text>
+<rect x="310" y="110" width="970" height="450" class="grupo" stroke="#8C4FFF"/>
+<use href="#pratica-02-infra-ic-Virtual-private-cloud-VPC_32" x="310" y="110" width="34" height="34"/>
+<text x="356" y="133" class="rotulo-grupo" text-anchor="start" fill="#8C4FFF">VPC padrão da conta</text>
+<rect x="335" y="155" width="560" height="380" class="zona"/>
+<text x="615.0" y="181" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona de disponibilidade us-east-1a</text>
+<rect x="355" y="195" width="520" height="320" class="subrede"/>
+<use href="#pratica-02-infra-ic-Public-subnet_32" x="355" y="195" width="32" height="32"/>
+<text x="399" y="217" class="rotulo-grupo" text-anchor="start" fill="#7AA116">Sub-rede pública</text>
+<rect x="960" y="155" width="295" height="380" class="zona"/>
+<text x="1107.5" y="181" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona de disponibilidade us-east-1b</text>
+<rect x="980" y="195" width="255" height="320" class="subrede"/>
+<use href="#pratica-02-infra-ic-Public-subnet_32" x="980" y="195" width="32" height="32"/>
+<text x="1024" y="217" class="rotulo-grupo" text-anchor="start" fill="#7AA116">Sub-rede pública</text>
+<rect x="375" y="235" width="840" height="245" class="sg"/>
+<text x="695" y="226" class="rotulo-sg" text-anchor="middle">Grupo de segurança sd-pratica02</text>
+<rect x="400" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-02-infra-ic-Res_Amazon-EC2_Instance_48" x="461.0" y="284" width="48" height="48"/>
+<text x="485.0" y="358" class="rotulo-instancia" text-anchor="middle">nó A</text>
+<text x="485.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="400" y="382" width="170" height="29" class="faixa"/>
+<text x="485.0" y="401" class="rotulo-faixa" text-anchor="middle">camada de aplicação :8080</text>
+<rect x="400" y="411" width="170" height="29" class="faixa"/>
+<text x="485.0" y="430" class="rotulo-faixa" text-anchor="middle">camada de dados :8081</text>
+<rect x="660" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-02-infra-ic-Res_Amazon-EC2_Instance_48" x="721.0" y="284" width="48" height="48"/>
+<text x="745.0" y="358" class="rotulo-instancia" text-anchor="middle">nó B</text>
+<text x="745.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="660" y="382" width="170" height="29" class="faixa"/>
+<text x="745.0" y="401" class="rotulo-faixa" text-anchor="middle">camada de aplicação :8080</text>
+<rect x="660" y="411" width="170" height="29" class="faixa"/>
+<text x="745.0" y="430" class="rotulo-faixa" text-anchor="middle">camada de dados :8081</text>
+<rect x="1010" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-02-infra-ic-Res_Amazon-EC2_Instance_48" x="1071.0" y="284" width="48" height="48"/>
+<text x="1095.0" y="358" class="rotulo-instancia" text-anchor="middle">nó C</text>
+<text x="1095.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="1010" y="382" width="170" height="29" class="faixa"/>
+<text x="1095.0" y="401" class="rotulo-faixa" text-anchor="middle">camada de aplicação :8080</text>
+<rect x="1010" y="411" width="170" height="29" class="faixa"/>
+<text x="1095.0" y="430" class="rotulo-faixa" text-anchor="middle">camada de dados :8081</text>
+<use href="#pratica-02-infra-ic-Res_User_48_Light" x="60" y="40" width="48" height="48" class="so-claro"/>
+<use href="#pratica-02-infra-ic-Res_User_48_Dark" x="60" y="40" width="48" height="48" class="so-escuro"/>
+<text x="84" y="106" class="rotulo" text-anchor="middle">Aluno</text>
+<use href="#pratica-02-infra-ic-Res_Client_48_Light" x="60" y="150" width="48" height="48" class="so-claro"/>
+<use href="#pratica-02-infra-ic-Res_Client_48_Dark" x="60" y="150" width="48" height="48" class="so-escuro"/>
+<text x="84" y="216" class="rotulo" text-anchor="middle">Notebook do aluno</text>
+<path d="M 84 232 L 84 312" class="seta" marker-end="url(#pratica-02-infra-ponta)"/>
+<use href="#pratica-02-infra-ic-Res_Internet_48_Light" x="60" y="320" width="48" height="48" class="so-claro"/>
+<use href="#pratica-02-infra-ic-Res_Internet_48_Dark" x="60" y="320" width="48" height="48" class="so-escuro"/>
+<text x="84" y="386" class="rotulo" text-anchor="middle">Internet</text>
+<path d="M 114 344 L 375 344" class="seta" marker-end="url(#pratica-02-infra-ponta)"/>
+<text x="118" y="318" class="rotulo-seta" text-anchor="start">SSH 22, origem Meu IP</text>
+<text x="118" y="334" class="rotulo-seta" text-anchor="start">HTTP 8080, origem Meu IP</text>
+<use href="#pratica-02-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" x="288" y="322" width="44" height="44"/>
+<text x="310" y="380" class="rotulo-seta" text-anchor="middle">Internet</text>
+<text x="310" y="396" class="rotulo-seta" text-anchor="middle">gateway</text>
+<text x="525" y="500" class="rotulo-seta" text-anchor="middle">a 8081 não é aberta para fora</text>
+</svg>
+      </div>
+      <figcaption>
+        O ambiente da prática depois dos passos 2 e 3. As três máquinas nascem idênticas, e
+        nenhuma ligação entre elas existe antes de você digitar um comando.
+      </figcaption>
+    </figure>
+
+    <p>
+      A ausência das setas é o assunto da prática inteira. Os três nós recebem o mesmo script
+      e sobem os mesmos dois serviços, então <strong>o arranjo não está no código</strong>. Ele
+      nasce quando alguém escolhe a quem perguntar, e é essa escolha que os experimentos vão
+      variar. O mesmo pedido pode se resolver dentro de uma máquina só, ou atravessar a rede
+      até a camada de dados de outra máquina, ou ainda ser dividido entre duas réplicas, sem
+      que uma linha de código mude.
+    </p>
+
+    <p>
+      Repare também que a seta que vem do seu computador termina na borda do
+      <strong>grupo de segurança</strong>, e não numa máquina específica. As regras de entrada
+      valem para os três nós ao mesmo tempo, e é por isso que o grupo aparece atravessando as
+      duas zonas de disponibilidade em vez de morar dentro de uma delas.
+    </p>
   </section>
 
   <!-- ============================================================
@@ -331,10 +545,11 @@ chmod 400 labsuser.pem</pre>
       <p>
         Você abriu a porta <strong>8080</strong> para o seu computador, mas não a
         <strong>8081</strong>. A camada de dados vai ficar alcançável apenas pelos outros
-        nós, através da regra do próprio grupo. Não é economia de digitação: é o desenho
+        nós, através da regra do próprio grupo. Isso não é economia de digitação. É o desenho
         clássico de um sistema em camadas, em que só a camada de cima é exposta e o banco
-        vive atrás dela. O Tópico 7 volta ao assunto com nome e sobrenome; por ora, note que
-        <em>onde cada peça mora</em> já é, por si só, uma medida de segurança.
+        vive atrás dela. O Tópico 7 retoma o assunto em detalhe, com o vocabulário próprio da
+        segurança. Por ora, note que <em>onde cada peça mora</em> já é, por si só, uma medida
+        de segurança.
       </p>
     </div>
 
@@ -357,7 +572,7 @@ chmod 400 labsuser.pem</pre>
       preencha:</p>
     <ul>
       <li><strong>Name:</strong> <code>sd-no</code></li>
-      <li><strong>AMI:</strong> Amazon Linux 2023 (já vem selecionada)</li>
+      <li><strong>AMI:</strong> Amazon Linux 2023, que já vem selecionada</li>
       <li><strong>Instance type:</strong> <code>t3.micro</code></li>
       <li><strong>Key pair:</strong> <code>vockey</code></li>
       <li>Em <strong>Network settings</strong>, clique em <strong>Edit</strong>:
@@ -387,10 +602,10 @@ chmod 400 labsuser.pem</pre>
     <div class="callout">
       <p class="callout-title">💡 Por que uma zona diferente</p>
       <p>
-        As três máquinas nascem iguais, mas uma delas nasce longe. Essa distância vai virar
-        um número no passo 5 e um argumento no passo 6: colocar réplicas em zonas diferentes
-        é o que impede que a queda de um data center leve as duas embora. Toda decisão de
-        posicionamento é uma troca entre proximidade e independência.
+        As três máquinas nascem iguais, mas uma delas nasce longe. Essa distância vira um
+        número no passo 5 e um argumento no passo 6, porque colocar réplicas em zonas
+        diferentes é o que impede que a queda de um data center leve as duas embora. Toda
+        decisão de posicionamento é uma troca entre proximidade e independência.
       </p>
     </div>
 
@@ -1257,9 +1472,9 @@ echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre
 +---------+----------------+----------------+---------------+
 | Estado  |    Privado     |    Publico     |     Zona      |
 +---------+----------------+----------------+---------------+
-|  running|  172.31.20.15  |  54.221.10.7   |  us-east-1a   |
-|  running|  172.31.22.31  |  3.94.60.12    |  us-east-1a   |
-|  running|  172.31.40.22  |  3.88.201.44   |  us-east-1b   |
+|  running|  172.31.80.29  |  13.219.77.84   |  us-east-1a   |
+|  running|  172.31.89.12  |  54.166.71.33    |  us-east-1a   |
+|  running|  172.31.24.63  |  54.147.49.47   |  us-east-1b   |
 +---------+----------------+----------------+---------------+</p>
 
     <p>
@@ -1272,7 +1487,8 @@ echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre
     <p>
       Para conferir que os serviços subiram, abra no navegador
       <code>http://<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span>:8080/saude</code>.
-      Você deve ver um JSON curto com o nome do nó e a zona dele.
+      Você deve ver uma resposta curta em <strong>JSON</strong>, que é o formato de texto com
+      que os dois serviços respondem, trazendo o nome do nó e a zona dele.
     </p>
 
     <div class="check">
@@ -1287,7 +1503,7 @@ echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre
        Passo 4
        ============================================================ -->
   <section class="lab-step" id="passo-4">
-    <h2><span class="step-num">4</span><span>Entrar por SSH e ver as duas camadas</span><span class="step-time">7 min</span></h2>
+    <h2><span class="step-num">4</span><span>Entrar nas máquinas e ver as duas camadas</span><span class="step-time">7 min</span></h2>
 
     <h3>4.1 Entrar nas duas máquinas</h3>
     <p>Na pasta onde está o <code>labsuser.pem</code>, abra <strong>duas janelas</strong> de
@@ -1312,7 +1528,7 @@ echo "pratica 02: no pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre
     </div>
 
     <p>Responda <code>yes</code> à pergunta sobre o <em>fingerprint</em>. Você entra sem
-      digitar senha: quem provou a sua identidade foi a chave privada.</p>
+      digitar senha, porque quem provou a sua identidade foi a chave privada.</p>
 
     <h3>4.2 Ver as duas camadas rodando lado a lado</h3>
     <p>No <strong>nó A</strong>, veja as duas camadas rodando lado a lado:</p>
@@ -1329,12 +1545,12 @@ cat /opt/sd/identidade.txt</pre>
 
     <p class="saida">active
 active
-instancia=i-0a1b2c3d4e5f60718
+instancia=i-043cd0501f5d88008
 tipo=t3.micro
 az=us-east-1a
-ip_privado=172.31.20.15
-ip_publico=54.221.10.7
-pratica 02: no pronto em 2026-08-11T13:22:41+00:00</p>
+ip_privado=172.31.80.29
+ip_publico=13.219.77.84
+pratica 02: no pronto em 2026-08-05T12:30:56+00:00</p>
 
     <p>
       São dois processos distintos, na mesma máquina, escutando em portas distintas.
@@ -1351,17 +1567,19 @@ pratica 02: no pronto em 2026-08-11T13:22:41+00:00</p>
 curl -s localhost:8080/saude; echo</pre>
     </div>
 
-    <p class="saida">{"ok": true, "no": "ip-172-31-20-15", "camada": "dados"}
-{"ok": true, "no": "ip-172-31-20-15", "az": "us-east-1a", "camada": "aplicacao"}</p>
+    <p class="saida">{"ok": true, "no": "ip-172-31-80-29", "camada": "dados"}
+{"ok": true, "no": "ip-172-31-80-29", "az": "us-east-1a", "camada": "aplicacao"}</p>
 
     <div class="callout">
       <p class="callout-title">💡 Camada é papel, não é máquina</p>
       <p>
-        As três máquinas rodam as duas camadas. Nenhuma delas "é" a camada de dados: elas
-        <em>oferecem</em> as duas, e você é quem decide quais vai usar em cada chamada. Um
-        mesmo nó pode ser cliente de um serviço e servidor de outro ao mesmo tempo, e é
-        assim que os sistemas reais funcionam: o servidor Web que responde ao seu navegador é
-        cliente do DNS um instante depois.
+        As três máquinas rodam as duas camadas. Nenhuma delas "é" a camada de dados, porque
+        todas <em>oferecem</em> as duas, e você é quem decide quais vai usar em cada chamada.
+      </p>
+      <p>
+        Um mesmo nó pode ser cliente de um serviço e servidor de outro ao mesmo tempo, e é
+        assim que os sistemas reais funcionam. O servidor Web que responde ao seu navegador
+        vira cliente do DNS um instante depois.
       </p>
     </div>
 
@@ -1407,8 +1625,8 @@ curl -s localhost:8080/saude; echo</pre>
 
     <p class="saida">Saude das replicas: a pergunta que um balanceador faria
 
-  172.31.22.31     SAUDAVEL   no ip-172-31-22-31    3.104 ms
-  172.31.40.22     SAUDAVEL   no ip-172-31-40-22    8.712 ms
+  172.31.89.12     SAUDAVEL   no ip-172-31-89-12    5.579 ms
+  172.31.24.63     SAUDAVEL   no ip-172-31-24-63    2.360 ms
 
   Esta rota nao consulta a camada de dados e nao soma nada.
   Ela responde "estou vivo", nunca "estou certo".</p>
@@ -1436,14 +1654,141 @@ curl -s localhost:8080/saude; echo</pre>
     <h2><span class="step-num">5</span><span>Experimento 1: a fronteira entre camadas tem preço</span><span class="step-time">20 min</span></h2>
 
     <p>
-      Trabalhe na janela do <strong>nó A</strong>. Todos os comandos abaixo pedem a mesma
-      coisa para a <strong>mesma aplicação</strong>, no nó B: o total de um pedido. O que
-      muda é <em>de onde ela tira as peças</em>.
+      Trabalhe na janela do <strong>nó A</strong>, que aqui faz o papel de cliente. Todos os
+      comandos abaixo pedem a mesma coisa, o total de um pedido, para a <strong>mesma
+      aplicação</strong>, que está no <strong>nó B</strong>. O que muda é <em>de onde ela
+      tira as peças</em>.
+    </p>
+    <p>
+      São dois arranjos, e a diferença entre eles cabe em um desenho. Olhe para quantas vezes
+      a linha do pedido atravessa a borda de uma máquina, porque é isso, e só isso, que muda
+      de um lado para o outro.
     </p>
 
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg class="fig-pratica-02-camadas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" role="img" aria-labelledby="pratica-02-camadas-titulo pratica-02-camadas-desc">
+<title id="pratica-02-camadas-titulo">Duas camadas contra três camadas</title>
+<desc id="pratica-02-camadas-desc">Os dois arranjos que o experimento compara. No de duas camadas, o cliente do nó A chama a aplicação do nó B, e essa aplicação lê o catálogo em um arquivo no disco da própria máquina, sem tocar na rede outra vez. No de três camadas, o cliente do nó A chama a mesma aplicação do nó B, e ela busca as peças em uma camada de dados que roda em outra máquina, o que faz o pedido atravessar a rede duas vezes em vez de uma.</desc>
+<style>
+  .fig-pratica-02-camadas{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-realce:#DD3522}
+  .fig-pratica-02-camadas text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-02-camadas .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-02-camadas .caixa{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-02-camadas .interna{fill:none;stroke:var(--diag-borda);stroke-width:1.2}
+  .fig-pratica-02-camadas .divisor{fill:none;stroke:var(--diag-borda);stroke-width:1;stroke-dasharray:6 6;opacity:.7}
+  .fig-pratica-02-camadas .seta{fill:none;stroke:var(--diag-linha);stroke-width:2;stroke-linejoin:round}
+  .fig-pratica-02-camadas .seta-local{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;stroke-dasharray:4 3}
+  .fig-pratica-02-camadas .selo{fill:none;stroke:var(--diag-realce);stroke-width:1.6}
+  .fig-pratica-02-camadas .titulo-painel{font-size:17px;font-weight:600}
+  .fig-pratica-02-camadas .sub-painel{font-size:12px;fill:var(--diag-apagado)}
+  .fig-pratica-02-camadas .rotulo-no{font-size:15px;font-weight:600}
+  .fig-pratica-02-camadas .rotulo{font-size:12px}
+  .fig-pratica-02-camadas .rotulo-fraco{font-size:11px;fill:var(--diag-apagado)}
+  .fig-pratica-02-camadas .rotulo-seta{font-size:11px;paint-order:stroke;stroke:var(--diag-fundo);
+       stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-02-camadas .rotulo-selo{font-size:13px;font-weight:600;fill:var(--diag-realce)}
+</style>
+<defs><marker id="pratica-02-camadas-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-02-camadas-ponta-fraca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker></defs>
+<rect class="fundo" x="0" y="0" width="1000" height="360"/>
+
+<text x="240" y="32" class="titulo-painel" text-anchor="middle">Duas camadas</text>
+<text x="240" y="54" class="sub-painel" text-anchor="middle">a aplicação lê o catálogo no próprio disco</text>
+
+<rect class="caixa" x="45" y="149" width="105" height="64" rx="6"/>
+<text x="97" y="176" class="rotulo-no" text-anchor="middle">nó A</text>
+<text x="97" y="196" class="rotulo-fraco" text-anchor="middle">cliente sd</text>
+
+<path d="M 150 181 L 210 181" class="seta" marker-end="url(#pratica-02-camadas-ponta)"/>
+<text x="180" y="170" class="rotulo-seta" text-anchor="middle">HTTP 8080</text>
+
+<rect class="caixa" x="215" y="86" width="215" height="190" rx="6"/>
+<text x="322" y="112" class="rotulo-no" text-anchor="middle">nó B</text>
+<rect class="interna" x="237" y="126" width="172" height="52" rx="4"/>
+<text x="323" y="147" class="rotulo" text-anchor="middle">camada de aplicação</text>
+<text x="323" y="166" class="rotulo-fraco" text-anchor="middle">porta 8080</text>
+<path d="M 290 178 L 290 202" class="seta-local" marker-end="url(#pratica-02-camadas-ponta-fraca)"/>
+<text x="300" y="195" class="rotulo-fraco" text-anchor="start">sem rede</text>
+<rect class="interna" x="237" y="202" width="172" height="52" rx="4"/>
+<text x="323" y="223" class="rotulo" text-anchor="middle">catálogo no disco</text>
+<text x="323" y="242" class="rotulo-fraco" text-anchor="middle">arquivo local</text>
+
+<rect class="selo" x="150" y="300" width="180" height="32" rx="16"/>
+<text x="240" y="321" class="rotulo-selo" text-anchor="middle">1 travessia de rede</text>
+
+<path d="M 500 70 L 500 340" class="divisor"/>
+
+<text x="742" y="32" class="titulo-painel" text-anchor="middle">Três camadas</text>
+<text x="742" y="54" class="sub-painel" text-anchor="middle">a aplicação pede as peças a outra máquina</text>
+
+<rect class="caixa" x="520" y="149" width="105" height="64" rx="6"/>
+<text x="572" y="176" class="rotulo-no" text-anchor="middle">nó A</text>
+<text x="572" y="196" class="rotulo-fraco" text-anchor="middle">cliente sd</text>
+
+<path d="M 625 181 L 685 181" class="seta" marker-end="url(#pratica-02-camadas-ponta)"/>
+<text x="655" y="170" class="rotulo-seta" text-anchor="middle">HTTP 8080</text>
+
+<rect class="caixa" x="690" y="149" width="105" height="64" rx="6"/>
+<text x="742" y="172" class="rotulo-no" text-anchor="middle">nó B</text>
+<text x="742" y="190" class="rotulo-fraco" text-anchor="middle">camada de</text>
+<text x="742" y="204" class="rotulo-fraco" text-anchor="middle">aplicação</text>
+
+<path d="M 795 181 L 855 181" class="seta" marker-end="url(#pratica-02-camadas-ponta)"/>
+<text x="825" y="170" class="rotulo-seta" text-anchor="middle">HTTP 8081</text>
+
+<rect class="caixa" x="860" y="149" width="105" height="64" rx="6"/>
+<text x="912" y="172" class="rotulo-no" text-anchor="middle">nó A ou C</text>
+<text x="912" y="190" class="rotulo-fraco" text-anchor="middle">camada de</text>
+<text x="912" y="204" class="rotulo-fraco" text-anchor="middle">dados</text>
+
+<rect class="selo" x="652" y="300" width="180" height="32" rx="16"/>
+<text x="742" y="321" class="rotulo-selo" text-anchor="middle">2 travessias de rede</text>
+</svg>
+      </div>
+      <figcaption>
+        O mesmo código nos dois lados. O que muda é onde a aplicação do nó B busca as peças,
+        e a segunda travessia é tudo o que separa um arranjo do outro.
+      </figcaption>
+    </figure>
+
+    <p>
+      Vale fixar como ler os blocos daqui em diante. O rótulo cinza diz <strong>onde você
+      digita</strong>, e o endereço dentro do comando diz <strong>a quem ele pergunta</strong>.
+      Quase sempre são nós diferentes, e é essa separação entre quem pede e quem responde que
+      o experimento mede.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Rode cada comando duas vezes e anote a segunda</p>
+      <p>
+        A primeira execução de um comando costuma sair bem mais lenta que as seguintes, às
+        vezes o dobro ou o triplo. Não é o arranjo, é o servidor ainda frio, e vale entender
+        de quem é a culpa. O cliente é um processo novo a cada vez que você digita
+        <code>sd</code>, então o que ele gasta para nascer ele gasta sempre e não explica
+        diferença nenhuma. Quem continua de pé entre um comando e outro é a aplicação do nó B,
+        e é ela que está atendendo aquele tipo de pedido pela primeira vez. Ela abre o
+        catálogo, compila a consulta e reserva estruturas que nas chamadas seguintes já
+        estarão prontas. O sistema operacional ajuda na segunda rodada, com o arquivo do
+        catálogo já na memória em vez de no disco.
+      </p>
+      <p>
+        Repita cada medição pelo menos duas vezes e leve para a tabela a <strong>segunda</strong>.
+        Isso não é manha desta prática, é o que se faz em qualquer medição de sistema, e é o
+        mesmo motivo pelo qual o comando já roda dez repetições e mostra a mediana em vez de
+        um tempo só.
+      </p>
+    </div>
+
     <h3>5.1 Um item só</h3>
-    <p>Primeiro o arranjo de <strong>duas camadas</strong>: a aplicação lê o catálogo no
-      disco dela mesma.</p>
+    <p>Primeiro o arranjo de <strong>duas camadas</strong>. A aplicação do nó B lê o catálogo
+      no disco dele mesmo, e o pedido inteiro se resolve dentro de uma máquina só.</p>
 
     <div class="cmd">
       <div class="cmd-head">
@@ -1454,19 +1799,19 @@ curl -s localhost:8080/saude; echo</pre>
       <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados local --itens 1</pre>
     </div>
 
-    <p class="saida">Pedido de 1 itens em 172.31.22.31, 10 repeticoes
+    <p class="saida">Pedido de 1 itens em 172.31.89.12, 10 repeticoes
 arranjo: 2 camadas (dado no disco da propria aplicacao)
 consulta: uma chamada por item
 
   respostas        : 10 de 10
-  mediana total    : 3.104 ms   &lt;-- anote este valor
-  p95 total        : 5.418 ms
-  mediana nos dados: 0.312 ms   (10% do total)
+  mediana total    : 2.462 ms   &lt;-- anote este valor
+  p95 total        : 2.823 ms
+  mediana nos dados: 0.235 ms   (10% do total)
   idas e voltas    : 1 por pedido
   total do pedido  : 47.19</p>
 
-    <p>Agora <strong>três camadas</strong>: a mesma aplicação, mas as peças vêm da camada de
-      dados do nó A, pela rede.</p>
+    <p>Agora <strong>três camadas</strong>. A aplicação continua sendo a do nó B, mas as
+      peças passam a vir da camada de dados do nó A, pela rede.</p>
 
     <div class="cmd">
       <div class="cmd-head">
@@ -1478,16 +1823,17 @@ consulta: uma chamada por item
     </div>
 
     <p class="saida">  respostas        : 10 de 10
-  mediana total    : 5.902 ms   &lt;-- anote este valor
-  p95 total        : 9.771 ms
-  mediana nos dados: 2.744 ms   (46% do total)
+  mediana total    : 3.644 ms   &lt;-- anote este valor
+  p95 total        : 3.902 ms
+  mediana nos dados: 1.849 ms   (51% do total)
   idas e voltas    : 1 por pedido
   total do pedido  : 47.19</p>
 
     <p>
       Mesmo total do pedido, porque o catálogo é idêntico nos três nós. A conta ficou cerca
-      de <strong>2,8 ms mais cara</strong>. Guarde esse número: ele é o preço de atravessar
-      a fronteira uma vez.
+      de <strong>1,2 ms mais cara</strong>. Guarde esse número, porque ele é o preço de
+      atravessar a fronteira uma vez. Parece pouco, e é justamente esse "parece pouco" que a
+      próxima seção vai cobrar.
     </p>
 
     <h3>5.2 Trinta itens</h3>
@@ -1504,23 +1850,24 @@ sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span cla
     </div>
 
     <p class="saida">arranjo: 2 camadas (dado no disco da propria aplicacao)
-  mediana total    : 5.361 ms   &lt;-- anote este valor
-  mediana nos dados: 1.986 ms   (37% do total)
+  mediana total    : 2.451 ms   &lt;-- anote este valor
+  mediana nos dados: 0.559 ms   (23% do total)
   idas e voltas    : 30 por pedido
   total do pedido  : 12193.35
 
-arranjo: 3 camadas (dado em 172.31.20.15)
-  mediana total    : 81.774 ms   &lt;-- anote este valor
-  p95 total        : 96.330 ms
-  mediana nos dados: 76.905 ms   (94% do total)
+arranjo: 3 camadas (dado em 172.31.80.29)
+  mediana total    : 49.211 ms   &lt;-- anote este valor
+  p95 total        : 51.849 ms
+  mediana nos dados: 47.187 ms   (96% do total)
   idas e voltas    : 30 por pedido
   total do pedido  : 12193.35</p>
 
     <p>
-      <strong>Quinze vezes mais lento, com o mesmo código e o mesmo resultado.</strong> A
+      <strong>Vinte vezes mais lento, com o mesmo código e o mesmo resultado.</strong> A
       aplicação fez as mesmas trinta consultas nos dois casos. No arranjo de duas camadas
-      elas custaram 2 ms somadas; no de três, quase 77 ms. E olhe a última linha do resumo:
-      94% do tempo do pedido foi gasto esperando a camada de dados.
+      elas custaram meio milissegundo somadas, e no de três passaram de 47 ms. Olhe ainda a
+      penúltima linha do resumo, porque ela fecha o argumento. Do tempo do pedido, 96% foi
+      gasto esperando a camada de dados.
     </p>
 
     <p>
@@ -1530,7 +1877,174 @@ arranjo: 3 camadas (dado em 172.31.20.15)
     </p>
 
     <h3>5.3 A mesma fronteira, mais longe</h3>
-    <p>Agora com a camada de dados na <em>outra zona de disponibilidade</em>, no nó C:</p>
+    <p>
+      Agora a camada de dados sai do nó A e vai para o nó C, na <em>outra zona de
+      disponibilidade</em>. Antes de rodar, vale ver o caminho que cada pedido vai percorrer.
+      Olhe para as duas setas do desenho e para onde cada uma termina, porque elas são
+      fronteiras diferentes e só a segunda muda neste experimento.
+    </p>
+
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg id="diagrama-pratica-02-cenario" class="fig-pratica-02-cenario" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1345 630" role="img" aria-labelledby="pratica-02-cenario-titulo pratica-02-cenario-desc">
+<title id="pratica-02-cenario-titulo">Arranjo de três camadas da Prática 02</title>
+<desc id="pratica-02-cenario-desc">As mesmas três instâncias da infraestrutura da prática, agora com o caminho de uma requisição desenhado. O cliente sd, que roda no nó A, chama a camada de aplicação do nó B na porta 8080, e essa camada busca as peças na camada de dados do nó C, na porta 8081, atravessando a fronteira entre as duas zonas de disponibilidade.</desc>
+<style>
+  .fig-pratica-02-cenario{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-nuvem:#242F3E}
+  @media (prefers-color-scheme:dark){
+    .fig-pratica-02-cenario{--diag-nuvem:#96a4b8}
+    .fig-pratica-02-cenario .so-claro{display:none} .fig-pratica-02-cenario .so-escuro{display:inline}
+  }
+  [data-theme="light"] .fig-pratica-02-cenario{--diag-nuvem:#242F3E}
+  [data-theme="light"] .fig-pratica-02-cenario .so-claro{display:inline}
+  [data-theme="light"] .fig-pratica-02-cenario .so-escuro{display:none}
+  [data-theme="dark"] .fig-pratica-02-cenario{--diag-nuvem:#96a4b8}
+  [data-theme="dark"] .fig-pratica-02-cenario .so-claro{display:none}
+  [data-theme="dark"] .fig-pratica-02-cenario .so-escuro{display:inline}
+  .fig-pratica-02-cenario .so-escuro{display:none}
+  .fig-pratica-02-cenario text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-02-cenario .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-02-cenario .grupo{fill:none;stroke-width:2}
+  .fig-pratica-02-cenario .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-02-cenario .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
+  .fig-pratica-02-cenario .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
+  .fig-pratica-02-cenario .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-02-cenario .faixa{fill:none;stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-02-cenario .apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.5;stroke-dasharray:4 3}
+  .fig-pratica-02-cenario .seta{fill:none;stroke:var(--diag-linha);stroke-width:2;stroke-linejoin:round}
+  .fig-pratica-02-cenario .seta-apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:5 4;stroke-linejoin:round}
+  .fig-pratica-02-cenario .seta-api{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:11 4 2 4;stroke-linejoin:round}
+  .fig-pratica-02-cenario .rotulo{font-size:13px}
+  .fig-pratica-02-cenario .rotulo-grupo{font-size:14px;font-weight:600}
+  .fig-pratica-02-cenario .rotulo-instancia{font-size:17px;font-weight:600}
+  .fig-pratica-02-cenario .rotulo-tipo{font-size:12px;opacity:.75}
+  .fig-pratica-02-cenario .rotulo-faixa{font-size:11px}
+  .fig-pratica-02-cenario .rotulo-apoio{font-size:11.5px}
+  .fig-pratica-02-cenario .rotulo-endereco{font-size:10.5px;fill:var(--diag-apagado)}
+  .fig-pratica-02-cenario .rotulo-seta{font-size:12px;paint-order:stroke;stroke:var(--diag-fundo);
+       stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-02-cenario .rotulo-sg{font-size:13px;font-weight:600;fill:#DD3522}
+  .fig-pratica-02-cenario .legenda{font-size:11.5px;fill:var(--diag-apagado)}
+</style>
+<defs><marker id="pratica-02-cenario-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-02-cenario-ponta-fina" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker><symbol id="pratica-02-cenario-ic-AWS-Cloud_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#242F3E" x="0" y="0" width="40" height="40"></rect>
+        <path d="M28.993,27.9952689 L11.487,27.9762689 C9.121,27.9742689 7.154,26.1292689 7.012,23.7752689 C7.004,23.6522689 7,23.5262689 7,23.3972689 C7,20.2992689 9.091,19.2872689 10.337,18.9592689 C10.577,18.8962689 10.735,18.6662689 10.707,18.4192689 C10.676,18.1492689 10.659,17.8752689 10.659,17.5962689 C10.659,15.1322689 12.308,12.4822689 14.415,11.5632689 C15.359,11.1502689 16.232,10.9862689 17.023,10.9862689 C19.276,10.9862689 20.867,12.3152689 21.561,13.0332689 C22.329,13.8262689 22.927,14.8382689 23.34,16.0422689 C23.4,16.2192689 23.555,16.3472689 23.74,16.3742689 C23.918,16.4012689 24.109,16.3232689 24.219,16.1712689 C24.807,15.3502689 25.766,14.9822689 26.659,15.2392689 C27.782,15.5602689 28.516,16.7272689 28.62,18.3072689 C28.578,18.5762689 28.759,18.8292689 29.027,18.8772689 C30.222,19.0892689 33,19.9572689 33,23.4402689 C33,27.5892689 29.114,27.9822689 28.993,27.9952689 M29.594,17.9742689 C29.379,16.0672689 28.4,14.6962689 26.934,14.2782689 C25.899,13.9822689 24.811,14.2452689 23.989,14.9502689 C23.553,13.9362689 22.979,13.0602689 22.28,12.3382689 C20.023,10.0052689 16.933,9.37226889 14.014,10.6462689 C11.531,11.7302689 9.659,14.7182689 9.659,17.5962689 C9.659,17.7702689 9.665,17.9432689 9.676,18.1142689 C8.319,18.5732689 6,19.8752689 6,23.3972689 C6,23.5492689 6.004,23.6962689 6.014,23.8382689 C6.188,26.7162689 8.593,28.9732689 11.486,28.9762689 L29.034,28.9932689 C29.084,28.9892689 34,28.5192689 34,23.4402689 C34,19.5022689 31.003,18.3142689 29.594,17.9742689" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Public-subnet_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#7AA116" x="0" y="0" width="40" height="40"></rect>
+        <path d="M19.536,22.049 C20.642,22.049 21.542,22.948 21.542,24.054 C21.542,25.16 20.642,26.06 19.536,26.06 C18.43,26.06 17.53,25.16 17.53,24.054 C17.53,22.948 18.43,22.049 19.536,22.049 L19.536,22.049 Z M19.012,27.007 L19.012,30.501 L20.012,30.501 L20.012,27.012 C21.442,26.782 22.542,25.549 22.542,24.054 C22.542,22.397 21.193,21.049 19.536,21.049 C17.879,21.049 16.53,22.397 16.53,24.054 C16.53,25.532 17.604,26.757 19.012,27.007 L19.012,27.007 Z M10,33.014 L29.012,33.014 L29.012,18 L10,18 L10,33.014 Z M14.046,12.484 C14.046,9.46 16.506,7 19.529,7 C22.553,7 25.012,9.46 25.012,12.484 L25.012,17 L14.046,17 L14.046,12.484 Z M29.512,17 L26.012,17 L26.012,12.484 C26.012,8.908 23.103,6 19.529,6 C15.954,6 13.046,8.908 13.046,12.484 L13.046,17 L9.5,17 C9.223,17 9,17.224 9,17.5 L9,33.514 C9,33.79 9.223,34.014 9.5,34.014 L29.512,34.014 C29.788,34.014 30.012,33.79 30.012,33.514 L30.012,17.5 C30.012,17.224 29.788,17 29.512,17 L29.512,17 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Region_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#00A4A6" x="0" y="0" width="40" height="40"></rect>
+        <path d="M14,20.026 L14,11.026 L29.293,11.026 L25.146,15.172 C24.951,15.368 24.951,15.684 25.146,15.88 L29.293,20.026 L14,20.026 Z M26.207,15.526 L30.854,10.88 C30.996,10.736 31.039,10.522 30.962,10.335 C30.885,10.148 30.702,10.026 30.5,10.026 L14,10.026 L14,8.97 C14.596,8.76 15.026,8.198 15.026,7.531 C15.026,6.687 14.34,6 13.495,6 C12.65,6 11.963,6.687 11.963,7.531 C11.963,8.201 12.398,8.766 13,8.973 L13,33.026 L10,33.026 L10,34.026 L17,34.026 L17,33.026 L14,33.026 L14,21.026 L30.5,21.026 C30.702,21.026 30.885,20.904 30.962,20.717 C31.039,20.53 30.996,20.316 30.854,20.172 L26.207,15.526 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_Amazon-EC2_Instance_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M9,39 L39,39 L39,9 L9,9 L9,39 Z M46,13 L46,11 L41,11 L41,8 C41,7.448 40.552,7 40,7 L37,7 L37,2 L35,2 L35,7 L31,7 L31,2 L29,2 L29,7 L25,7 L25,2 L23,2 L23,7 L19,7 L19,2 L17,2 L17,7 L13,7 L13,2 L11,2 L11,7 L8,7 C7.447,7 7,7.448 7,8 L7,11 L2,11 L2,13 L7,13 L7,17 L2,17 L2,19 L7,19 L7,23 L2,23 L2,25 L7,25 L7,29 L2,29 L2,31 L7,31 L7,35 L2,35 L2,37 L7,37 L7,40 C7,40.553 7.447,41 8,41 L11,41 L11,46 L13,46 L13,41 L17,41 L17,46 L19,46 L19,41 L23,41 L23,46 L25,46 L25,41 L29,41 L29,46 L31,46 L31,41 L35,41 L35,46 L37,46 L37,41 L40,41 C40.552,41 41,40.553 41,40 L41,37 L46,37 L46,35 L41,35 L41,31 L46,31 L46,29 L41,29 L41,25 L46,25 L46,23 L41,23 L41,19 L46,19 L46,17 L41,17 L41,13 L46,13 Z" fill="#ED7100"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_Amazon-VPC_Internet-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M33.4312,35.1778 L31.9332,35.1778 L31.9332,17.5018 C31.9332,17.1088 31.7022,16.7518 31.3442,16.5908 L31.2522,16.5488 C29.2432,15.6418 27.1642,14.7028 24.1762,14.7028 C21.0532,14.7028 18.7612,15.7118 16.4952,16.8368 C16.1552,17.0058 15.9402,17.3528 15.9402,17.7328 L15.9402,35.1778 L14.4772,35.1778 L14.4772,16.3118 C16.9112,14.3328 20.4202,13.2048 24.1862,13.2048 C27.6872,13.2048 31.0252,14.2018 33.4312,15.9528 L33.4312,35.1778 Z M24.1862,11.2048 C19.7612,11.2048 15.6172,12.6238 12.8152,15.0998 C12.6002,15.2888 12.4772,15.5618 12.4772,15.8488 L12.4772,36.1778 C12.4772,36.7308 12.9242,37.1778 13.4772,37.1778 L16.9402,37.1778 C17.4932,37.1778 17.9402,36.7308 17.9402,36.1778 L17.9402,18.3558 C19.8592,17.4288 21.7192,16.7028 24.1762,16.7028 C26.5112,16.7028 28.2092,17.3778 29.9332,18.1488 L29.9332,36.1778 C29.9332,36.7308 30.3802,37.1778 30.9332,37.1778 L34.4312,37.1778 C34.9842,37.1778 35.4312,36.7308 35.4312,36.1778 L35.4312,15.4578 C35.4312,15.1538 35.2922,14.8658 35.0532,14.6748 C32.2792,12.4698 28.3182,11.2048 24.1862,11.2048 L24.1862,11.2048 Z M23.9542,43.9088 C12.9522,43.9088 3.9992,34.9568 3.9992,23.9538 C3.9992,12.9508 12.9522,3.9998 23.9542,3.9998 C34.9572,3.9998 43.9092,12.9508 43.9092,23.9538 C43.9092,34.9568 34.9572,43.9088 23.9542,43.9088 L23.9542,43.9088 Z M23.9542,1.9998 C11.8482,1.9998 1.9992,11.8488 1.9992,23.9538 C1.9992,36.0608 11.8482,45.9088 23.9542,45.9088 C36.0602,45.9088 45.9092,36.0608 45.9092,23.9538 C45.9092,11.8488 36.0602,1.9998 23.9542,1.9998 L23.9542,1.9998 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_Client_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_Client_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_Internet_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_Internet_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_User_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Res_User_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#242F3E"></path>
+    </g></symbol><symbol id="pratica-02-cenario-ic-Virtual-private-cloud-VPC_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#8C4FFF" x="0" y="0" width="40" height="40"></rect>
+        <path d="M30.9707,21.0293596 L28.0267,19.7663596 L28.0267,30.2553596 C30.5717,29.9033596 30.9587,27.2873596 30.9747,27.1683596 L30.9707,21.0293596 Z M27.0267,30.2693596 L27.0267,19.7593596 L23.9917,21.0323596 L23.9917,27.2333596 C24.0047,27.2873596 24.4367,30.0003596 27.0267,30.2693596 L27.0267,30.2693596 Z M27.3327,18.5473596 C27.4567,18.4943596 27.5987,18.4953596 27.7237,18.5483596 L31.6677,20.2403596 C31.8517,20.3193596 31.9707,20.4993596 31.9707,20.6993596 L31.9707,27.2333596 C31.7877,28.6803596 30.6137,31.2963596 27.4437,31.2963596 C24.3687,31.2963596 23.1897,28.6843596 22.9957,27.3023596 L22.9917,20.6993596 C22.9917,20.4983596 23.1127,20.3163596 23.2977,20.2383596 L27.3327,18.5473596 Z M32.9827022,19.1843596 L27.5217,16.7783596 L21.9917,19.1053596 L21.9917,26.2333596 C21.9907,26.2753596 21.9377,29.1013596 23.6487,30.8563596 C24.5657,31.7973596 25.8427,32.2753596 27.4437,32.2753596 C29.0457,32.2753596 30.3307,31.7963596 31.2627,30.8533596 C32.9977,29.0953596 32.9827022,26.2683596 32.9827022,26.2403596 L32.9827022,19.1843596 Z M31.9797,31.5503596 C30.8527,32.6943596 29.3257,33.2753596 27.4437,33.2753596 C25.5597,33.2753596 24.0397,32.6943596 22.9267,31.5483596 C20.9217,29.4853596 20.9877,26.3513596 20.9917,26.2193596 L20.9917,18.7733596 C20.9917,18.5723596 21.1117,18.3903596 21.2967,18.3123596 L27.3317,15.7723596 C27.4587,15.7203596 27.6027,15.7193596 27.7277,15.7763596 L33.6837,18.4013596 C33.8657,18.4813596 33.9827,18.6603596 33.9827,18.8583596 L33.9827,26.2333596 C33.9847,26.3583596 34.0097,29.4883596 31.9797,31.5503596 L31.9797,31.5503596 Z M10.9917,24.2363596 L18.9917,24.2363596 L18.9917,25.2363596 L10.9917,25.2363596 C8.1807,25.2363596 6.1807,23.2203596 6.0127,20.2203596 C6.0007,20.1093596 5.9997,19.9753596 5.9997,19.8413596 C5.9997,17.3323596 7.3177,15.6183596 9.8167,14.8623596 C9.7977,14.6353596 9.7847,14.3963596 9.7847,14.2153596 C9.7847,11.2993596 11.3617,8.77035958 13.8017,7.77035958 C17.0997,6.42235958 20.8437,6.87635958 22.9077,8.87435958 C23.6527,9.59835958 24.2317,10.4163596 24.6677,11.3593596 C25.2767,10.9093596 26.0677,10.6983596 27.0167,10.7453596 C28.7967,10.8353596 30.1657,12.4583596 30.4497,14.7523596 C31.9477,14.8763596 32.9347,15.6353596 33.4597,17.0603596 L32.5227,17.4063596 C32.0947,16.2493596 31.3147,15.7333596 29.9917,15.7333596 C29.7267,15.7333596 29.5077,15.5273596 29.4917,15.2633596 C29.3537,12.9253596 28.0857,11.8003596 26.9657,11.7443596 C26.0207,11.6913596 25.3207,11.9633596 24.8867,12.5353596 C24.7757,12.6803596 24.6017,12.7523596 24.4137,12.7283596 C24.2337,12.7003596 24.0817,12.5773596 24.0187,12.4053596 C23.6147,11.3023596 23.0237,10.3823596 22.2117,9.59135958 C20.4237,7.86135958 17.1217,7.49235958 14.1807,8.69635958 C12.1177,9.54135958 10.7847,11.7073596 10.7847,14.2153596 C10.7847,14.4883596 10.8197,14.9113596 10.8507,15.1743596 C10.8807,15.4253596 10.7197,15.6583596 10.4747,15.7183596 C8.1687,16.2903596 6.9997,17.6773596 6.9997,19.8413596 C6.9997,19.9423596 6.9987,20.0423596 7.0087,20.1433596 C7.1497,22.6383596 8.7117,24.2363596 10.9917,24.2363596 L10.9917,24.2363596 Z" fill="#FFFFFF"></path>
+    </g></symbol></defs>
+<rect x="0" y="0" width="1345" height="630" class="fundo"/>
+<rect x="270" y="30" width="1050" height="574" class="grupo" stroke="var(--diag-nuvem)"/>
+<use href="#pratica-02-cenario-ic-AWS-Cloud_32" x="270" y="30" width="34" height="34"/>
+<text x="316" y="53" class="rotulo-grupo" text-anchor="start" fill="var(--diag-nuvem)">Nuvem AWS</text>
+<rect x="290" y="75" width="1010" height="507" class="grupo" stroke="#00A4A6" stroke-dasharray="8 6"/>
+<use href="#pratica-02-cenario-ic-Region_32" x="290" y="75" width="34" height="34"/>
+<text x="336" y="98" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">Região us-east-1</text>
+<rect x="310" y="110" width="970" height="450" class="grupo" stroke="#8C4FFF"/>
+<use href="#pratica-02-cenario-ic-Virtual-private-cloud-VPC_32" x="310" y="110" width="34" height="34"/>
+<text x="356" y="133" class="rotulo-grupo" text-anchor="start" fill="#8C4FFF">VPC padrão da conta</text>
+<rect x="335" y="155" width="560" height="380" class="zona"/>
+<text x="615.0" y="181" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona de disponibilidade us-east-1a</text>
+<rect x="355" y="195" width="520" height="320" class="subrede"/>
+<use href="#pratica-02-cenario-ic-Public-subnet_32" x="355" y="195" width="32" height="32"/>
+<text x="399" y="217" class="rotulo-grupo" text-anchor="start" fill="#7AA116">Sub-rede pública</text>
+<rect x="960" y="155" width="295" height="380" class="zona"/>
+<text x="1107.5" y="181" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona de disponibilidade us-east-1b</text>
+<rect x="980" y="195" width="255" height="320" class="subrede"/>
+<use href="#pratica-02-cenario-ic-Public-subnet_32" x="980" y="195" width="32" height="32"/>
+<text x="1024" y="217" class="rotulo-grupo" text-anchor="start" fill="#7AA116">Sub-rede pública</text>
+<rect x="375" y="235" width="840" height="245" class="sg"/>
+<text x="695" y="226" class="rotulo-sg" text-anchor="middle">Grupo de segurança sd-pratica02</text>
+<rect x="400" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-02-cenario-ic-Res_Amazon-EC2_Instance_48" x="461.0" y="284" width="48" height="48"/>
+<text x="485.0" y="358" class="rotulo-instancia" text-anchor="middle">nó A</text>
+<text x="485.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="400" y="382" width="170" height="29" class="faixa"/>
+<text x="485.0" y="401" class="rotulo-faixa" text-anchor="middle">camada de aplicação :8080</text>
+<rect x="400" y="411" width="170" height="29" class="faixa"/>
+<text x="485.0" y="430" class="rotulo-faixa" text-anchor="middle">camada de dados :8081</text>
+<rect x="660" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-02-cenario-ic-Res_Amazon-EC2_Instance_48" x="721.0" y="284" width="48" height="48"/>
+<text x="745.0" y="358" class="rotulo-instancia" text-anchor="middle">nó B</text>
+<text x="745.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="660" y="382" width="170" height="29" class="faixa"/>
+<text x="745.0" y="401" class="rotulo-faixa" text-anchor="middle">camada de aplicação :8080</text>
+<rect x="660" y="411" width="170" height="29" class="faixa"/>
+<text x="745.0" y="430" class="rotulo-faixa" text-anchor="middle">camada de dados :8081</text>
+<rect x="1010" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-02-cenario-ic-Res_Amazon-EC2_Instance_48" x="1071.0" y="284" width="48" height="48"/>
+<text x="1095.0" y="358" class="rotulo-instancia" text-anchor="middle">nó C</text>
+<text x="1095.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="1010" y="382" width="170" height="29" class="faixa"/>
+<text x="1095.0" y="401" class="rotulo-faixa" text-anchor="middle">camada de aplicação :8080</text>
+<rect x="1010" y="411" width="170" height="29" class="faixa"/>
+<text x="1095.0" y="430" class="rotulo-faixa" text-anchor="middle">camada de dados :8081</text>
+<use href="#pratica-02-cenario-ic-Res_User_48_Light" x="60" y="40" width="48" height="48" class="so-claro"/>
+<use href="#pratica-02-cenario-ic-Res_User_48_Dark" x="60" y="40" width="48" height="48" class="so-escuro"/>
+<text x="84" y="106" class="rotulo" text-anchor="middle">Aluno</text>
+<use href="#pratica-02-cenario-ic-Res_Client_48_Light" x="60" y="150" width="48" height="48" class="so-claro"/>
+<use href="#pratica-02-cenario-ic-Res_Client_48_Dark" x="60" y="150" width="48" height="48" class="so-escuro"/>
+<text x="84" y="216" class="rotulo" text-anchor="middle">Notebook do aluno</text>
+<path d="M 84 232 L 84 312" class="seta" marker-end="url(#pratica-02-cenario-ponta)"/>
+<use href="#pratica-02-cenario-ic-Res_Internet_48_Light" x="60" y="320" width="48" height="48" class="so-claro"/>
+<use href="#pratica-02-cenario-ic-Res_Internet_48_Dark" x="60" y="320" width="48" height="48" class="so-escuro"/>
+<text x="84" y="386" class="rotulo" text-anchor="middle">Internet</text>
+<path d="M 114 344 L 400 344" class="seta" marker-end="url(#pratica-02-cenario-ponta)"/>
+<text x="118" y="318" class="rotulo-seta" text-anchor="start">SSH 22, origem Meu IP</text>
+<text x="118" y="334" class="rotulo-seta" text-anchor="start">HTTP 8080, origem Meu IP</text>
+<use href="#pratica-02-cenario-ic-Res_Amazon-VPC_Internet-Gateway_48" x="288" y="322" width="44" height="44"/>
+<text x="310" y="380" class="rotulo-seta" text-anchor="middle">Internet</text>
+<text x="310" y="396" class="rotulo-seta" text-anchor="middle">gateway</text>
+<text x="485.0" y="466" class="rotulo" text-anchor="middle">cliente sd</text>
+<path d="M 570 355.0 L 600 355.0 L 600 396.5 L 660 396.5" class="seta" marker-end="url(#pratica-02-cenario-ponta)"/>
+<text x="615" y="343.0" class="rotulo-seta" text-anchor="middle">HTTP 8080</text>
+<path d="M 830 396.5 L 920 396.5 L 920 425.5 L 1010 425.5" class="seta" marker-end="url(#pratica-02-cenario-ponta)"/>
+<text x="965" y="415.5" class="rotulo-seta" text-anchor="middle">HTTP 8081</text>
+</svg>
+      </div>
+      <figcaption>
+        O arranjo que o comando abaixo monta. O cliente do nó A pergunta à aplicação do nó B,
+        que busca cada peça na camada de dados do nó C, em outra zona.
+      </figcaption>
+    </figure>
+
+    <p>
+      A primeira seta não mudou em nenhuma das três medições deste passo, porque o cliente
+      sempre pergunta à aplicação do nó B. O que muda é só a segunda, que apontou primeiro
+      para o disco da própria máquina, depois para a camada de dados do nó A e agora para a do
+      nó C. Como só ela varia, qualquer diferença de tempo nasce ali.
+    </p>
 
     <div class="cmd">
       <div class="cmd-head">
@@ -1541,28 +2055,142 @@ arranjo: 3 camadas (dado em 172.31.20.15)
       <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --itens 30</pre>
     </div>
 
-    <p class="saida">arranjo: 3 camadas (dado em 172.31.40.22)
-  mediana total    : 88.140 ms   &lt;-- anote este valor
-  mediana nos dados: 83.221 ms   (94% do total)
+    <p class="saida">arranjo: 3 camadas (dado em 172.31.24.63)
+  mediana total    : 44.457 ms   &lt;-- anote este valor
+  mediana nos dados: 42.625 ms   (96% do total)
   idas e voltas    : 30 por pedido</p>
 
     <p>
-      Um resultado desconfortável e importante: a outra zona acrescenta pouco. A diferença
-      física entre duas zonas vizinhas é de fração de milissegundo por viagem, e mesmo
-      multiplicada pelas trinta viagens ela costuma somar poucos milissegundos, enquanto cada
-      viagem já custava mais de 2 ms de software (abrir conexão, montar HTTP, serializar
-      JSON, acordar processos). <strong>A fronteira já era cara antes da distância
-      entrar na conta.</strong> Se o seu resultado sair até menor que o da mesma zona, não é
-      erro de medição: é o ruído do software engolindo o sinal da distância. E se sair
-      visivelmente maior, o argumento não muda: compare a diferença entre as duas zonas com
-      os 80 ms que as trinta rodadas já custavam e veja qual parcela domina.
+      O resultado é desconfortável e importante. A outra zona acrescentou pouco, e pode não
+      ter acrescentado nada.
+    </p>
+
+    <p>
+      A diferença física entre duas zonas vizinhas é de fração de milissegundo por viagem, e
+      mesmo multiplicada pelas trinta viagens ela costuma somar poucos milissegundos. Cada
+      viagem, porém, já custava cerca de 1,5 ms só de software, gasto em abrir a conexão,
+      montar a requisição HTTP, serializar a resposta em JSON e acordar os processos dos dois
+      lados. <strong>A fronteira já era cara antes de a distância entrar na conta.</strong>
+    </p>
+
+    <p>
+      Isso muda como você lê o seu próprio número. Se o resultado sair até menor que o da
+      mesma zona, não houve erro de medição. Foi o ruído do software engolindo o sinal da
+      distância, e o valor vale do mesmo jeito. Se sair visivelmente maior, o argumento
+      continua de pé. Compare a diferença entre as duas zonas com os 49 ms que as trinta
+      rodadas já custavam e veja qual das duas parcelas domina.
     </p>
 
     <h3>5.4 A mesma arquitetura, uma viagem só</h3>
     <p>
       Continuamos com três camadas, o mesmo dado remoto e a mesma resposta. Muda apenas que a
-      aplicação pede as trinta peças de uma vez:
+      aplicação pede as trinta peças de uma vez. Antes de rodar, compare as duas conversas
+      abaixo e conte as idas e voltas de cada uma.
     </p>
+
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg class="fig-pratica-02-rodadas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 425" role="img" aria-labelledby="pratica-02-rodadas-titulo pratica-02-rodadas-desc">
+<title id="pratica-02-rodadas-titulo">Trinta idas e voltas contra uma</title>
+<desc id="pratica-02-rodadas-desc">As duas conversas entre a camada de aplicação e a camada de dados para montar o mesmo pedido de trinta peças. À esquerda, a aplicação pergunta por uma peça de cada vez e a conversa se repete trinta vezes, com mediana de 49 milissegundos. À direita, a aplicação pede as trinta peças em uma única chamada e a conversa acontece uma vez só, com mediana de 4 milissegundos. O arranjo de camadas é idêntico nos dois casos, e o que muda é o número de idas e voltas.</desc>
+<style>
+  .fig-pratica-02-rodadas{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-caro:#DD3522;
+       --diag-barato:#1D8102}
+  .fig-pratica-02-rodadas text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-02-rodadas .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-02-rodadas .caixa{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-02-rodadas .vida{fill:none;stroke:var(--diag-borda);stroke-width:1.2;stroke-dasharray:5 5}
+  .fig-pratica-02-rodadas .divisor{fill:none;stroke:var(--diag-borda);stroke-width:1;stroke-dasharray:6 6;opacity:.7}
+  .fig-pratica-02-rodadas .ida{fill:none;stroke:var(--diag-linha);stroke-width:1.8}
+  .fig-pratica-02-rodadas .volta{fill:none;stroke:var(--diag-apagado);stroke-width:1.5;stroke-dasharray:5 4}
+  .fig-pratica-02-rodadas .chave{fill:none;stroke:var(--diag-caro);stroke-width:1.6}
+  .fig-pratica-02-rodadas .selo-caro{fill:none;stroke:var(--diag-caro);stroke-width:1.6}
+  .fig-pratica-02-rodadas .selo-barato{fill:none;stroke:var(--diag-barato);stroke-width:1.6}
+  .fig-pratica-02-rodadas .titulo-painel{font-size:17px;font-weight:600}
+  .fig-pratica-02-rodadas .sub-painel{font-size:12px;fill:var(--diag-apagado)}
+  .fig-pratica-02-rodadas .rotulo{font-size:12px}
+  .fig-pratica-02-rodadas .rotulo-fraco{font-size:11px;fill:var(--diag-apagado)}
+  .fig-pratica-02-rodadas .rotulo-seta{font-size:11px;fill:var(--diag-apagado);paint-order:stroke;
+       stroke:var(--diag-fundo);stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-02-rodadas .conta{font-size:15px;font-weight:600;fill:var(--diag-caro)}
+  .fig-pratica-02-rodadas .reticencia{font-size:20px;fill:var(--diag-apagado)}
+  .fig-pratica-02-rodadas .texto-caro{font-size:13px;font-weight:600;fill:var(--diag-caro)}
+  .fig-pratica-02-rodadas .texto-barato{font-size:13px;font-weight:600;fill:var(--diag-barato)}
+</style>
+<defs><marker id="pratica-02-rodadas-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-02-rodadas-ponta-fraca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker></defs>
+<rect class="fundo" x="0" y="0" width="1000" height="425"/>
+
+<text x="240" y="30" class="titulo-painel" text-anchor="middle">Uma peça por chamada</text>
+<text x="240" y="52" class="sub-painel" text-anchor="middle">a conversa inteira se repete trinta vezes</text>
+
+<rect class="caixa" x="50" y="70" width="140" height="46" rx="6"/>
+<text x="120" y="90" class="rotulo" text-anchor="middle">camada de</text>
+<text x="120" y="107" class="rotulo" text-anchor="middle">aplicação</text>
+<rect class="caixa" x="310" y="70" width="140" height="46" rx="6"/>
+<text x="380" y="90" class="rotulo" text-anchor="middle">camada de</text>
+<text x="380" y="107" class="rotulo" text-anchor="middle">dados</text>
+<path d="M 120 116 L 120 352" class="vida"/>
+<path d="M 380 116 L 380 352" class="vida"/>
+
+<path d="M 120 142 L 372 142" class="ida" marker-end="url(#pratica-02-rodadas-ponta)"/>
+<text x="246" y="136" class="rotulo-seta" text-anchor="middle">peça 1</text>
+<path d="M 380 158 L 128 158" class="volta" marker-end="url(#pratica-02-rodadas-ponta-fraca)"/>
+<path d="M 120 186 L 372 186" class="ida" marker-end="url(#pratica-02-rodadas-ponta)"/>
+<text x="246" y="180" class="rotulo-seta" text-anchor="middle">peça 2</text>
+<path d="M 380 202 L 128 202" class="volta" marker-end="url(#pratica-02-rodadas-ponta-fraca)"/>
+<path d="M 120 230 L 372 230" class="ida" marker-end="url(#pratica-02-rodadas-ponta)"/>
+<text x="246" y="224" class="rotulo-seta" text-anchor="middle">peça 3</text>
+<path d="M 380 246 L 128 246" class="volta" marker-end="url(#pratica-02-rodadas-ponta-fraca)"/>
+<text x="246" y="284" class="reticencia" text-anchor="middle">⋮</text>
+<path d="M 120 306 L 372 306" class="ida" marker-end="url(#pratica-02-rodadas-ponta)"/>
+<text x="246" y="300" class="rotulo-seta" text-anchor="middle">peça 30</text>
+<path d="M 380 322 L 128 322" class="volta" marker-end="url(#pratica-02-rodadas-ponta-fraca)"/>
+
+<path d="M 408 136 L 420 136 L 420 328 L 408 328" class="chave"/>
+<text x="428" y="238" class="conta" text-anchor="start">× 30</text>
+
+<rect class="selo-caro" x="130" y="370" width="220" height="34" rx="17"/>
+<text x="240" y="392" class="texto-caro" text-anchor="middle">mediana de 49 ms</text>
+
+<path d="M 500 20 L 500 405" class="divisor"/>
+
+<text x="750" y="30" class="titulo-painel" text-anchor="middle">Trinta peças em lote</text>
+<text x="750" y="52" class="sub-painel" text-anchor="middle">a conversa acontece uma vez só</text>
+
+<rect class="caixa" x="560" y="70" width="140" height="46" rx="6"/>
+<text x="630" y="90" class="rotulo" text-anchor="middle">camada de</text>
+<text x="630" y="107" class="rotulo" text-anchor="middle">aplicação</text>
+<rect class="caixa" x="820" y="70" width="140" height="46" rx="6"/>
+<text x="890" y="90" class="rotulo" text-anchor="middle">camada de</text>
+<text x="890" y="107" class="rotulo" text-anchor="middle">dados</text>
+<path d="M 630 116 L 630 352" class="vida"/>
+<path d="M 890 116 L 890 352" class="vida"/>
+
+<path d="M 630 142 L 882 142" class="ida" marker-end="url(#pratica-02-rodadas-ponta)"/>
+<text x="756" y="136" class="rotulo-seta" text-anchor="middle">peças 1 a 30</text>
+<path d="M 890 158 L 638 158" class="volta" marker-end="url(#pratica-02-rodadas-ponta-fraca)"/>
+<text x="756" y="176" class="rotulo-fraco" text-anchor="middle">as trinta de uma vez</text>
+
+<text x="756" y="250" class="rotulo-fraco" text-anchor="middle">o resto do tempo a rede fica parada</text>
+
+<rect class="selo-barato" x="640" y="370" width="220" height="34" rx="17"/>
+<text x="750" y="392" class="texto-barato" text-anchor="middle">mediana de 4 ms</text>
+</svg>
+      </div>
+      <figcaption>
+        As duas conversas montam o mesmo pedido, com o mesmo arranjo de camadas e a mesma
+        resposta no fim. O que separa 49 ms de 4 ms é o número de idas e voltas.
+      </figcaption>
+    </figure>
+
+    <p>O comando é o de antes, com <code>--lote</code> no fim:</p>
 
     <div class="cmd">
       <div class="cmd-head">
@@ -1573,23 +2201,23 @@ arranjo: 3 camadas (dado em 172.31.20.15)
       <pre>sd tempo <span class="var" data-var="IP_B">IP-PRIVADO-B</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 30 --lote</pre>
     </div>
 
-    <p class="saida">arranjo: 3 camadas (dado em 172.31.20.15)
+    <p class="saida">arranjo: 3 camadas (dado em 172.31.80.29)
 consulta: uma chamada em lote
 
   respostas        : 10 de 10
-  mediana total    : 8.219 ms   &lt;-- anote este valor
-  mediana nos dados: 3.410 ms   (41% do total)
+  mediana total    : 4.089 ms   &lt;-- anote este valor
+  mediana nos dados: 2.087 ms   (51% do total)
   idas e voltas    : 1 por pedido
   total do pedido  : 12193.35</p>
 
     <div class="callout">
       <p class="callout-title">💡 O que ler nesses números</p>
       <p>
-        Separar as camadas não é o erro; conversar trinta vezes é. O arranjo de três camadas
-        com uma chamada em lote custou 8 ms contra os 5 ms do arranjo de duas camadas: um
+        Separar as camadas não é o erro, conversar trinta vezes é. O arranjo de três camadas
+        com uma chamada em lote custou 4 ms contra os 2,5 ms do arranjo de duas camadas, um
         preço pequeno por ganhar um banco de dados independente, que pode ser reforçado,
         replicado e protegido sem tocar na aplicação. O mesmo arranjo com trinta chamadas
-        custou 82 ms. <strong>A conta é do número de rodadas, não da separação.</strong>
+        custou 49 ms. <strong>A conta é do número de rodadas, não da separação.</strong>
       </p>
     </div>
 
@@ -1597,10 +2225,13 @@ consulta: uma chamada em lote
       <p class="callout-title">⚠ E o que estes números não dizem</p>
       <p>
         Um sistema de verdade reaproveita conexões e mantém um <em>pool</em> aberto para o
-        banco, o que barateia cada viagem, mas não a elimina: continua havendo uma ida, uma
-        volta e uma espera. E o efeito piora com a carga: enquanto a aplicação espera pela
-        trigésima resposta, ela está ocupando memória e um lugar na fila. É por isso que a
-        conta de latência do Tópico 6 começa contando rodadas.
+        banco. Isso barateia cada viagem, mas não a elimina, porque continua havendo uma ida,
+        uma volta e uma espera.
+      </p>
+      <p>
+        O efeito ainda piora com a carga. Enquanto a aplicação espera pela trigésima resposta,
+        ela ocupa memória e um lugar na fila, e nenhum dos dois recursos é infinito. É por
+        isso que a conta de latência do Tópico 6 começa contando rodadas.
       </p>
     </div>
 
@@ -1620,9 +2251,9 @@ consulta: uma chamada em lote
 
     <p>
       Até agora só o nó B trabalhou. Vamos usar os dois nós de aplicação como
-      <strong>réplicas</strong>: o cliente reveza os pedidos entre eles e, se um falhar,
-      tenta o outro. É o mesmo desenho de um balanceador de carga, escrito em vinte linhas
-      para você poder ler.
+      <strong>réplicas</strong>, com o cliente revezando os pedidos entre eles e tentando o
+      outro sempre que um falhar. É o mesmo desenho de um balanceador de carga, escrito em
+      vinte linhas para você poder ler.
     </p>
 
     <div class="cmd">
@@ -1638,10 +2269,10 @@ consulta: uma chamada em lote
 timeout de 2.0 s; se uma replica falhar, tenta a seguinte
 
   atendidos     : 20 de 20
-  por no        : ip-172-31-22-31 10 | ip-172-31-40-22 10
+  por no        : ip-172-31-24-63 10 | ip-172-31-89-12 10
   tentativas perdidas: nenhuma
-  mediana       : 4.318 ms
-  p95           : 11.204 ms</p>
+  mediana       : 1.845 ms
+  p95           : 2.624 ms</p>
 
     <h3>6.1 Derrube a aplicação do nó C</h3>
     <p>Na <strong>janela 2</strong>, que está conectada ao nó C:</p>
@@ -1675,28 +2306,28 @@ sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
     </div>
 
     <p class="saida">  atendidos     : 20 de 20
-  por no        : ip-172-31-22-31 20
+  por no        : ip-172-31-89-12 20
   tentativas perdidas: RECUSADO 10 (conexao recusada (RST))
-  mediana       : 5.771 ms
-  p95           : 9.882 ms
-  preco do desvio: 1.402 ms a mais nos pedidos que precisaram da segunda tentativa
+  mediana       : 2.051 ms
+  p95           : 2.433 ms
+  preco do desvio: 0.641 ms a mais nos pedidos que precisaram da segunda tentativa
 
 Saude das replicas: a pergunta que um balanceador faria
 
-  172.31.22.31     SAUDAVEL   no ip-172-31-22-31   1.905 ms
-  172.31.40.22     FORA       RECUSADO: conexao recusada (RST)</p>
+  172.31.89.12     SAUDAVEL   no ip-172-31-89-12    3.780 ms
+  172.31.24.63     FORA       RECUSADO: conexao recusada (RST)</p>
 
     <p>
       <strong>Vinte de vinte atendidos, com metade da frota no chão.</strong> Quem estivesse
-      olhando só para a linha de cima não teria visto nada acontecer. Isso é
-      <em>mascaramento</em>: o serviço converteu a falha de um componente em algo mais
-      aceitável, no caso em um atraso de 1,4 ms. A linha das tentativas perdidas é o preço,
+      olhando só para a linha de cima não teria visto nada acontecer. Isso tem nome, e é
+      <em>mascaramento</em>. O serviço converteu a falha de um componente em algo mais
+      aceitável, que aqui foi um atraso de 0,6 ms. A linha das tentativas perdidas é o preço,
       e ela existe justamente porque o programa se deu ao trabalho de contar.
     </p>
 
     <h3>6.2 A mesma queda, mil vezes mais cara</h3>
     <p>
-      Suba a aplicação de volta no nó C e, no lugar dela, ligue um defeito diferente: o
+      Suba a aplicação de volta no nó C e, no lugar dela, ligue um defeito diferente. Agora o
       processo continua vivo e responde, mas leva cinco segundos para montar cada pedido.
     </p>
 
@@ -1721,36 +2352,45 @@ sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
     </div>
 
     <p class="saida">  atendidos     : 8 de 8
-  por no        : ip-172-31-22-31 8
+  por no        : ip-172-31-89-12 8
   tentativas perdidas: SEM RESPOSTA 4 (esgotou o tempo de espera)
-  mediana       : 2003.118 ms
-  p95           : 2011.640 ms
-  preco do desvio: 2001.664 ms a mais nos pedidos que precisaram da segunda tentativa
+  mediana       : 2003.439 ms
+  p95           : 2004.916 ms
+  preco do desvio: 2003.092 ms a mais nos pedidos que precisaram da segunda tentativa
 
-  172.31.22.31     SAUDAVEL   no ip-172-31-22-31   1.905 ms
-  172.31.40.22     SAUDAVEL   no ip-172-31-40-22   2.140 ms</p>
+  172.31.89.12     SAUDAVEL   no ip-172-31-89-12    3.910 ms
+  172.31.24.63     SAUDAVEL   no ip-172-31-24-63    2.044 ms</p>
 
     <p>
-      Todos os oito pedidos foram atendidos de novo: o mascaramento funcionou. Mas o desvio
-      que custava 1,4 ms passou a custar <strong>2 segundos</strong>, porque agora não há
-      recusa nenhuma para o cliente escutar. Ele precisa esperar a paciência acabar. E repare
-      na última linha: <strong>o nó C está saudável</strong>. A rota de saúde não monta
-      pedido nenhum, então ela responde depressa mesmo quando tudo o que importa está parado.
+      Todos os oito pedidos foram atendidos de novo, então o mascaramento funcionou. Mas o
+      desvio que custava 0,6 ms passou a custar <strong>2 segundos</strong>, porque agora não há
+      recusa nenhuma para o cliente escutar. Ele precisa esperar a paciência acabar.
+    </p>
+
+    <p>
+      Repare na última linha, que é a mais incômoda das duas telas. <strong>O nó C aparece
+      como saudável.</strong> A rota de saúde não monta pedido nenhum, então ela responde
+      depressa mesmo quando tudo o que importa está parado.
     </p>
 
     <div class="callout is-warn">
       <p class="callout-title">⚠ Falha por omissão e falha de temporização</p>
       <p>
         Os dois casos que você acabou de provocar têm nomes distintos no modelo de falhas do
-        Tópico 2. O primeiro é uma <strong>falha por omissão</strong>: o processo parou e
-        ficou parado. O segundo exige um cuidado que é fácil pular. O tópico diz que
-        <strong>falha de temporização</strong> só faz sentido quando existe um limite
-        prometido, e a rede que você está usando não promete nada. Quem prometeu foi o
-        cliente, para si mesmo: <code>TIMEOUT = 2.0</code>. É em relação a esse limite
-        declarado que a resposta chega atrasada, e é só por isso que o nome se aplica aqui.
-        Sem um limite declarado, num sistema assíncrono, nem "atraso" se poderia afirmar:
-        restaria a suspeita. A replicação mascarou os dois casos, e cobrou preços que diferem
-        em três ordens de grandeza. A diferença toda está em quanto tempo o sistema leva para
+        Tópico 2. O primeiro é uma <strong>falha por omissão</strong>, porque o processo parou
+        e ficou parado.
+      </p>
+      <p>
+        O segundo exige um cuidado que é fácil pular. O tópico diz que <strong>falha de
+        temporização</strong> só faz sentido quando existe um limite prometido, e a rede que
+        você está usando não promete nada. Quem prometeu foi o cliente, para si mesmo, na linha
+        <code>TIMEOUT = 2.0</code>. É em relação a esse limite declarado que a resposta chega
+        atrasada, e é só por isso que o nome se aplica aqui. Sem um limite declarado, num
+        sistema assíncrono, nem "atraso" se poderia afirmar, e restaria a suspeita.
+      </p>
+      <p>
+        A replicação mascarou os dois casos, e cobrou preços que diferem em três ordens de
+        grandeza. A diferença toda está em quanto tempo o sistema leva para
         <em>desconfiar</em>.
       </p>
     </div>
@@ -1806,14 +2446,14 @@ sd saude <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
 sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --pedidos 10</pre>
     </div>
 
-    <p class="saida">  172.31.22.31     SAUDAVEL   no ip-172-31-22-31   1.884 ms
-  172.31.40.22     SAUDAVEL   no ip-172-31-40-22   2.093 ms
+    <p class="saida">  172.31.89.12     SAUDAVEL   no ip-172-31-89-12    4.072 ms
+  172.31.24.63     SAUDAVEL   no ip-172-31-24-63    1.781 ms
 
   atendidos     : 10 de 10
-  por no        : ip-172-31-22-31 5 | ip-172-31-40-22 5
+  por no        : ip-172-31-24-63 5 | ip-172-31-89-12 5
   tentativas perdidas: nenhuma
-  mediana       : 33.940 ms
-  p95           : 41.002 ms</p>
+  mediana       : 22.655 ms
+  p95           : 24.026 ms</p>
 
     <p>
       Nada. Saúde verde nos dois, dez de dez atendidos, nenhuma falha, tempos normais.
@@ -1837,10 +2477,10 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
       <pre>sd conferir <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var" data-var="IP_C">IP-PRIVADO-C</span> --dados <span class="var" data-var="IP_A">IP-PRIVADO-A</span> --itens 12</pre>
     </div>
 
-    <p class="saida">Mesma pergunta, 2 replicas: 12 itens, dados em 172.31.20.15
+    <p class="saida">Mesma pergunta, 2 replicas: 12 itens, dados em 172.31.80.29
 
-  no ip-172-31-22-31   us-east-1a   total      3020.82   itens  12   32.104 ms
-  no ip-172-31-40-22   us-east-1b   total      2564.54   itens  12   35.660 ms
+  no ip-172-31-89-12    us-east-1a   total      3020.82   itens  12   36.352 ms
+  no ip-172-31-24-63    us-east-1b   total      2564.54   itens  12   29.604 ms
 
   As respostas DIVERGEM em: total
   Nenhuma replica acusou erro e todas responderam 200 OK.
@@ -1886,7 +2526,7 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
         Nos três casos o nó C falhou, e a frota continuou entregando todas as respostas
         pedidas. A
         diferença está no que foi entregue. Quando C <em>parou</em>, o pedido foi refeito em
-        B e a resposta saiu certa: a redundância resolveu. Quando C <em>mentiu</em>, cada
+        B e a resposta saiu certa, então a redundância resolveu. Quando C <em>mentiu</em>, cada
         pedido que caiu nele produziu uma resposta errada, entregue com sucesso, e a segunda
         réplica nunca chegou a ser consultada, porque não houve falha nenhuma para detectar.
         <strong>Replicar protege contra o nó que some, não contra o nó que erra.</strong>
@@ -1907,10 +2547,11 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
     <h2><span class="step-num">8</span><span>Anotar os resultados</span><span class="step-time">5 min</span></h2>
 
     <p>
-      Cada linha diz de onde tirar o número. <strong>Não existe resposta certa aqui: o valor
-      é o seu.</strong> A coluna de referência é só uma checagem de sanidade. Ficar dentro da
-      faixa não vale ponto, e ficar fora não é erro: é motivo para repetir a medição e
-      desconfiar do que aconteceu naquele instante.
+      Cada linha diz de onde tirar o número. <strong>Não existe resposta certa aqui, porque o
+      valor é o seu.</strong> A coluna de referência é só uma checagem de sanidade, colhida em
+      uma execução real desta prática com três <code>t3.micro</code>. Ficar dentro da faixa não
+      vale ponto, e ficar fora não é erro, é motivo para repetir a medição e desconfiar do que
+      aconteceu naquele instante.
     </p>
 
     <div class="callout">
@@ -1934,25 +2575,25 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
             <td>1 item, duas camadas<br>
               <span class="ref">passo 5.1 · linha <code>mediana total</code></span></td>
             <td><input type="text" data-res="um_local" data-rotulo="1 item, 2 camadas (mediana, ms)" placeholder="ms"></td>
-            <td class="ref">2 a 6 ms</td>
+            <td class="ref">1 a 8 ms</td>
           </tr>
           <tr>
             <td>1 item, três camadas<br>
               <span class="ref">passo 5.1 · segundo comando</span></td>
             <td><input type="text" data-res="um_remoto" data-rotulo="1 item, 3 camadas (mediana, ms)" placeholder="ms"></td>
-            <td class="ref">4 a 10 ms: alguns milissegundos a mais</td>
+            <td class="ref">2 a 12 ms, alguns milissegundos a mais</td>
           </tr>
           <tr>
             <td>30 itens, duas camadas<br>
               <span class="ref">passo 5.2 · linha <code>mediana total</code></span></td>
             <td><input type="text" data-res="trinta_local" data-rotulo="30 itens, 2 camadas (mediana, ms)" placeholder="ms"></td>
-            <td class="ref">3 a 12 ms: quase igual ao de 1 item</td>
+            <td class="ref">1 a 10 ms, quase igual ao de 1 item</td>
           </tr>
           <tr>
             <td>30 itens, três camadas, mesma zona<br>
               <span class="ref">passo 5.2 · segundo comando</span></td>
             <td><input type="text" data-res="trinta_remoto" data-rotulo="30 itens, 3 camadas mesma zona (mediana, ms)" placeholder="ms"></td>
-            <td class="ref">50 a 150 ms</td>
+            <td class="ref">25 a 120 ms</td>
           </tr>
           <tr>
             <td>30 itens, três camadas, outra zona<br>
@@ -1964,13 +2605,13 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
             <td>30 itens, três camadas, em lote<br>
               <span class="ref">passo 5.4</span></td>
             <td><input type="text" data-res="trinta_lote" data-rotulo="30 itens, 3 camadas em lote (mediana, ms)" placeholder="ms"></td>
-            <td class="ref">5 a 20 ms</td>
+            <td class="ref">3 a 15 ms</td>
           </tr>
           <tr>
             <td>Quantas vezes o arranjo de 30 chamadas foi mais lento que o em lote<br>
-              <span class="ref">conta sua · divida o tempo das 30 chamadas pelo tempo em lote: ex.: 81,8 ÷ 8,2 = 10</span></td>
+              <span class="ref">conta sua · divida o tempo das 30 chamadas pelo tempo em lote, por exemplo 49,2 ÷ 4,1 = 12</span></td>
             <td><input type="text" data-res="razao_lote" data-rotulo="razao 30 chamadas / lote" placeholder="vezes"></td>
-            <td class="ref">5 a 20 vezes</td>
+            <td class="ref">5 a 25 vezes</td>
           </tr>
           <tr>
             <td>Fatia do pedido gasta na camada de dados, com 30 chamadas<br>
@@ -1988,7 +2629,7 @@ sd frota <span class="var" data-var="IP_B">IP-PRIVADO-B</span> <span class="var"
             <td>Preço do desvio com a réplica lenta<br>
               <span class="ref">passo 6.2 · mesma linha</span></td>
             <td><input type="text" data-res="desvio_lenta" data-rotulo="preco do desvio, replica lenta (ms)" placeholder="ms"></td>
-            <td class="ref">cerca de 2000 ms: o timeout do cliente</td>
+            <td class="ref">cerca de 2000 ms, que é o timeout do cliente</td>
           </tr>
           <tr>
             <td>Pedidos atendidos com uma réplica no chão<br>
@@ -2035,8 +2676,8 @@ encerrar o laboratorio.</p>
     <h2><span class="step-num is-accent">§</span><span>O que isso tem a ver com o Tópico 2</span></h2>
 
     <p>
-      O tópico apresenta três famílias de modelos: físico, de arquitetura e fundamentais.
-      Você passou pelas três em cem minutos, com as mesmas três máquinas.
+      O tópico apresenta três famílias de modelos, que são o físico, o de arquitetura e os
+      fundamentais. Você passou pelas três em cem minutos, com as mesmas três máquinas.
     </p>
 
     <div class="tabela-rolavel">
@@ -2047,13 +2688,13 @@ encerrar o laboratorio.</p>
         <tbody>
           <tr>
             <td><strong>Modelo de arquitetura</strong></td>
-            <td>O mesmo código produziu quatro sistemas diferentes. Entidades, papéis e
-              posicionamento não estavam no programa: estavam na forma de chamá-lo.</td>
+            <td>O mesmo código produziu quatro sistemas diferentes. As entidades, os papéis e
+              o posicionamento não estavam no programa, e sim na forma de chamá-lo.</td>
           </tr>
           <tr>
             <td><strong>Camadas físicas (tiers)</strong></td>
-            <td>Duas camadas custaram 5 ms; três camadas custaram 8 ms em lote e 82 ms com uma
-              chamada por item. O que separar cobra é pequeno; o que conversar demais cobra é
+            <td>Duas camadas custaram 2,5 ms; três camadas custaram 4 ms em lote e 49 ms com
+              uma chamada por item. O que separar cobra é pequeno; o que conversar demais cobra é
               uma ordem de grandeza. A manutenibilidade que você ganha ao separar é paga em
               latência, e a fatura chega multiplicada pelo número de rodadas.</td>
           </tr>
@@ -2070,10 +2711,10 @@ encerrar o laboratorio.</p>
           </tr>
           <tr>
             <td><strong>Modelo de interação</strong></td>
-            <td>O timeout de 2 s foi o único instrumento disponível para decidir que alguém
-              não vinha. Em um sistema assíncrono não existe limite conhecido de atraso: os
-              2 s não vieram do sistema, foi o cliente que os declarou para si, e esperar é a
-              única forma de desconfiar.</td>
+            <td>O timeout de 2 s foi o único instrumento disponível para decidir que a
+              resposta não viria mais. Em um sistema assíncrono não existe limite conhecido de
+              atraso, e os 2 s não vieram do sistema. Foi o cliente que os declarou para si, e
+              esperar é a única forma de desconfiar.</td>
           </tr>
           <tr>
             <td><strong>Modelo de falhas</strong></td>
@@ -2085,7 +2726,7 @@ encerrar o laboratorio.</p>
           </tr>
           <tr>
             <td><strong>Mascaramento</strong></td>
-            <td>A frota converteu a queda de um nó em 1,4 ms de atraso. Converter uma falha
+            <td>A frota converteu a queda de um nó em 0,6 ms de atraso. Converter uma falha
               em outra mais aceitável é a definição exata do termo no tópico.</td>
           </tr>
           <tr>
@@ -2102,9 +2743,10 @@ encerrar o laboratorio.</p>
       <p class="callout-title">💡 A frase para levar</p>
       <p>
         Um modelo serve para tornar explícitas as suposições do sistema. Hoje você viu duas
-        suposições muito comuns caírem em cima da mesa: a de que separar camadas custa pouco,
-        e a de que ter duas réplicas significa estar protegido. Nenhuma das duas é falsa
-        sempre. As duas são falsas o suficiente para merecerem medição.
+        suposições muito comuns caírem em cima da mesa. A primeira é a de que separar camadas
+        custa pouco, e a segunda é a de que ter duas réplicas significa estar protegido.
+        Nenhuma das duas é falsa sempre. As duas são falsas o suficiente para merecerem
+        medição.
       </p>
     </div>
   </section>
@@ -2120,7 +2762,8 @@ encerrar o laboratorio.</p>
         <strong>Instance state &gt; Terminate instance</strong>.</li>
       <li>Depois que elas ficarem <em>terminated</em>, apague o grupo de segurança
         <code>sd-pratica02</code> em <strong>Security Groups</strong>.</li>
-      <li>Apague o <code>labsuser.pem</code> desta sessão: ele não vai servir na próxima.</li>
+      <li>Apague o <code>labsuser.pem</code> desta sessão, porque ele não vai servir na
+        próxima.</li>
       <li>Na aba do laboratório, clique em <strong>End Lab</strong>.</li>
     </ol>
 
@@ -2159,7 +2802,7 @@ encerrar o laboratorio.</p>
        ============================================================ -->
   <div class="moodle-note">
     <p>
-      <strong>Para concluir:</strong> responda ao questionário desta prática no Moodle da
+      <strong>Para concluir</strong>, responda ao questionário desta prática no Moodle da
       disciplina. As perguntas usam os números que você mediu, e pedem a faixa em que eles
       caíram, não o valor exato. Tenha a tabela de resultados à mão.
     </p>
@@ -2280,17 +2923,22 @@ encerrar o laboratorio.</p>
 
     <h3>Onde está o joelho da curva</h3>
     <p>
-      Rode <code>sd tempo</code> com a camada de dados remota variando os itens: 1, 5, 10, 30,
-      60, 120. O tempo cresce em linha reta com o número de chamadas, e o coeficiente angular
-      é o preço de uma ida e volta. Você acabou de medir uma constante da sua infraestrutura.
+      Rode <code>sd tempo</code> com a camada de dados remota variando os itens, em 1, 5, 10,
+      30, 60 e 120. O tempo cresce em linha reta com o número de chamadas, e o coeficiente
+      angular é o preço de uma ida e volta. Você acabou de medir uma constante da sua
+      infraestrutura. Na execução que gerou os exemplos desta página a reta subiu cerca de
+      <strong>1,5 ms por ida e volta</strong>, o que colocou o pedido de 120 itens em quase
+      180 ms.
     </p>
 
     <h3>Três camadas de verdade</h3>
     <p>
       Nada obriga a camada de dados a viver junto do cliente. Aponte a aplicação do nó B para
       a camada de dados do nó B (<code>--dados</code> com o IP privado do próprio B) e compare
-      com o modo <code>local</code>. A diferença que sobrar é o preço de atravessar a rede
-      sem sair da máquina: mesmo pela interface de retorno, HTTP e TCP cobram.
+      com o modo <code>local</code>. A diferença que sobrar é o preço de atravessar a rede sem
+      sair da máquina, porque mesmo sem distância nenhuma HTTP e TCP cobram. Na execução de
+      referência foram cerca de <strong>29 ms contra 2,5 ms</strong> nas trinta chamadas, quase
+      1 ms por rodada gasto para sair do processo e voltar ao mesmo lugar.
     </p>
 
     <h3>Um terceiro voto</h3>
