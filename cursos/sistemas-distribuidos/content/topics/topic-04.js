@@ -3,9 +3,12 @@
    ------------------------------------------------------------
    Estrutura documentada no modelo topic-01.js (sections[] com
    slides[] opcionais, quiz[], glossary[], references[]).
-   Conteúdo baseado em: COULOURIS et al., cap. 4 (pp. 145–183),
-   VAN STEEN; TANENBAUM, 4. ed., cap. 4 e KLEPPMANN, cap. 5
-   (leituras complementares).
+   Fundamentação: manifesto em docs/fontes/topico-04.json, que liga
+   cada seção às páginas que a autorizam. Hierarquia de fontes em
+   docs/fontes/README.md — o van Steen 4. ed. manda no conteúdo
+   (4.1.2, 4.3 e 4.4, mais 3.4.1 e 3.4.4) e o Coulouris (caps. 4
+   e 6) dá o esqueleto. Redesenho fechado em 2026-08-06, registrado
+   em docs/fontes/README.md, seções 3.2 e 3.6.
    ============================================================ */
 
 window.SD = window.SD || {};
@@ -15,484 +18,1099 @@ SD.content["04"] = {
 
   sections: [
     {
-      title: "Passagem de mensagens: características, portas e soquetes",
+      title: "Os dois eixos e o soquete",
       html:
-        "<p>Chegamos à camada em que o sistema distribuído de fato conversa. O " +
-        "Tópico 3 mostrou como a Internet move pacotes entre <em>computadores</em>; " +
-        "agora subimos um degrau: como <strong>processos</strong> trocam mensagens " +
-        "usando UDP e TCP, e como o middleware constrói, sobre eles, as abstrações " +
-        "dos próximos tópicos (a invocação remota do Tópico 5, por exemplo). Este " +
-        "tópico cobre os dois andares de baixo do middleware: a <strong>passagem de " +
-        "mensagens</strong> e o <strong>empacotamento de dados</strong>.</p>" +
-        "<h3>send e receive</h3>" +
-        "<p>Toda a comunicação entre processos se apoia em duas operações: " +
-        "<strong>send</strong> (enviar uma sequência de bytes a um destino) e " +
-        "<strong>receive</strong> (receber). Uma <em>fila</em> é associada a cada " +
-        "destino: processos origem fazem mensagens serem adicionadas a filas " +
-        "remotas, e processos destino as removem de suas filas locais. A " +
-        "sincronização entre os dois lados define duas formas de comunicação:</p>" +
-        "<ul>" +
-        "<li><strong>Síncrona</strong>: send e receive são operações " +
-        "<em>bloqueantes</em>: quem envia fica bloqueado até que o receive " +
-        "correspondente seja executado no destino; quem recebe fica bloqueado até a " +
-        "mensagem chegar. Os dois processos se sincronizam a cada mensagem.</li>" +
-        "<li><strong>Assíncrona</strong>: o send é <em>não bloqueante</em>: " +
-        "retorna assim que a mensagem foi copiada para um buffer local, e a " +
-        "transmissão prossegue em paralelo com o remetente. O receive pode ter " +
-        "variante não bloqueante (o buffer é preenchido em segundo plano e o " +
-        "processo é notificado depois, por polling ou interrupção), mas ela " +
-        "complica o programa: em sistemas com <em>threads</em>, como Java, o " +
-        "receive bloqueante executado por uma thread dedicada dá a mesma " +
-        "flexibilidade com muito mais simplicidade: por isso a recepção não " +
-        "bloqueante é rara nos sistemas atuais.</li>" +
-        "</ul>" +
-        "<h3>Destinos: endereço IP + porta</h3>" +
-        "<p>Nos protocolos Internet, mensagens são enviadas para o par " +
-        "(<strong>endereço IP</strong>, <strong>porta local</strong>). Uma porta tem " +
-        "<em>exatamente um destino</em>, mas pode ter <em>vários remetentes</em>: " +
-        "qualquer processo que conheça o número da porta pode escrever para ela. " +
-        "Cada computador tem 2<sup>16</sup> portas; um processo pode usar várias, " +
-        "mas não pode compartilhá-las com outros processos do mesmo computador (o " +
-        "multicast IP é a exceção). E um alerta de projeto: se o cliente usa um " +
-        "endereço IP fixo, o serviço fica amarrado àquele computador para sempre. " +
-        "Para haver <strong>transparência de localização</strong>, clientes se " +
-        "referem a serviços por <em>nome</em>, e um servidor de nomes ou " +
-        "<em>binder</em> converte o nome em localização na hora da execução: assim " +
-        "o serviço pode mudar de máquina com o sistema rodando (assunto do " +
-        "Tópico 9).</p>" +
-        "<h3>As promessas: confiabilidade e ordenamento</h3>" +
-        "<p>Dois eixos separam os serviços de comunicação (o Tópico 2 os apresentou " +
-        "no modelo de falhas):</p>" +
-        "<ul>" +
-        "<li><strong>Confiabilidade</strong>: <em>validade</em>: toda mensagem " +
-        "enviada é entregue, não importa quantos pacotes se percam no caminho; " +
-        "<em>integridade</em>: o que chega não está corrompido nem duplicado.</li>" +
-        "<li><strong>Ordenamento</strong>: algumas aplicações exigem entrega na " +
-        "ordem de emissão; para elas, mensagem fora de ordem é falha.</li>" +
-        "</ul>" +
-        "<h3>Soquetes: a abstração de programação</h3>" +
-        "<p>UDP e TCP são programados por uma mesma abstração, originária do UNIX " +
-        "BSD e presente em praticamente todo sistema operacional: o " +
-        "<strong>soquete</strong> (socket). Um soquete é um ponto de destino de " +
-        "comunicação: para receber mensagens, o processo <em>vincula</em> seu " +
-        "soquete a uma porta local e a um dos endereços IP do computador; o mesmo " +
-        "soquete serve para enviar e receber. Cada soquete é associado a um único " +
-        "protocolo (UDP <em>ou</em> TCP). Em Java, a classe <em>InetAddress</em> " +
-        "encapsula os endereços: o programador usa nomes DNS e nem precisa saber se " +
-        "o endereço resolvido é IPv4 (4 bytes) ou IPv6 (16 bytes).</p>",
-      slides: [
-        {
-          title: "Onde estamos na pilha do middleware",
-          html:
-            "<ul>" +
-            "<li>Tópico 3: pacotes entre <strong>computadores</strong> · agora: " +
-            "mensagens entre <strong>processos</strong></li>" +
-            "<li>Acima de nós: requisição-resposta, RPC e RMI (Tópico 5)</li>" +
-            "<li>Este tópico: <strong>passagem de mensagens</strong> + " +
-            "<strong>empacotamento de dados</strong></li>" +
-            "</ul>"
-        },
-        {
-          title: "send e receive: síncrono ou assíncrono",
-          html:
-            "<ul>" +
-            "<li>Uma <strong>fila</strong> por destino: origem adiciona, destino remove</li>" +
-            "<li><strong>Síncrono</strong>: os dois bloqueiam; sincronia a cada mensagem</li>" +
-            "<li><strong>Assíncrono</strong>: send retorna após copiar ao buffer local</li>" +
-            "<li>Na prática: receive <strong>bloqueante</strong> + uma thread dedicada</li>" +
-            "</ul>"
-        },
-        {
-          title: "Portas e soquetes",
-          html:
-            "<ul>" +
-            "<li>Destino = <strong>endereço IP + porta</strong> (2¹⁶ por computador)</li>" +
-            "<li>Porta: <strong>1 destino, N remetentes</strong>; sem compartilhar entre processos</li>" +
-            "<li><strong>Soquete</strong>: vinculado a porta + IP; envia e recebe; UDP <em>ou</em> TCP</li>" +
-            "<li>Transparência de localização: nome + <strong>binder</strong>, não IP fixo</li>" +
-            "</ul>"
-        }
-      ]
-    },
-    {
-      title: "Comunicação cliente-servidor: UDP e TCP na prática",
-      html:
-        "<p>UDP e TCP resolvem o mesmo problema, levar bytes de um processo a " +
-        "outro, com filosofias opostas: o UDP é a passagem de mensagens em estado " +
-        "bruto; o TCP, um <strong>fluxo</strong> (stream) que imita, entre " +
-        "processos remotos, a simplicidade de ler e escrever em um arquivo. Nos " +
-        "dois, o uso típico é <strong>cliente-servidor</strong>: o servidor vincula " +
-        "seu soquete a uma porta de serviço que divulga; o cliente usa qualquer " +
-        "porta livre.</p>" +
-        "<h3>UDP: datagramas sem promessas</h3>" +
-        "<p>Um datagrama UDP viaja da origem ao destino <em>sem confirmações nem " +
-        "novas tentativas</em>: se algo falhar, a mensagem não chega, e ninguém " +
-        "avisa. Quem programa com UDP convive com:</p>" +
-        "<ul>" +
-        "<li><strong>Tamanho</strong>: o receptor fornece um vetor de bytes para " +
-        "receber; mensagem maior que ele é <em>truncada</em>. O IP admite " +
-        "datagramas de até 64 KB, mas a maioria dos ambientes limita a 8 KB na " +
-        "prática.</li>" +
-        "<li><strong>Bloqueio</strong>: send não bloqueante (retorna ao repassar a " +
-        "mensagem às camadas UDP/IP); receive bloqueante. Mensagens endereçadas a " +
-        "uma porta sem soquete associado são <em>descartadas</em>.</li>" +
-        "<li><strong>Timeouts</strong>: esperar para sempre é inadequado: o " +
-        "remetente pode ter falhado. Pode-se configurar um tempo-limite no soquete" +
-        ", mas escolher seu valor é difícil, como a demo do Tópico 1 mostrou.</li>" +
-        "<li><strong>Recepção anônima</strong>: o receive não escolhe origem: " +
-        "obtém qualquer mensagem endereçada ao soquete, informando IP e porta do " +
-        "remetente (para responder, ou para restringir, com connect).</li>" +
-        "</ul>" +
-        "<p><strong>Modelo de falhas</strong>: falhas por <em>omissão</em> " +
-        "(descarte por erro na soma de verificação ou por buffer cheio, na origem " +
-        "ou no destino) e entrega <em>fora de ordem</em>. Quem precisa de mais " +
-        "constrói por cima: com confirmações e retransmissões, monta-se um serviço " +
-        "confiável sobre UDP. É o que fazem os protocolos requisição-resposta do " +
-        "Tópico 5.</p>" +
-        "<p>E por que alguém escolheria isso? Porque a entrega garantida cobra três " +
-        "sobrecargas que o UDP não tem: <em>manter estado</em> na origem e no " +
-        "destino, <em>mensagens extras</em> (confirmações) e a <em>latência do " +
-        "remetente</em>. O DNS roda sobre UDP; o VoIP também: áudio atrasado é " +
-        "inútil, retransmitir não ajuda.</p>" +
-        "<h3>TCP: o fluxo que esconde a rede</h3>" +
-        "<p>O TCP oferece um fluxo de bytes bidirecional entre dois processos " +
-        "<em>conectados</em>. Antes dos dados, o estabelecimento: o cliente pede a " +
-        "conexão (<em>connect</em>) e o servidor a aceita (<em>accept</em>). O " +
-        "soquete de escuta do servidor permanece na porta de serviço, e cada " +
-        "conexão aceita ganha um <em>novo soquete</em>: por isso um servidor " +
-        "atende muitos clientes na mesma porta, tipicamente com uma <em>thread por " +
-        "cliente</em>, que pode bloquear esperando dados sem atrasar os demais. " +
-        "Estabelecida a conexão, os papéis desaparecem. São dois fluxos, um em cada " +
-        "direção, sem endereços nem portas nas leituras e escritas. A abstração " +
-        "esconde da aplicação:</p>" +
-        "<ul>" +
-        "<li><strong>Tamanhos de mensagem</strong>: a aplicação escreve e lê o " +
-        "volume que quiser; o TCP decide quanto agrupar em cada datagrama IP;</li>" +
-        "<li><strong>Mensagens perdidas</strong>: confirmações com <em>janela " +
-        "deslizante</em>: o que não é confirmado no prazo é retransmitido;</li>" +
-        "<li><strong>Controle de fluxo</strong>: quem escreve rápido demais é " +
-        "bloqueado até o leitor consumir;</li>" +
-        "<li><strong>Duplicação e desordem</strong>: identificadores de mensagem " +
-        "permitem rejeitar duplicatas e reordenar o que chega trocado.</li>" +
-        "</ul>" +
-        "<p>Restam para a aplicação a <strong>correspondência dos dados</strong> " +
-        "(se um lado escreve um inteiro seguido de um double, o outro deve ler um " +
-        "inteiro seguido de um double: o fluxo não marca fronteiras de mensagem) e " +
-        "o custo do estabelecimento de conexão em interações curtas. HTTP, FTP, " +
-        "Telnet e SMTP rodam sobre TCP.</p>" +
-        '<div class="callout">' +
-        '<p class="callout-title">⚠️ O TCP não é comunicação confiável no sentido forte</p>' +
-        "<p>Somas de verificação e números de sequência garantem a integridade; " +
-        "timeouts e retransmissões, a validade: em boas condições. Mas se as " +
-        "perdas passam do limite ou a rede se rompe, o TCP declara a conexão " +
-        "<em>desfeita</em>. Os processos ficam sem saber: a falha foi da rede ou do " +
-        "processo do outro lado? As últimas mensagens chegaram ou não? É o " +
-        "“caiu ou está lenta?” do Tópico 1: nenhum transporte elimina " +
-        "essa incerteza fundamental.</p>" +
-        "</div>",
-      slides: [
-        {
-          title: "UDP: mensagens sem promessas",
-          html:
-            "<ul>" +
-            "<li>Sem confirmação, sem retransmissão, sem aviso de perda</li>" +
-            "<li>Truncamento: buffer do receptor manda · prática ~8 KB</li>" +
-            "<li>Porta sem soquete → mensagem <strong>descartada</strong></li>" +
-            "<li>Falhas: <strong>omissão</strong> + <strong>desordem</strong> · " +
-            "timeout é problema do programador</li>" +
-            "</ul>"
-        },
-        {
-          title: "Por que alguém escolhe UDP?",
-          html:
-            "<ul>" +
-            "<li>Entrega garantida cobra caro: <strong>estado</strong> + " +
-            "<strong>mensagens extras</strong> + <strong>latência</strong></li>" +
-            "<li><strong>DNS</strong>: requisição perdida? pergunta de novo</li>" +
-            "<li><strong>VoIP</strong>: áudio atrasado é inútil: retransmitir não ajuda</li>" +
-            "<li>Confiabilidade sob medida: a aplicação constrói o que precisar</li>" +
-            "</ul>"
-        },
-        {
-          title: "TCP: o fluxo que esconde a rede",
-          html:
-            "<ul>" +
-            "<li>Conexão: <strong>connect</strong> (cliente) + <strong>accept</strong> " +
-            "(servidor) → novo soquete por cliente</li>" +
-            "<li>Esconde: tamanhos, perdas (janela deslizante), controle de fluxo, " +
-            "duplicação, ordem</li>" +
-            "<li>Fluxo sem fronteiras: os dois lados combinam o formato</li>" +
-            "<li>HTTP · FTP · Telnet · SMTP</li>" +
-            "</ul>"
-        },
-        {
-          title: "O que o TCP NÃO garante",
-          html:
-            "<ul>" +
-            "<li>Perdas demais → conexão declarada <strong>desfeita</strong></li>" +
-            "<li>Rede caiu ou processo caiu? <strong>Indistinguível</strong></li>" +
-            "<li>Últimas mensagens entregues? <strong>Incerto</strong></li>" +
-            "<li>O “caiu ou está lenta?” do Tópico 1 continua valendo</li>" +
-            "</ul>"
-        }
-      ]
-    },
-    {
-      title: "Representação externa de dados e empacotamento",
-      html:
-        "<p>Programas guardam informação em <strong>estruturas de dados</strong>; " +
-        "mensagens carregam <em>sequências puras de bytes</em>. Toda comunicação " +
-        "exige, portanto, uma ida e uma volta: <em>simplificar</em> as estruturas " +
-        "em bytes antes de transmitir e reconstruí-las na chegada. E os dois lados " +
-        "podem discordar em tudo: na ordem dos bytes de um inteiro " +
-        "(<strong>big-endian</strong>, byte mais significativo primeiro, ou " +
-        "<strong>little-endian</strong>), no formato de ponto flutuante, no código " +
-        "de caracteres (ASCII de um byte, Unicode multibyte).</p>" +
-        "<p>Há duas saídas: converter os valores para um <em>formato externo " +
-        "acordado</em> antes de transmitir, ou transmiti-los <em>no formato do " +
-        "remetente, com uma indicação do formato usado</em>: o destinatário " +
-        "converte se precisar. Um padrão aceito para representar estruturas de " +
-        "dados e valores primitivos chama-se <strong>representação externa de " +
-        "dados</strong>. <strong>Empacotamento</strong> (marshalling) é montar os " +
-        "itens de dados na forma adequada para transmissão; " +
-        "<strong>desempacotamento</strong> (unmarshalling) é desmontá-los na " +
-        "chegada. Feito à mão, o empacotamento é minucioso e propenso a erros; por " +
-        "isso é gerado automaticamente ou executado pelo middleware, sem envolver o " +
-        "programador. Três estratégias clássicas:</p>" +
-        "<ul>" +
-        "<li><strong>CDR do CORBA</strong>: binária e <em>sem informação de " +
-        "tipos</em>: a mensagem carrega só os valores, pois remetente e " +
-        "destinatário conhecem de antemão a ordem e os tipos dos itens, descritos " +
-        "em <strong>IDL</strong> (linguagem de definição de interface), da qual um " +
-        "compilador gera as operações de empacotamento. Aceita as duas ordens de " +
-        "bytes: os valores viajam na ordem do remetente, indicada em cada " +
-        "mensagem.</li>" +
-        "<li><strong>Serialização Java</strong>: binária e <em>autossuficiente</em>: " +
-        "a forma serializada inclui o nome e a versão da classe e os tipos e nomes " +
-        "das variáveis; o grafo inteiro de objetos referenciados é serializado " +
-        "junto, com <em>handles</em> garantindo que cada objeto seja gravado uma só " +
-        "vez. A <em>reflexão</em> torna o processo genérico, sem código especial " +
-        "por tipo. Variáveis <em>transientes</em> (recursos locais, como arquivos e " +
-        "soquetes) ficam de fora.</li>" +
-        "<li><strong>XML</strong>: <em>textual e autodescritiva</em>: dados " +
-        "rotulados por tags, legíveis por humanos e independentes de plataforma; " +
-        "<em>espaços de nomes</em> dão escopo às tags e <em>esquemas</em> definem e " +
-        "validam a estrutura. O preço: mensagens bem maiores e mais lentas de " +
-        "processar (dados binários só via base64). É a base dos serviços Web " +
-        "(SOAP).</li>" +
-        "</ul>" +
-        '<div class="callout">' +
-        '<p class="callout-title">💡 E hoje? JSON e buffers de protocolo</p>' +
-        "<p>O próprio livro registra a tendência: os <strong>buffers de " +
-        "protocolo</strong> do Google (binário compacto descrito por esquema) e o " +
-        "<strong>JSON</strong> (texto leve nascido do JavaScript) representam um " +
-        "passo em direção a estratégias mais leves que a XML. É o cardápio atual: " +
-        "JSON domina as APIs Web; Protocol Buffers, a comunicação interna entre " +
-        "serviços. A leitura complementar de Kleppmann aprofunda a comparação, " +
-        "inclusive o problema de <em>evoluir o esquema</em> sem quebrar quem ainda " +
-        "fala a versão antiga.</p>" +
+        "<p>O tópico 03 terminou com o pacote chegando ao computador de destino. Falta o " +
+        "trecho final do caminho, que é o mais curto e o menos óbvio. O pacote alcançou a " +
+        "máquina, mas ainda precisa alcançar o <strong>processo</strong> certo dentro " +
+        "dela, e esse processo precisa saber o que fazer com a sequência de bytes que " +
+        "recebeu.</p>" +
+        "<p>Toda a distribuição se apoia em duas operações. Um processo executa " +
+        "<code>send</code> para entregar uma mensagem a um destino, e outro executa " +
+        "<code>receive</code> para retirá-la de lá. Invocação remota, replicação, " +
+        "consenso e sistema de arquivos distribuído são construções feitas por cima desse " +
+        "par, e nenhuma delas consegue ser mais confiável do que ele.</p>" +
+        "<p>Cada destino de mensagem tem uma fila associada. O processo remetente faz a " +
+        "mensagem ser acrescentada a uma fila remota, e o processo destino retira " +
+        "mensagens da fila local dele. É essa fila que permite alguma folga entre os dois " +
+        "lados, e é dela que nasce a primeira pergunta de projeto do tópico.</p>" +
+        "<h3>Os dois eixos que classificam toda comunicação</h3>" +
+        "<p>Dizer que um sistema troca mensagens não informa quase nada, porque a " +
+        "expressão cobre arranjos que se comportam de maneiras opostas quando alguma " +
+        "coisa falha. Vale então organizar essas possibilidades em dois eixos " +
+        "independentes, e essa grade é o esqueleto do tópico inteiro.</p>" +
+        "<p>O primeiro eixo pergunta por quanto tempo o sistema de comunicação guarda a " +
+        "mensagem. Na <strong>comunicação persistente</strong>, o middleware armazena a " +
+        "mensagem pelo tempo que for preciso para entregá-la. O remetente pode encerrar " +
+        "logo depois de submetê-la, e o destinatário nem precisava estar em execução no " +
+        "momento do envio. O correio eletrônico é o exemplo mais conhecido.</p>" +
+        "<p>Na <strong>comunicação transiente</strong>, o sistema guarda a mensagem " +
+        "apenas enquanto as duas aplicações estiverem em execução. Se a entrega não puder " +
+        "acontecer, seja porque a transmissão foi interrompida, seja porque o " +
+        "destinatário não está ativo, a mensagem é descartada. Todo serviço de nível de " +
+        "transporte oferece somente comunicação transiente, e o roteador que não consegue " +
+        "repassar um pacote adiante simplesmente o joga fora.</p>" +
+        "<p>O segundo eixo pergunta se quem enviou continua trabalhando. Na " +
+        "<strong>comunicação assíncrona</strong>, o remetente prossegue imediatamente " +
+        "depois de submeter a mensagem, que fica guardada pelo middleware no ato da " +
+        "submissão. Na <strong>comunicação síncrona</strong>, o remetente fica bloqueado " +
+        "até saber que o pedido dele foi aceito.</p>" +
+        "<p>A palavra aceito esconde uma ambiguidade que vale desfazer, porque a " +
+        "sincronização pode acontecer em três lugares diferentes do percurso.</p>" +
+        '<figure class="figura" id="fig-pontos-sincronizacao">' +
+        '<svg viewBox="0 0 600 300" role="img" ' +
+        'aria-labelledby="fig-pontos-sincronizacao-titulo">' +
+        '<title id="fig-pontos-sincronizacao-titulo">Três linhas de vida verticais, do ' +
+        "remetente, do middleware e do destinatário. A mensagem sai do remetente para o " +
+        "middleware, é encaminhada ao destinatário, é processada por ele e volta como " +
+        "resposta. Três marcas numeradas na linha do remetente mostram os pontos em que " +
+        "ele pode ser desbloqueado, na submissão, na entrega e na resposta.</title>" +
+        '<rect class="caixa" x="70" y="8" width="120" height="34" rx="8"/>' +
+        '<text x="130" y="30" text-anchor="middle" font-size="14">Remetente</text>' +
+        '<rect class="caixa-destaque" x="250" y="8" width="120" height="34" rx="8"/>' +
+        '<text x="310" y="30" text-anchor="middle" font-size="14">Middleware</text>' +
+        '<rect class="caixa" x="430" y="8" width="120" height="34" rx="8"/>' +
+        '<text x="490" y="30" text-anchor="middle" font-size="14">Destinatário</text>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M130 46 L130 288"/>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M310 46 L310 288"/>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M490 46 L490 288"/>' +
+        '<text class="rotulo-secundario" x="220" y="82" text-anchor="middle" ' +
+        'font-size="13">submete</text>' +
+        '<path class="traco" d="M130 92 L298 92"/>' +
+        '<path class="seta" d="M298 86 L298 98 L310 92 Z"/>' +
+        '<circle class="caixa-destaque" cx="34" cy="92" r="13"/>' +
+        '<text x="34" y="97" text-anchor="middle" font-size="14">1</text>' +
+        '<path class="traco" stroke-dasharray="2 4" d="M47 92 L117 92"/>' +
+        '<text class="rotulo-secundario" x="400" y="137" text-anchor="middle" ' +
+        'font-size="13">entrega</text>' +
+        '<path class="traco" d="M310 147 L478 147"/>' +
+        '<path class="seta" d="M478 141 L478 153 L490 147 Z"/>' +
+        '<circle class="caixa-destaque" cx="34" cy="147" r="13"/>' +
+        '<text x="34" y="152" text-anchor="middle" font-size="14">2</text>' +
+        '<path class="traco" stroke-dasharray="2 4" d="M47 147 L117 147"/>' +
+        '<rect class="caixa" x="466" y="172" width="48" height="44" rx="6"/>' +
+        '<text class="rotulo-secundario" x="524" y="199" font-size="13">processa</text>' +
+        '<text class="rotulo-secundario" x="310" y="247" text-anchor="middle" ' +
+        'font-size="13">responde</text>' +
+        '<path class="traco" d="M490 257 L142 257"/>' +
+        '<path class="seta" d="M142 251 L142 263 L130 257 Z"/>' +
+        '<circle class="caixa-destaque" cx="34" cy="257" r="13"/>' +
+        '<text x="34" y="262" text-anchor="middle" font-size="14">3</text>' +
+        '<path class="traco" stroke-dasharray="2 4" d="M47 257 L117 257"/>' +
+        "</svg>" +
+        "<figcaption>Os três pontos em que a comunicação síncrona pode desbloquear o " +
+        "remetente. No ponto 1 ele espera apenas o middleware assumir a transmissão. No " +
+        "ponto 2 espera a mensagem chegar ao destinatário. No ponto 3 espera o " +
+        "destinatário processar e responder.</figcaption>" +
+        "</figure>" +
+        "<p>Os três pontos custam coisas diferentes e prometem coisas diferentes. " +
+        "Desbloquear na submissão devolve o controle quase de imediato e não promete nada " +
+        "sobre o outro lado. Desbloquear na entrega promete que a mensagem chegou, mas " +
+        "não que ela foi compreendida. Desbloquear na resposta é a promessa mais forte e " +
+        "também a mais cara, porque o remetente passa a pagar o tempo de processamento " +
+        "alheio.</p>" +
+        "<p>Os dois eixos combinados produzem quatro arranjos, e dois deles concentram a " +
+        "maior parte do que se encontra em produção.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-eixos-comunicacao">' +
+        "<tr><th>Combinação</th><th>Como se comporta</th><th>Onde aparece</th></tr>" +
+        "<tr><td>Persistente e assíncrona</td>" +
+        "<td>O remetente submete e segue adiante, e o middleware guarda a mensagem até " +
+        "conseguir entregá-la.</td>" +
+        "<td>O correio eletrônico funciona assim.</td></tr>" +
+        "<tr><td>Persistente e síncrona na submissão</td>" +
+        "<td>O remetente espera somente a confirmação de que o middleware assumiu a " +
+        "transmissão.</td>" +
+        "<td>É o esquema comum dos sistemas de fila de mensagens, tratados na seção 4.</td></tr>" +
+        "<tr><td>Transiente e síncrona na resposta</td>" +
+        "<td>O remetente fica bloqueado até o destinatário processar o pedido e devolver " +
+        "o resultado.</td>" +
+        "<td>Corresponde à chamada de procedimento remoto, que o tópico 05 detalha.</td></tr>" +
+        "<tr><td>Transiente e assíncrona</td>" +
+        "<td>O remetente segue adiante, e a mensagem se perde se o destinatário não " +
+        "estiver ativo naquele instante.</td>" +
+        "<td>Aparece no datagrama disparado sem espera de resposta.</td></tr>" +
+        "</table>" +
         "</div>" +
-        "<h3>Referências a objetos remotos</h3>" +
-        "<p>Em sistemas de objetos distribuídos (Java RMI, CORBA), a mensagem de " +
-        "invocação precisa dizer <em>qual</em> objeto invocar. Uma " +
-        "<strong>referência de objeto remoto</strong> identifica um objeto no " +
-        "sistema inteiro e deve ser única <em>no espaço e no tempo</em>: mesmo " +
-        "depois que o objeto é excluído, a referência não pode ser reutilizada: " +
-        "invocar um objeto que não existe mais deve produzir erro, nunca acessar " +
-        "outro objeto por engano. Uma construção clássica concatena endereço IP + " +
-        "porta do processo criador + hora da criação + número sequencial do objeto " +
-        "+ informação da interface. Se o objeto puder migrar de processo, a " +
-        "referência não pode servir de endereço: o Tópico 5 retoma o assunto.</p>",
+        "<p>A tabela também antecipa o roteiro deste tópico. A seção 4 trata do quadrante " +
+        "persistente, onde moram as filas de mensagens, e todo o resto vive no quadrante " +
+        "transiente, que é onde o soquete opera.</p>" +
+        "<h3>O soquete, que é o ponto de contato</h3>" +
+        "<p>O <strong>soquete</strong> é um ponto de extremidade da comunicação, e existe " +
+        "para dar ao programa um objeto no qual escrever os dados que saem e do qual ler " +
+        "os dados que chegam. Ele funciona como abstração sobre a porta que o sistema " +
+        "operacional usa para um protocolo de transporte específico, o que implica que " +
+        "cada soquete pertence a um protocolo só.</p>" +
+        "<p>Para receber mensagens, o soquete precisa estar vinculado a uma porta local e " +
+        "a um dos endereços de rede da máquina em que executa. Daí decorre uma regra que " +
+        "costuma surpreender quem programa pela primeira vez, porque um processo não " +
+        "compartilha uma porta com outro processo da mesma máquina, embora qualquer " +
+        "número de processos possa enviar mensagens para a mesma porta. A porta tem um " +
+        "destinatário e muitos remetentes.</p>" +
+        "<p>A interface de soquetes nasceu no Berkeley Unix nos anos 1970 e foi " +
+        "padronizada depois com pouquíssimas adaptações, o que explica por que o mesmo " +
+        "conjunto de operações reaparece em Linux, Windows e macOS. São oito operações, e o servidor " +
+        "executa as quatro primeiras normalmente nessa ordem.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-operacoes-soquete">' +
+        "<tr><th>Operação</th><th>O que ela faz</th></tr>" +
+        "<tr><td><code>socket</code></td>" +
+        "<td>Cria um ponto de extremidade novo para um protocolo de transporte, e o " +
+        "sistema operacional reserva ali os recursos de envio e de recepção.</td></tr>" +
+        "<tr><td><code>bind</code></td>" +
+        "<td>Associa um endereço local ao soquete, avisando o sistema operacional de que " +
+        "só interessam as mensagens daquele endereço e daquela porta.</td></tr>" +
+        "<tr><td><code>listen</code></td>" +
+        "<td>Informa quantos pedidos de conexão pendentes o servidor aceita enfileirar, " +
+        "sem bloquear quem chamou.</td></tr>" +
+        "<tr><td><code>accept</code></td>" +
+        "<td>Bloqueia quem chamou até um pedido de conexão chegar, e devolve um soquete " +
+        "novo dedicado àquela conversa.</td></tr>" +
+        "<tr><td><code>connect</code></td>" +
+        "<td>Tenta ativamente estabelecer a conexão com o endereço de transporte que o " +
+        "chamador indicou.</td></tr>" +
+        "<tr><td><code>send</code></td><td>Envia dados pela conexão já estabelecida.</td></tr>" +
+        "<tr><td><code>receive</code></td><td>Recebe dados pela conexão já estabelecida.</td></tr>" +
+        "<tr><td><code>close</code></td><td>Libera a conexão.</td></tr>" +
+        "</table>" +
+        "</div>" +
+        "<p>A operação <code>accept</code> guarda a sutileza que permite ao servidor " +
+        "atender mais de um cliente. Quando um pedido de conexão chega, o sistema " +
+        "operacional cria um soquete <em>novo</em>, com as mesmas propriedades do " +
+        "original, e devolve esse novo a quem chamou. O servidor entrega a conversa a uma " +
+        "thread ou a um processo filho e volta a esperar no soquete original, que " +
+        "continua livre para receber o próximo pedido.</p>" +
+        "<p>Do lado do cliente a sequência é mais curta. Ele também cria um soquete, mas " +
+        "não precisa vinculá-lo explicitamente a um endereço, porque o sistema " +
+        "operacional aloca uma porta dinamicamente quando a conexão sobe. A operação " +
+        "<code>connect</code> bloqueia até a conexão ficar estabelecida, e a partir daí " +
+        "os dois lados trocam dados pelas mesmas duas operações. Encerrar é simétrico, " +
+        "com os dois chamando <code>close</code>.</p>" +
+        "<h3>O que o transporte promete, e o que ele não promete</h3>" +
+        "<p>Escolher entre UDP e TCP é escolher o que o sistema operacional faz por você " +
+        "e o que sobra para o seu código. O tópico 03 apresentou os dois protocolos por " +
+        "dentro. Aqui interessa o que cada um entrega à aplicação, e principalmente o que " +
+        "ele deixa de entregar.</p>" +
+        "<p>O datagrama UDP viaja sem confirmação e sem nova tentativa de envio. Havendo " +
+        "falha, a mensagem pode não chegar, e a aplicação não fica sabendo. Some-se a " +
+        "isso que o destinatário precisa oferecer um vetor de bytes de tamanho definido, " +
+        "e a mensagem maior que esse vetor chega truncada.</p>" +
+        "<p>Duas fontes de perda merecem atenção porque nenhuma delas envolve a rede. A " +
+        "mensagem pode ser descartada por erro de soma de verificação, e pode ser " +
+        "descartada por falta de espaço em buffer, tanto na origem quanto no destino. Há " +
+        "ainda um terceiro caso que confunde muita gente, porque a mensagem endereçada a " +
+        "uma porta sem soquete vinculado é descartada em silêncio, sem que erro nenhum " +
+        "volte ao remetente.</p>" +
+        "<p>Em compensação, o UDP não paga três sobrecargas que a entrega garantida " +
+        "cobra. Ele não guarda informação de estado na origem nem no destino, não " +
+        "transmite mensagens adicionais de confirmação e não impõe latência ao remetente. " +
+        "É por isso que o DNS e a voz sobre IP rodam sobre UDP, já que nos dois casos " +
+        "repetir a pergunta sai mais barato que sustentar uma conexão.</p>" +
+        "<p>O fluxo TCP faz o oposto e esconde quatro características da rede atrás da " +
+        "abstração de um fluxo de bytes. A aplicação escolhe o volume que envia e o que " +
+        "lê, sem pensar em pacotes. As perdas são tratadas por confirmação e " +
+        "retransmissão. O controle de fluxo bloqueia quem escreve rápido demais até que " +
+        "quem lê tenha consumido o suficiente. E os números de sequência descartam " +
+        "duplicatas e recolocam em ordem o que chegou fora dela.</p>" +
+        "<p>Nada disso sai de graça, e o preço aparece antes da primeira mensagem útil. " +
+        "Os dois processos estabelecem uma conexão antes de poderem se comunicar, com um " +
+        "<code>connect</code> partindo do cliente e um <code>accept</code> respondendo do " +
+        "servidor. Num modelo cliente-servidor em que cada requisição é seguida de uma " +
+        "resposta curta, essa montagem representa uma sobrecarga considerável por " +
+        "requisição.</p>" +
+        "<p>Falta a parte que costuma ficar de fora. <strong>O TCP não fornece " +
+        "comunicação confiável.</strong> Ele garante a entrega diante da perda de alguns " +
+        "pacotes, mas, se a perda ultrapassar um limite, ou se a rede se romper ou " +
+        "congestionar seriamente, o software de envio deixa de receber confirmações e, " +
+        "depois de certo tempo, declara a conexão desfeita.</p>" +
+        "<p>O que acontece a seguir é o assunto de fundo da disciplina inteira. O " +
+        "processo que tenta ler ou escrever recebe uma notificação de erro, e esse erro " +
+        "tem duas propriedades incômodas. Ele não distingue falha de rede de falha do " +
+        "processo do outro lado, e não informa se as mensagens enviadas há pouco chegaram " +
+        "a ser recebidas.</p>" +
+        "<p>Guarde essas duas frases, porque elas reaparecem em quase todo o resto do " +
+        "curso. A incerteza que o tópico 02 classificou como falha por omissão não é um " +
+        "defeito de implementação que uma biblioteca melhor resolveria. Ela é o que sobra " +
+        "depois que o melhor protocolo de transporte disponível fez tudo o que podia " +
+        "fazer.</p>",
       slides: [
         {
-          title: "O problema: bytes não são objetos",
+          title: "O último trecho do caminho",
           html:
             "<ul>" +
-            "<li>Estruturas de dados ⇄ sequências de bytes</li>" +
-            "<li><strong>big-endian × little-endian</strong> · ponto flutuante · " +
-            "ASCII × Unicode</li>" +
-            "<li>Formato externo acordado <em>ou</em> formato do remetente + indicação</li>" +
-            "<li><strong>Empacotar</strong> (marshalling) → transmitir → " +
-            "<strong>desempacotar</strong></li>" +
+            "<li>O tópico 03 entregou o pacote à <strong>máquina</strong></li>" +
+            "<li>Falta alcançar o <strong>processo</strong> certo dentro dela</li>" +
+            "<li>Duas operações sustentam tudo, <code>send</code> e <code>receive</code></li>" +
+            "<li>Nada construído em cima é mais confiável que esse par</li>" +
             "</ul>"
         },
         {
-          title: "Três estratégias clássicas",
+          title: "Os dois eixos",
           html:
             "<ul>" +
-            "<li><strong>CDR/CORBA</strong>: binária, sem tipos: a IDL é o acordo prévio</li>" +
-            "<li><strong>Java</strong>: binária, com tipos: classe + versão + reflexão</li>" +
-            "<li><strong>XML</strong>: textual, autodescritiva: legível, mas grande e lenta</li>" +
-            "<li>Middleware empacota sozinho: feito à mão, é fonte de erros</li>" +
+            "<li><strong>Persistente</strong>, o middleware guarda até entregar</li>" +
+            "<li><strong>Transiente</strong>, guarda só enquanto os dois executam</li>" +
+            "<li><strong>Assíncrona</strong>, o remetente segue adiante</li>" +
+            "<li><strong>Síncrona</strong>, o remetente espera o aceite</li>" +
             "</ul>"
         },
         {
-          title: "E hoje: JSON e Protocol Buffers",
+          title: "As quatro combinações",
+          ref: "tab-eixos-comunicacao"
+        },
+        {
+          title: "Três pontos de sincronização",
           html:
             "<ul>" +
-            "<li>Passo para <strong>estratégias mais leves</strong> que a XML</li>" +
-            "<li><strong>JSON</strong>: texto simples; padrão das APIs Web</li>" +
-            "<li><strong>Protobuf</strong>: binário + esquema; serviços internos (Google)</li>" +
-            "<li>Desafio real: <strong>evoluir o esquema</strong> sem quebrar os antigos</li>" +
+            "<li>Na submissão, o middleware assumiu a transmissão</li>" +
+            "<li>Na entrega, a mensagem chegou ao destinatário</li>" +
+            "<li>Na resposta, o outro lado processou e devolveu</li>" +
+            "</ul>",
+          ref: "fig-pontos-sincronizacao"
+        },
+        {
+          title: "O soquete",
+          html:
+            "<ul>" +
+            "<li>Ponto de extremidade, abstração sobre a porta</li>" +
+            "<li>Uma porta tem <strong>um destinatário</strong> e muitos remetentes</li>" +
+            "<li><code>accept</code> devolve um soquete <em>novo</em> por conversa</li>" +
+            "<li>O cliente dispensa <code>bind</code>, o sistema aloca a porta</li>" +
             "</ul>"
         },
         {
-          title: "Referências a objetos remotos",
+          title: "As oito operações de soquete",
+          ref: "tab-operacoes-soquete"
+        },
+        {
+          title: "O que o TCP não promete",
           html:
             "<ul>" +
-            "<li>Identificam o objeto no sistema todo: únicas no " +
-            "<strong>espaço e no tempo</strong></li>" +
-            "<li>IP + porta + hora + nº do objeto + interface</li>" +
-            "<li>Nunca reutilizar: objeto excluído → <strong>erro</strong>, jamais " +
-            "outro objeto</li>" +
-            "<li>Se o objeto migra, a referência não é endereço (Tópico 5)</li>" +
+            "<li>Esconde tamanho, perda, ordem e velocidade</li>" +
+            "<li>Perda acima do limite desfaz a conexão</li>" +
+            "<li>O erro <strong>não distingue</strong> falha de rede de falha do processo</li>" +
+            "<li>E não diz se o que você enviou chegou</li>" +
             "</ul>"
         }
       ]
     },
     {
-      title: "Comunicação em grupo: multicast, sobreposições e MPI",
+      title: "Empacotamento de dados",
       html:
-        "<p>A troca de mensagens <em>aos pares</em> não serve bem quando um " +
-        "processo precisa falar com um <strong>grupo</strong>, por exemplo, com um " +
-        "serviço replicado em vários computadores para tolerar falhas. O " +
-        "<strong>multicast</strong> envia uma única mensagem a todos os membros de " +
-        "um grupo de processos, com a participação transparente para o remetente. " +
-        "Quatro usos o motivam:</p>" +
+        "<p>A seção anterior entregou ao programa um canal por onde passam bytes. Falta " +
+        "resolver o descompasso que isso cria, porque um programa em execução não guarda " +
+        "bytes. Ele guarda estruturas de dados, com objetos que apontam para outros " +
+        "objetos, números inteiros, números com casas decimais e texto.</p>" +
+        "<p>Antes de transmitir, essas estruturas precisam ser simplificadas em uma " +
+        "sequência de bytes, e precisam ser reconstruídas na chegada. " +
+        "<strong>Empacotamento</strong>, também chamado de <em>marshalling</em>, é o " +
+        "procedimento de montar um conjunto de itens de dados numa forma conveniente " +
+        "para viajar em uma mensagem. O <strong>desempacotamento</strong> é o " +
+        "procedimento inverso, feito no destino.</p>" +
+        "<p>Se as duas máquinas fossem idênticas, bastaria copiar a memória de uma para a " +
+        "outra. Elas não são, e três diferenças atrapalham.</p>" +
         "<ul>" +
-        "<li><strong>Tolerância a falhas por replicação</strong>: requisições " +
-        "difundidas a um grupo de servidores que executam as mesmas operações; se " +
-        "alguns falham, os demais seguem atendendo;</li>" +
-        "<li><strong>Descoberta de serviços</strong>: localizar os servidores de " +
-        "descoberta em redes espontâneas (é o que o Jini faz);</li>" +
-        "<li><strong>Desempenho por dados replicados</strong>: propagar cada " +
-        "mudança a todas as réplicas;</li>" +
-        "<li><strong>Notificações de eventos</strong>: um status muda e todos os " +
-        "interessados sabem (a base do publicar-assinar).</li>" +
+        "<li>A <strong>ordem dos bytes de um inteiro</strong> muda conforme a " +
+        "arquitetura. Na ordem big-endian o byte mais significativo vem na primeira " +
+        "posição, e na little-endian ele vem por último.</li>" +
+        "<li>A <strong>representação de números em ponto flutuante</strong> também " +
+        "difere entre arquiteturas de processador.</li>" +
+        "<li>O <strong>código de caracteres</strong> não é único, porque um sistema pode " +
+        "usar um byte por caractere enquanto outro adota uma codificação capaz de " +
+        "representar muitos idiomas.</li>" +
         "</ul>" +
-        "<h3>Multicast IP</h3>" +
-        "<p>O <strong>multicast IP</strong> transmite um único datagrama a um " +
-        "<em>grupo multicast</em>, identificado por um endereço IP classe D " +
-        "(224.0.0.0 a 239.255.255.255). A participação é dinâmica (computadores " +
-        "entram e saem quando querem) e dá até para enviar sem ser membro. Para o " +
-        "programador, está disponível <em>apenas via UDP</em>: datagramas comuns " +
-        "com endereço de grupo (em Java, um MulticastSocket entra no grupo com " +
-        "joinGroup; processos do mesmo computador podem, aqui sim, compartilhar a " +
-        "porta). O <strong>TTL</strong> limita quantos roteadores o datagrama " +
-        "atravessa: o padrão 1 restringe à rede local. Endereços podem ser " +
-        "<em>permanentes</em>, atribuídos pelo IANA (224.0.1.1 é do protocolo NTP), " +
-        "ou <em>temporários</em>, criados sob demanda.</p>" +
-        "<p><strong>Modelo de falhas</strong>: o mesmo do UDP: <em>omissão</em>. " +
-        "Qualquer destino pode descartar por buffer cheio, e um datagrama perdido " +
-        "entre roteadores some para todos os membros dali em diante. Resultado: " +
-        "<em>alguns membros recebem, outros não</em>: o multicast IP é um " +
-        "<strong>multicast não confiável</strong>. Também não há garantias de " +
-        "ordem: membros diferentes podem receber as mensagens em ordens " +
-        "diferentes.</p>" +
-        "<p>Para o serviço replicado do primeiro exemplo, isso é fatal: réplicas " +
-        "que perdem uma operação, ou que as aplicam em ordem diferente, divergem. " +
-        "Ele exige <strong>multicast confiável</strong>: entrega <em>tudo ou " +
-        "nada</em> (atômica), e, quase sempre, <strong>totalmente ordenado</strong>: " +
-        "todos os membros recebem todas as mensagens na mesma ordem. Construir " +
-        "essas garantias sobre uma rede que não as dá é assunto do Tópico 10 " +
-        "(Replicação).</p>" +
-        "<h3>Redes de sobreposição: reinventar a rede sem trocá-la</h3>" +
-        "<p>E quando a rede não fornece o que a aplicação precisa (multicast entre " +
-        "domínios, por exemplo)? Constrói-se uma <strong>rede de sobreposição</strong> " +
-        "(overlay): uma rede <em>virtual</em>, de nós e enlaces virtuais, montada " +
-        "sobre a rede existente: com endereçamento, protocolos e roteamento " +
-        "próprios. Exemplos: as <em>tabelas de hashing distribuídas</em> (DHTs, com " +
-        "roteamento baseado em chave), o compartilhamento de arquivos " +
-        "<em>peer-to-peer</em>, as <em>redes de distribuição de conteúdo</em> " +
-        "(CDNs), o MBone para multicast, sobreposições de resiliência e as VPNs. " +
-        "Vantagens: novos serviços <em>sem mudar a rede subjacente</em>, " +
-        "experimentação e várias sobreposições coexistindo; o custo é um nível " +
-        "extra de indireção (desempenho) e mais complexidade. É uma resposta " +
-        "elegante ao dilema fim-a-fim do Tópico 2: otimizar a rede para <em>uma</em> " +
-        "aplicação sem impor isso a todas.</p>" +
-        "<p>O <strong>Skype</strong> é o estudo de caso: VoIP peer-to-peer sobre a " +
-        "Internet comum. Hosts comuns e <strong>supernós</strong>, hosts promovidos " +
-        "por terem banda, endereço IP global (sem NAT) e boa disponibilidade, " +
-        "formam a sobreposição. O login é autenticado em um servidor conhecido; a " +
-        "busca por um usuário é orquestrada pelo supernó do cliente e contata, em " +
-        "média, oito supernós (três a quatro segundos). A voz usa TCP para " +
-        "sinalização e <em>preferencialmente UDP</em> para o áudio: com TCP e nós " +
-        "intermediários para atravessar firewalls.</p>" +
-        "<h3>MPI: passagem de mensagens de alto desempenho</h3>" +
-        "<p>Na computação de alto desempenho, a passagem de mensagens é usada em " +
-        "estado puro, pelo padrão <strong>MPI</strong> (Message Passing Interface, " +
-        "1994): uma interface portável, com mais de 115 operações, que separa " +
-        "explicitamente as duas dimensões da primeira seção: síncrono/assíncrono e " +
-        "bloqueante/não bloqueante. Só de send bloqueante há quatro variantes: " +
-        "MPI_Send (genérico: retorna quando for “seguro” reutilizar o " +
-        "buffer da aplicação), MPI_Ssend (síncrono: só retorna com a mensagem " +
-        "entregue), MPI_Bsend (copia para um buffer explícito da biblioteca) e " +
-        "MPI_Rsend (o programador <em>afirma</em> que o receptor já está pronto, " +
-        "permitindo otimizações, e falhando se a suposição for falsa). As " +
-        "variantes não bloqueantes (MPI_Isend etc.) retornam imediatamente e são " +
-        "acompanhadas com MPI_Wait e MPI_Test. Há ainda comunicação " +
-        "<em>coletiva</em>: scatter (um para muitos) e gather (muitos para um).</p>" +
-        /* Área reservada para demonstração interativa futura. */
+        "<p>Vale desfazer uma confusão comum aqui. Os bytes em si nunca têm a ordem dos " +
+        "bits alterada durante a transmissão, e o problema é sempre a ordem dos bytes " +
+        "dentro de um valor, nunca a ordem dos bits dentro de um byte.</p>" +
+        "<p>Existem dois caminhos para conciliar as diferenças. O primeiro converte os " +
+        "valores para um formato externo acordado antes da transmissão, e os converte de " +
+        "volta para a forma local na recepção. O segundo transmite no formato do " +
+        "remetente, acompanhado de uma indicação de qual formato é esse, e deixa a " +
+        "conversão por conta do destinatário. O padrão acordado que sustenta o primeiro " +
+        "caminho chama-se <strong>representação externa de dados</strong>.</p>" +
+        "<h3>A pergunta que separa os formatos</h3>" +
+        "<p>Todo formato de empacotamento responde à mesma pergunta, e é dela que saem as " +
+        "diferenças de tamanho e de flexibilidade entre eles. Além dos valores, o que " +
+        "mais viaja dentro da mensagem?</p>" +
+        "<p>Um formato pode carregar o nome de cada campo, o tipo de cada campo, os dois " +
+        "ou nenhum dos dois. Quanto menos ele carrega, menor fica a mensagem, e mais os " +
+        "dois lados precisam ter combinado de antemão. Essa troca entre tamanho e " +
+        "acoplamento organiza a seção inteira.</p>" +
+        "<h3>Do texto ao binário</h3>" +
+        "<p>O JSON e a linguagem de marcação extensível (XML) são os formatos textuais " +
+        "mais difundidos, e a razão do sucesso deles não é técnica. Eles carregam o nome " +
+        "e o valor de cada campo, então quem " +
+        "recebe consegue interpretar a mensagem sem ter combinado nada antes. É isso que " +
+        "os torna a escolha natural quando os dois lados pertencem a organizações " +
+        "diferentes, porque fazer duas organizações concordarem em qualquer coisa é mais " +
+        "difícil que economizar bytes.</p>" +
+        "<p>O preço aparece em três lugares. A ambiguidade dos números é o mais " +
+        "perigoso, porque o JSON distingue texto de número mas não distingue inteiro de " +
+        "ponto flutuante e não especifica precisão. Inteiros acima de 2<sup>53</sup> não " +
+        "cabem exatamente num ponto flutuante de precisão dupla, então chegam errados a " +
+        "quem interpreta em JavaScript. A rede social X convive com isso mandando o " +
+        "identificador de cada publicação duas vezes, uma como número e outra como texto " +
+        "decimal.</p>" +
+        "<p>O segundo preço é a ausência de cadeia binária. Nem JSON nem XML transportam " +
+        "uma sequência de bytes sem codificação de caracteres, e a saída usual codifica o " +
+        "binário como texto em Base64, o que aumenta o dado em cerca de um terço. O " +
+        "terceiro preço é o próprio esquema, porque tanto o esquema de JSON quanto o de " +
+        "XML são poderosos e, por isso mesmo, complicados de aprender e de implementar.</p>" +
+        "<p>A verbosidade motivou uma família de codificações binárias do JSON, entre as " +
+        "quais o MessagePack é a mais conhecida. Elas mantêm o modelo de dados intacto e apenas trocam a " +
+        "sintaxe textual por bytes. Como não pressupõem esquema nenhum, continuam " +
+        "obrigadas a incluir o nome de cada campo dentro da mensagem, e por isso o ganho " +
+        "é modesto. Um registro de exemplo com três campos cai de 81 para 66 bytes.</p>" +
+        "<h3>Quando o esquema entra, os nomes saem</h3>" +
+        "<p>Os buffers de protocolo, criados no Google, exigem um esquema para qualquer " +
+        "dado codificado. Esse esquema declara os campos numa linguagem de definição de " +
+        "interface, e cada campo recebe um número, chamado de <strong>etiqueta de " +
+        "campo</strong>. Na mensagem codificada não aparece nome nenhum, só a etiqueta, e " +
+        "o mesmo registro de exemplo cai para 33 bytes.</p>" +
+        "<p>A economia é a parte menos interessante. O que a etiqueta compra de verdade é " +
+        "a <strong>evolução do esquema</strong>, que é a capacidade de mudar a estrutura " +
+        "da mensagem sem parar o sistema. Isso vale mais que os bytes economizados, " +
+        "porque em produção as versões nunca são trocadas todas ao mesmo tempo.</p>" +
+        "<p>Duas propriedades descrevem o que se quer preservar. Há " +
+        "<strong>compatibilidade para a frente</strong> quando o código antigo consegue " +
+        "ler dados escritos pelo código novo, e há <strong>compatibilidade para " +
+        "trás</strong> quando o código novo consegue ler dados escritos pelo antigo.</p>" +
+        "<p>As etiquetas entregam as duas, com uma liberdade e uma proibição. Você pode " +
+        "renomear um campo à vontade, porque o nome nunca aparece nos dados codificados, " +
+        "mas não pode mudar a etiqueta de um campo, porque isso invalidaria todo dado já " +
+        "escrito.</p>" +
+        "<p>Acrescentar campo funciona assim. O campo novo ganha uma etiqueta nova, e o " +
+        "código antigo, ao encontrar uma etiqueta que não conhece, simplesmente a ignora. " +
+        "Ele consegue pular a quantidade certa de bytes porque o tipo do dado viaja " +
+        "anotado junto da etiqueta, e é essa anotação que sustenta a compatibilidade para " +
+        "a frente. No sentido contrário, o código novo que lê dado antigo preenche o " +
+        "campo ausente com um valor padrão.</p>" +
+        "<p>Remover campo é o mesmo problema espelhado, e deixa uma consequência " +
+        "permanente. A etiqueta aposentada nunca mais pode ser reutilizada, porque ainda " +
+        "pode existir dado escrito com ela em algum lugar, e reservá-la explicitamente no " +
+        "esquema é a forma de não esquecer disso.</p>" +
+        "<p>Mudar o tipo de um campo é o caso que mais engana. Alargar um inteiro de 32 " +
+        "para 64 bits parece inofensivo, e o código novo de fato lê o dado antigo sem " +
+        "problema, preenchendo com zeros os bits que faltam. O caminho inverso trunca, " +
+        "porque o código antigo continua guardando o valor numa variável de 32 bits.</p>" +
+        "<h3>Quando o esquema inteiro é compartilhado</h3>" +
+        "<p>O Avro leva a ideia ao limite e não tem etiqueta nenhuma. A mensagem " +
+        "codificada é a simples concatenação dos valores, e nada nela identifica campo " +
+        "nem tipo. Um texto é apenas um prefixo de comprimento seguido dos bytes, e " +
+        "olhando para os bytes ninguém consegue dizer se aquilo é texto ou número. O " +
+        "mesmo registro de exemplo cai para 32 bytes, o menor de todos.</p>" +
+        "<p>O preço dessa compactação é severo. Os dados só podem ser decodificados " +
+        "corretamente por quem tiver exatamente o mesmo esquema de quem escreveu, e " +
+        "qualquer divergência produz dado interpretado errado, não erro de leitura.</p>" +
+        "<p>A saída do Avro para a evolução separa dois esquemas que os outros formatos " +
+        "confundem. O <strong>esquema do escritor</strong> é a versão que a aplicação " +
+        "usava quando codificou o dado. O <strong>esquema do leitor</strong> é a versão " +
+        "que a aplicação que vai ler espera encontrar. Para decodificar, o Avro usa os " +
+        "dois, compara um com o outro e traduz do primeiro para o segundo.</p>" +
+        "<h3>A ideia é mais velha que as ferramentas</h3>" +
+        "<p>Nada disso é invenção recente. A arquitetura comum de intermediação de " +
+        "pedidos a objetos (CORBA), padronizada nos anos 1990, definiu uma representação " +
+        "comum de dados que já transmitia somente os valores, sem nenhuma " +
+        "informação sobre os tipos. Ela podia fazer isso porque remetente e destinatário " +
+        "compartilhavam de antemão o conhecimento da ordem e dos tipos dos itens, " +
+        "descritos numa linguagem de definição de interface a partir da qual as operações " +
+        "de empacotamento eram geradas automaticamente.</p>" +
+        "<p>É a mesma barganha que o Avro faz hoje, com trinta anos de diferença. E é por " +
+        "isso que a tecnologia sair do currículo não tira a lição do lugar, porque a lição " +
+        "nunca esteve no CORBA.</p>" +
+        "<p>Os quatro formatos se comparam pelas mesmas dimensões, usando sempre o mesmo " +
+        "registro de exemplo com três campos.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-formatos-empacotamento">' +
+        "<tr><th>Formato</th><th>O que viaja além dos valores</th><th>Tamanho do " +
+        "exemplo</th><th>O que os dois lados combinam antes</th></tr>" +
+        "<tr><td>JSON textual</td>" +
+        "<td>Viajam o nome de cada campo e a sintaxe que os separa.</td>" +
+        "<td>81 bytes</td>" +
+        "<td>Quase nada, porque a mensagem se descreve sozinha.</td></tr>" +
+        "<tr><td>MessagePack</td>" +
+        "<td>Os nomes continuam viajando, e só a sintaxe textual vira binária.</td>" +
+        "<td>66 bytes</td>" +
+        "<td>Quase nada, pelo mesmo motivo do JSON.</td></tr>" +
+        "<tr><td>Buffers de protocolo</td>" +
+        "<td>Viaja a etiqueta numérica de cada campo, com o tipo anotado junto.</td>" +
+        "<td>33 bytes</td>" +
+        "<td>Os dois precisam do esquema, mas versões diferentes dele convivem.</td></tr>" +
+        "<tr><td>Avro</td>" +
+        "<td>Nada além dos próprios valores, concatenados.</td>" +
+        "<td>32 bytes</td>" +
+        "<td>O leitor precisa do esquema exato de quem escreveu, além do dele.</td></tr>" +
+        "</table>" +
+        "</div>" +
+        "<p>A tabela revela onde está mesmo o salto de tamanho, e não é entre texto e " +
+        "binário. Trocar JSON por MessagePack economiza pouco, enquanto trocar qualquer " +
+        "um dos dois por um formato com esquema corta a mensagem pela metade. O que se " +
+        "paga em troca é acoplamento, porque a partir dali as duas pontas dependem de um " +
+        "acordo que precisa ser versionado com o mesmo cuidado que o código.</p>",
+      slides: [
+        {
+          title: "Por que empacotar",
+          html:
+            "<ul>" +
+            "<li>O programa guarda estruturas, a mensagem carrega bytes</li>" +
+            "<li>Diferem a ordem dos bytes, o ponto flutuante e o código de caractere</li>" +
+            "<li><strong>Empacotar</strong> monta, <strong>desempacotar</strong> " +
+            "reconstrói</li>" +
+            "<li>A ordem dos <em>bits</em> dentro do byte nunca muda</li>" +
+            "</ul>"
+        },
+        {
+          title: "A pergunta que separa os formatos",
+          html:
+            "<ul>" +
+            "<li>Além dos valores, o que mais viaja?</li>" +
+            "<li>Nome do campo, tipo do campo, os dois, ou nenhum</li>" +
+            "<li>Menos carga significa mensagem menor</li>" +
+            "<li>E significa mais acordo prévio entre as pontas</li>" +
+            "</ul>"
+        },
+        {
+          title: "Os quatro formatos comparados",
+          ref: "tab-formatos-empacotamento"
+        },
+        {
+          title: "Evolução do esquema",
+          html:
+            "<ul>" +
+            "<li><strong>Para a frente</strong>, código antigo lê dado novo</li>" +
+            "<li><strong>Para trás</strong>, código novo lê dado antigo</li>" +
+            "<li>Renomear campo pode, mudar a etiqueta não</li>" +
+            "<li>Etiqueta aposentada nunca volta a ser usada</li>" +
+            "</ul>"
+        },
+        {
+          title: "A ideia é mais velha que a ferramenta",
+          html:
+            "<ul>" +
+            "<li>A representação de dados do CORBA já mandava só os valores</li>" +
+            "<li>Podia, porque a descrição da interface era compartilhada antes</li>" +
+            "<li>O Avro faz a mesma barganha hoje</li>" +
+            "<li>A lição nunca esteve na tecnologia</li>" +
+            "</ul>"
+        }
+      ]
+    },
+    {
+      title: "A outra ponta, quem recebe",
+      html:
+        "<p>As duas seções anteriores olharam para quem envia. A mensagem, porém, chega a " +
+        "algum lugar, e duas decisões tomadas do lado de quem recebe mudam a comunicação " +
+        "por inteiro. Uma delas define o que cada mensagem precisa carregar. A outra " +
+        "define em qual máquina ela vai aterrissar.</p>" +
+        "<p>Um servidor é um processo que implementa um serviço em nome de um conjunto de " +
+        "clientes, e no fundo todos são organizados do mesmo jeito. Ele espera uma " +
+        "requisição, garante que ela seja atendida e volta a esperar a próxima. As " +
+        "diferenças interessantes estão nos detalhes desse ciclo.</p>" +
+        "<h3>Atender sozinho ou passar adiante</h3>" +
+        "<p>O <strong>servidor iterativo</strong> trata a requisição ele mesmo e devolve a " +
+        "resposta ao cliente. Enquanto isso acontece, ninguém mais é atendido.</p>" +
+        "<p>O <strong>servidor concorrente</strong> não trata a requisição. Ele a repassa " +
+        "a uma thread separada ou a outro processo e volta imediatamente a esperar a " +
+        "próxima, deixando a resposta por conta de quem recebeu a tarefa. Um servidor com " +
+        "várias threads é o exemplo mais comum, e criar um processo filho por requisição " +
+        "é a alternativa que muitos sistemas Unix seguem.</p>" +
+        "<h3>Como o cliente descobre onde bater</h3>" +
+        "<p>O cliente envia a requisição a um ponto de extremidade na máquina do servidor, " +
+        "que é a porta da seção 1, e cada servidor escuta um ponto específico. Resta saber " +
+        "como o cliente descobre qual é.</p>" +
+        "<p>A resposta mais simples é atribuir pontos fixos aos serviços conhecidos. " +
+        "Servidores de transferência de arquivos escutam sempre a porta TCP 21, e " +
+        "servidores da Web escutam a porta TCP 80, por atribuição da autoridade que " +
+        "administra os números da Internet. Com o ponto já definido, ao cliente basta " +
+        "descobrir o endereço de rede da máquina, e para isso serve o serviço de nomes.</p>" +
+        "<p>Muitos serviços, porém, não têm ponto atribuído de antemão, e recebem um " +
+        "endereço dinâmico do sistema operacional local. Nesse caso entra um processo " +
+        "auxiliar que escuta num ponto conhecido e sabe onde cada serviço da máquina está. " +
+        "O cliente pergunta a ele primeiro e depois procura o servidor certo.</p>" +
+        "<p>Há ainda uma variante que economiza recursos. Em vez de manter dezenas de " +
+        "servidores acordados só esperando, um <strong>superservidor</strong> escuta todos " +
+        "os pontos de uma vez e cria o processo adequado quando a requisição chega, " +
+        "processo que termina ao acabar o trabalho.</p>" +
+        "<h3>Como interromper um servidor</h3>" +
+        "<p>Imagine alguém que começou a enviar um arquivo enorme e percebeu no meio que " +
+        "escolheu o arquivo errado. O jeito que funciona bem demais na Internet de hoje, e " +
+        "às vezes é o único disponível, consiste em fechar a aplicação cliente de supetão, " +
+        "abri-la de novo e fingir que nada aconteceu. O servidor acaba desfazendo a " +
+        "conexão antiga, achando que o cliente caiu.</p>" +
+        "<p>A saída melhor exige que cliente e servidor tenham sido projetados para trocar " +
+        "<strong>dados fora de banda</strong>, que são dados processados na frente de " +
+        "qualquer outro daquele cliente. Uma forma é o servidor escutar um ponto de " +
+        "controle separado, com prioridade maior que o ponto por onde passam os dados " +
+        "normais. Outra é usar a mesma conexão, já que o TCP permite transmitir dados " +
+        "urgentes que interrompem o servidor na chegada.</p>" +
+        "<h3>Com estado ou sem estado</h3>" +
+        "<p>Chegamos à decisão que mais afeta o resto do sistema. Um <strong>servidor sem " +
+        "estado</strong> não guarda informação sobre a situação dos clientes dele, e pode " +
+        "mudar o próprio estado sem avisar ninguém. O servidor da Web é o exemplo " +
+        "clássico, porque responde à requisição e esquece o cliente por completo assim que " +
+        "termina.</p>" +
+        "<p>A definição é mais sutil do que parece. Muitos projetos sem estado de fato " +
+        "guardam informação sobre os clientes, e o que os define é outra coisa, porque " +
+        "perder essa informação não interrompe o serviço. Um servidor da Web costuma " +
+        "registrar todas as requisições, o que ajuda a decidir o que replicar e onde, mas " +
+        "perder o registro custa no máximo algum desempenho.</p>" +
+        "<p>Existe um meio-termo com nome próprio. No <strong>estado leve</strong>, o " +
+        "servidor promete guardar informação em nome do cliente por um tempo limitado, e " +
+        "depois desse prazo volta ao comportamento padrão e descarta o que guardava. Um " +
+        "servidor que promete avisar o cliente sobre atualizações durante alguns minutos, " +
+        "e depois exige que o cliente volte a perguntar, funciona assim.</p>" +
+        "<p>O <strong>servidor com estado</strong> mantém informação persistente sobre os " +
+        "clientes, que precisa ser apagada explicitamente. Um servidor de arquivos que " +
+        "permite ao cliente guardar uma cópia local para alterar mantém uma tabela de " +
+        "pares formados por cliente e arquivo, e é ela que diz quem tem permissão de " +
+        "escrita sobre o quê, e portanto quem tem a versão mais recente.</p>" +
+        "<p>As duas escolhas se comparam pelas mesmas quatro dimensões.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-servidor-estado">' +
+        "<tr><th>Dimensão</th><th>Sem estado</th><th>Com estado</th></tr>" +
+        "<tr><td>O que guarda do cliente</td>" +
+        "<td>Pode guardar, desde que perder aquilo não derrube o serviço.</td>" +
+        "<td>Guarda informação persistente, que só some quando alguém a apaga.</td></tr>" +
+        "<tr><td>O que acontece se o servidor cair</td>" +
+        "<td>Ele volta a executar e passa a esperar requisições, sem medida " +
+        "especial nenhuma.</td>" +
+        "<td>Ele precisa recuperar todo o estado que tinha um instante antes da " +
+        "queda.</td></tr>" +
+        "<tr><td>Desempenho percebido pelo cliente</td>" +
+        "<td>Cada requisição carrega tudo de que o servidor precisa, o que engorda a " +
+        "mensagem.</td>" +
+        "<td>Leitura e escrita ficam mais rápidas, porque o servidor já sabe o " +
+        "contexto.</td></tr>" +
+        "<tr><td>Complexidade que cria</td>" +
+        "<td>Deixa a recuperação trivial e empurra o trabalho para o cliente.</td>" +
+        "<td>Exige mecanismos de recuperação, que o tópico de tolerância a falhas " +
+        "detalha.</td></tr>" +
+        "</table>" +
+        "</div>" +
+        "<p>Vale separar dois tipos de estado que costumam ser confundidos. O " +
+        "<strong>estado de sessão</strong> acompanha uma série de operações de um mesmo " +
+        "usuário e deve durar algum tempo, mas não para sempre. Perdê-lo não causa dano " +
+        "real, desde que o cliente possa repetir a requisição original, e é por isso que " +
+        "ele admite armazenamento mais simples e menos confiável. O <strong>estado " +
+        "permanente</strong> é o que vive em banco de dados, como o cadastro de um cliente " +
+        "ou a chave de um software comprado.</p>" +
+        "<p>A escolha entre os dois desenhos não deve mudar o serviço oferecido, e sim " +
+        "como ele é implementado. Se um arquivo precisa ser aberto antes de ser lido, o " +
+        "servidor sem estado imita esse comportamento abrindo o arquivo, fazendo a " +
+        "operação e fechando o arquivo em seguida, tudo dentro do atendimento de uma " +
+        "requisição só.</p>" +
+        "<p>Quando o servidor quer lembrar do comportamento anterior do cliente sem " +
+        "guardar estado, a solução conhecida é pedir que o próprio cliente carregue essa " +
+        "informação. É o que faz o <em>cookie</em> da Web, um pedaço pequeno de dados com " +
+        "informação de interesse do servidor, que o navegador apenas guarda e reenvia no " +
+        "acesso seguinte, sem nunca executá-lo.</p>" +
+        "<h3>Quando o servidor é um agrupamento</h3>" +
+        "<p>Até aqui o servidor foi tratado como uma máquina. Em produção ele quase nunca " +
+        "é, e um <strong>agrupamento de servidores</strong> é apenas um conjunto de " +
+        "máquinas ligadas por rede, cada uma executando um ou mais servidores. A " +
+        "organização mais comum se divide em três camadas.</p>" +
+        '<figure class="figura" id="fig-agrupamento-servidores">' +
+        '<svg viewBox="0 0 600 260" role="img" ' +
+        'aria-labelledby="fig-agrupamento-servidores-titulo">' +
+        '<title id="fig-agrupamento-servidores-titulo">Agrupamento de servidores em três ' +
+        "camadas. As requisições dos clientes entram por um comutador lógico na primeira " +
+        "camada, que as despacha para um entre três servidores de aplicação na segunda " +
+        "camada, e esses servidores acessam o sistema distribuído de arquivos e banco de " +
+        "dados na terceira camada.</title>" +
+        '<text class="rotulo-secundario" x="8" y="122" font-size="13">requisições</text>' +
+        '<path class="traco" d="M8 132 L86 132"/>' +
+        '<path class="seta" d="M86 126 L86 138 L98 132 Z"/>' +
+        '<rect class="caixa-destaque" x="100" y="72" width="92" height="120" rx="8"/>' +
+        '<text x="146" y="126" text-anchor="middle" font-size="14">Comutador</text>' +
+        '<text x="146" y="146" text-anchor="middle" font-size="14">lógico</text>' +
+        '<rect class="caixa" x="252" y="52" width="152" height="42" rx="8"/>' +
+        '<text x="328" y="78" text-anchor="middle" font-size="13">Servidor de aplicação</text>' +
+        '<rect class="caixa" x="252" y="111" width="152" height="42" rx="8"/>' +
+        '<text x="328" y="137" text-anchor="middle" font-size="13">Servidor de aplicação</text>' +
+        '<rect class="caixa" x="252" y="170" width="152" height="42" rx="8"/>' +
+        '<text x="328" y="196" text-anchor="middle" font-size="13">Servidor de aplicação</text>' +
+        '<path class="traco" d="M192 118 L228 118 L228 73 L240 73"/>' +
+        '<path class="seta" d="M240 67 L240 79 L252 73 Z"/>' +
+        '<path class="traco" d="M192 132 L240 132"/>' +
+        '<path class="seta" d="M240 126 L240 138 L252 132 Z"/>' +
+        '<path class="traco" d="M192 146 L228 146 L228 191 L240 191"/>' +
+        '<path class="seta" d="M240 185 L240 197 L252 191 Z"/>' +
+        '<path class="traco" d="M404 73 L440 73 L440 126 L452 126"/>' +
+        '<path class="seta" d="M452 120 L452 132 L464 126 Z"/>' +
+        '<path class="traco" d="M404 132 L452 132"/>' +
+        '<path class="seta" d="M452 126 L452 138 L464 132 Z"/>' +
+        '<path class="traco" d="M404 191 L440 191 L440 138 L452 138"/>' +
+        '<path class="seta" d="M452 132 L452 144 L464 138 Z"/>' +
+        '<rect class="caixa" x="466" y="72" width="120" height="120" rx="8"/>' +
+        '<text x="526" y="116" text-anchor="middle" font-size="13">Arquivos e</text>' +
+        '<text x="526" y="136" text-anchor="middle" font-size="13">banco de dados</text>' +
+        '<text x="526" y="156" text-anchor="middle" font-size="13">distribuídos</text>' +
+        '<text class="rotulo-secundario" x="146" y="232" text-anchor="middle" ' +
+        'font-size="13">1ª camada</text>' +
+        '<text class="rotulo-secundario" x="328" y="232" text-anchor="middle" ' +
+        'font-size="13">2ª camada</text>' +
+        '<text class="rotulo-secundario" x="526" y="232" text-anchor="middle" ' +
+        'font-size="13">3ª camada</text>' +
+        "</svg>" +
+        "<figcaption>O agrupamento de servidores em três camadas. O comutador é o único " +
+        "endereço que o cliente conhece, e é ele que decide qual máquina atende cada " +
+        "requisição.</figcaption>" +
+        "</figure>" +
+        "<p>A primeira camada tem um comutador lógico por onde as requisições dos clientes " +
+        "são roteadas. A segunda reúne os servidores de aplicação, que fazem o " +
+        "processamento propriamente dito. A terceira guarda os dados, com servidores de " +
+        "arquivo e de banco de dados, muitas vezes em máquinas configuradas para acesso " +
+        "rápido a disco e com bastante memória de cache.</p>" +
+        "<p>A separação nem sempre é estrita. É frequente cada máquina ter o próprio " +
+        "armazenamento local, integrando aplicação e dados num servidor só, o que reduz o " +
+        "arranjo a duas camadas.</p>" +
+        "<p>O objetivo de projeto do comutador é esconder que existem várias máquinas. O " +
+        "cliente enxerga um único endereço de rede e não precisa saber nada sobre a " +
+        "organização interna do agrupamento, o que é transparência de acesso pela " +
+        "definição do tópico 01.</p>" +
+        "<p>Existem dois tipos de comutador, e a diferença está em quanto cada um entende " +
+        "do que passa por ele. O <strong>comutador de nível de transporte</strong> aceita " +
+        "pedidos de conexão TCP e os repassa a um servidor escolhido, ficando no meio da " +
+        "conexão e reescrevendo os endereços de origem e destino a cada segmento, que é " +
+        "uma forma de tradução de endereços de rede.</p>" +
+        "<p>O <strong>comutador de nível de aplicação</strong> inspeciona o conteúdo da " +
+        "requisição em vez de olhar apenas o que o TCP mostra. Ele pode ler o endereço " +
+        "pedido e mandar vídeo para máquinas preparadas para vídeo, e consulta a banco " +
+        "para máquinas com acesso àquele banco. Quanto mais o comutador sabe sobre o que " +
+        "está sendo pedido, melhor ele decide quem atende, e o custo desse conhecimento é " +
+        "ser mais lento que o comutador de transporte.</p>" +
+        "<p>Os nomes que a prática corrente usa são outros, e vale reconhecê-los. O " +
+        "balanceador de carga em equipamento dedicado e o balanceador em software fazem o " +
+        "papel do comutador. O <strong>sistema de descoberta de serviço</strong>, apoiado " +
+        "num registro central, resolve o mesmo problema de forma mais dinâmica que o " +
+        "serviço de nomes, porque cada instância se registra ao subir e envia sinais " +
+        "periódicos de que continua viva. A <strong>malha de serviço</strong> combina as " +
+        "duas coisas e coloca um balanceador local junto de cada cliente e de cada " +
+        "servidor.</p>" +
+        "<p>Feche a seção juntando as duas pontas dela, porque as duas decisões que " +
+        "pareciam separadas são a mesma. O comutador só pode mandar qualquer requisição " +
+        "para qualquer máquina se nenhuma delas guardar contexto daquele cliente. É o " +
+        "servidor sem estado que torna o agrupamento possível, e é por isso que a escolha " +
+        "da metade desta seção decide o que a outra metade consegue fazer.</p>",
+      slides: [
+        {
+          title: "Quem recebe também decide",
+          html:
+            "<ul>" +
+            "<li>Servidor <strong>iterativo</strong> atende ele mesmo</li>" +
+            "<li>Servidor <strong>concorrente</strong> repassa e volta a esperar</li>" +
+            "<li>Ponto de contato fixo, por atribuição, ou descoberto</li>" +
+            "<li>O <strong>superservidor</strong> escuta por muitos de uma vez</li>" +
+            "</ul>"
+        },
+        {
+          title: "Com estado ou sem estado",
+          html:
+            "<ul>" +
+            "<li><strong>Sem estado</strong>, perder a informação não derruba o serviço</li>" +
+            "<li><strong>Estado leve</strong>, a promessa vale por um tempo</li>" +
+            "<li><strong>Com estado</strong>, a queda exige recuperar tudo</li>" +
+            "<li>O <em>cookie</em> devolve a lembrança ao cliente</li>" +
+            "</ul>"
+        },
+        {
+          title: "As duas escolhas, quatro dimensões",
+          ref: "tab-servidor-estado"
+        },
+        {
+          title: "O agrupamento em três camadas",
+          html:
+            "<ul>" +
+            "<li>Comutador, aplicação e dados</li>" +
+            "<li>O cliente enxerga <strong>um endereço só</strong></li>" +
+            "<li>Comutador de transporte reescreve endereços</li>" +
+            "<li>Comutador de aplicação lê o que foi pedido e decide melhor</li>" +
+            "</ul>",
+          ref: "fig-agrupamento-servidores"
+        },
+        {
+          title: "As duas decisões são a mesma",
+          html:
+            "<ul>" +
+            "<li>O comutador manda qualquer pedido para qualquer máquina</li>" +
+            "<li>Isso só funciona se nenhuma guardar contexto do cliente</li>" +
+            "<li>É o servidor <strong>sem estado</strong> que permite o agrupamento</li>" +
+            "</ul>"
+        }
+      ]
+    },
+    {
+      title: "Quando a mensagem espera",
+      html:
+        "<p>Tudo o que veio até aqui pressupõe a mesma coisa, que é os dois lados estarem " +
+        "em execução no momento da conversa. A grade da seção 1 já tinha nomeado o outro " +
+        "quadrante, e é hora de ir até lá.</p>" +
+        "<p>Antes disso, vale uma parada dentro do próprio quadrante transiente. A " +
+        "programação direta com soquetes é básica e frágil, porque erra-se com facilidade " +
+        "e porque o soquete oferece apenas TCP ou UDP, deixando todo o resto por conta de " +
+        "quem programa.</p>" +
+        "<h3>Um degrau acima do soquete</h3>" +
+        "<p>Uma observação simples deu origem a bibliotecas melhores. A maior parte das " +
+        "aplicações que trocam mensagens se organiza segundo uns poucos padrões de " +
+        "comunicação, então dá para oferecer um soquete já preparado para cada padrão. É " +
+        "isso que o ZeroMQ faz, com três padrões principais, que são requisição e " +
+        "resposta, publicar e assinar, e o encadeamento em linha de produção.</p>" +
+        "<p>Duas escolhas de projeto dessa biblioteca merecem atenção. A comunicação é " +
+        "assíncrona, então o remetente segue adiante depois de submeter a mensagem. E o " +
+        "soquete pode estar vinculado a vários endereços, o que permite a um servidor " +
+        "atender origens bem diferentes por uma interface só, com uma única operação de " +
+        "recepção bloqueante.</p>" +
+        "<p>A combinação das duas produz um efeito curioso, que já é um ensaio do que vem " +
+        "adiante nesta seção. O processo pode pedir a conexão e enviar mensagens mesmo que " +
+        "o destinatário ainda não esteja no ar, porque o pedido e as mensagens ficam " +
+        "enfileirados do lado do remetente, e uma thread da própria biblioteca trata de " +
+        "estabelecer a conexão e transmitir tudo quando for possível.</p>" +
+        "<p>No outro extremo do espectro está a interface de passagem de mensagens usada " +
+        "na computação de alto desempenho, que resolve um problema diferente. Ela expõe " +
+        "explicitamente as duas dimensões da seção 1, com variantes bloqueantes e não " +
+        "bloqueantes de envio e de recepção, e a diversidade cobra o preço dela. A quarta " +
+        "versão do padrão passa de 650 operações, o que se explica pela busca de " +
+        "desempenho em aplicações paralelas, e não por elegância de projeto.</p>" +
+        "<h3>A fila de mensagens</h3>" +
+        "<p>Os <strong>sistemas de fila de mensagens</strong> oferecem armazenamento de " +
+        "médio prazo para mensagens, sem exigir que remetente ou destinatário estejam " +
+        "ativos durante a transmissão. As aplicações se comunicam inserindo mensagens em " +
+        "filas específicas, e essas mensagens são encaminhadas por uma série de servidores " +
+        "de comunicação até alcançarem o destino, mesmo que ele estivesse fora do ar no " +
+        "instante do envio.</p>" +
+        "<p>Uma diferença de escala de tempo separa esses sistemas de tudo o que veio " +
+        "antes, e ela é a chave para entender quando usá-los. Soquetes e passagem de " +
+        "mensagens de alto desempenho trabalham em milissegundos ou segundos. Os sistemas " +
+        "de fila são projetados para transferências que podem levar <strong>minutos</strong>.</p>" +
+        "<p>A garantia que o remetente recebe é bem mais fraca do que ele costuma imaginar. " +
+        "Ele tem a promessa de que a mensagem será eventualmente inserida na fila do " +
+        "destinatário, e nada mais. Não há promessa sobre quando ela será lida, nem sequer " +
+        "sobre se ela será lida, porque isso depende inteiramente do comportamento de " +
+        "quem recebe.</p>" +
+        "<p>Em compensação, essa semântica fraca compra uma propriedade valiosa, que é o " +
+        "<strong>desacoplamento no tempo</strong>. Depois que a mensagem entra na fila, " +
+        "ela fica lá até alguém removê-la, e pouco importa se o remetente ou o " +
+        "destinatário estão executando. Isso produz quatro situações.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-desacoplamento-tempo">' +
+        "<tr><th>Remetente</th><th>Destinatário</th><th>O que acontece</th></tr>" +
+        "<tr><td>Em execução</td><td>Em execução</td>" +
+        "<td>Os dois acompanham a transmissão inteira, que é o caso mais parecido com um " +
+        "soquete.</td></tr>" +
+        "<tr><td>Em execução</td><td>Passivo</td>" +
+        "<td>O remetente continua enviando, ainda que a entrega não seja possível " +
+        "agora.</td></tr>" +
+        "<tr><td>Passivo</td><td>Em execução</td>" +
+        "<td>O destinatário lê mensagens que lhe foram enviadas por quem já nem está " +
+        "mais no ar.</td></tr>" +
+        "<tr><td>Passivo</td><td>Passivo</td>" +
+        "<td>O sistema guarda e transmite mensagens sem nenhum dos dois presentes, e só " +
+        "quem suporta este caso oferece mensageria realmente persistente.</td></tr>" +
+        "</table>" +
+        "</div>" +
+        "<p>A interface que tudo isso exige é surpreendentemente pequena, com quatro " +
+        "operações que dão conta do modelo inteiro.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-operacoes-fila">' +
+        "<tr><th>Operação</th><th>O que ela faz</th></tr>" +
+        "<tr><td><code>PUT</code></td>" +
+        "<td>Acrescenta uma mensagem à fila indicada, sem bloquear quem chamou.</td></tr>" +
+        "<tr><td><code>GET</code></td>" +
+        "<td>Bloqueia até a fila indicada ter conteúdo e remove a mensagem mais " +
+        "antiga.</td></tr>" +
+        "<tr><td><code>POLL</code></td>" +
+        "<td>Consulta a fila e remove a primeira mensagem, e nunca bloqueia, porque " +
+        "segue adiante se a fila estiver vazia.</td></tr>" +
+        "<tr><td><code>NOTIFY</code></td>" +
+        "<td>Instala um tratador que será chamado sozinho sempre que uma mensagem entrar " +
+        "na fila.</td></tr>" +
+        "</table>" +
+        "</div>" +
+        "<p>A operação <code>NOTIFY</code> tem um uso que passa despercebido. O tratador " +
+        "instalado pode iniciar um processo que busque as mensagens quando nenhum processo " +
+        "estiver executando, e é assim que a fila consegue acordar quem deveria consumi-la.</p>" +
+        "<h3>Como a mensagem encontra o destino</h3>" +
+        "<p>Quem administra as filas é um <strong>gerenciador de filas</strong>, que pode " +
+        "ser um processo separado ou uma biblioteca ligada à aplicação. Vale uma regra " +
+        "prática, porque a aplicação só põe mensagem em fila local e só retira mensagem de " +
+        "fila local. O gerenciador e a aplicação dele ficam então na mesma máquina, ou no " +
+        "pior caso na mesma rede local.</p>" +
+        "<p>Se a aplicação só alcança filas locais, cada mensagem precisa carregar a " +
+        "informação de destino, e cabe ao gerenciador fazê-la chegar lá. Para não amarrar " +
+        "a fila a um lugar, os nomes de fila são lógicos e independentes de localização, e " +
+        "o gerenciador mantém o mapeamento entre cada nome e um endereço de contato, que " +
+        "inclui a máquina, a porta e o protocolo.</p>" +
+        "<p>Esse mapeamento é o ponto fraco do arranjo. A solução mais direta implementa " +
+        "uma tabela de consulta e a copia para todos os gerenciadores, e o problema de " +
+        "manutenção aparece logo, porque batizar uma fila nova obriga a atualizar muitas " +
+        "tabelas, quando não todas.</p>" +
+        "<p>Há ainda um problema de escala escondido na suposição de que cada gerenciador " +
+        "alcança qualquer outro diretamente, porque isso exigiria que todos conhecessem o " +
+        "endereço de todos. Na prática, gerenciadores especiais funcionam como roteadores " +
+        "e repassam mensagens adiante, e o sistema de filas vai crescendo até virar uma " +
+        "rede de sobreposição completa, montada no nível da aplicação.</p>" +
+        "<h3>O intermediário que traduz</h3>" +
+        "<p>Aplicações diferentes raramente combinam o formato das mensagens de antemão, e " +
+        "a estratégia geral é aprender a conviver com a diferença em vez de eliminá-la. " +
+        "Quem faz a conversão é um <strong>intermediário de mensagens</strong>, que atua " +
+        "como porta de entrada no nível da aplicação dentro da rede de filas.</p>" +
+        "<p>Repare na posição dele, que é a parte contraintuitiva. Para o sistema de " +
+        "filas, o intermediário é apenas mais uma aplicação, e não uma peça interna. Ele " +
+        "recebe mensagens por uma fila e devolve mensagens por outra, exatamente como " +
+        "qualquer participante.</p>" +
+        "<p>O trabalho dele varia bastante em ambição. No caso simples, o intermediário " +
+        "apenas reformata, trocando o separador de registros ou convertendo campos de " +
+        "tamanho fixo em campos de tamanho variável. No caso avançado, ele guarda o " +
+        "conhecimento do protocolo de várias aplicações, com um subprograma para cada par " +
+        "de aplicações que precise conversar, e esses subprogramas entram e saem sem " +
+        "parar o intermediário.</p>" +
+        "<p>O intermediário também assume um papel de mediação que vale conhecer, porque é " +
+        "onde nasce o modelo publicar e assinar. A aplicação publica uma mensagem sobre um " +
+        "assunto, e quem tiver declarado interesse naquele assunto recebe a mensagem do " +
+        "intermediário, sem que publicador e assinante saibam um do outro.</p>" +
+        "<p>Fica um alerta que o próprio van Steen faz, e que serve para muito além deste " +
+        "assunto. No coração do intermediário existe um repositório de regras de " +
+        "transformação, e alguém precisa escrever cada uma delas. Produtos comerciais " +
+        "costumam vender isso como inteligência do sistema, quando a inteligência está na " +
+        "cabeça dos especialistas que preencheram o repositório.</p>" +
+        "<p>A prática corrente chama esse arranjo de arquitetura orientada a eventos, e " +
+        "chama o intermediário de intermediário de mensagens, com produtos que quase todo " +
+        "sistema de porte usa. O nome mudou, o modelo é o desta seção, e o desacoplamento " +
+        "no tempo continua sendo a razão de existir dele.</p>",
+      slides: [
+        {
+          title: "Um degrau acima do soquete",
+          html:
+            "<ul>" +
+            "<li>Soquete puro é básico e frágil</li>" +
+            "<li>Bibliotecas oferecem <strong>padrões</strong> prontos</li>" +
+            "<li>Requisição e resposta, publicar e assinar, linha de produção</li>" +
+            "<li>Dá para enviar antes de o destinatário subir</li>" +
+            "</ul>"
+        },
+        {
+          title: "A fila muda a escala de tempo",
+          html:
+            "<ul>" +
+            "<li>Soquete e alto desempenho trabalham em milissegundos</li>" +
+            "<li>Fila é projetada para <strong>minutos</strong></li>" +
+            "<li>A garantia é só de inserção na fila do destino</li>" +
+            "<li>Nada promete quando, nem se, a mensagem será lida</li>" +
+            "</ul>"
+        },
+        {
+          title: "Quatro situações de desacoplamento",
+          ref: "tab-desacoplamento-tempo"
+        },
+        {
+          title: "A interface da fila",
+          ref: "tab-operacoes-fila"
+        },
+        {
+          title: "O intermediário",
+          html:
+            "<ul>" +
+            "<li>Converte para o destino entender</li>" +
+            "<li>Para o sistema de filas, é <strong>só mais uma aplicação</strong></li>" +
+            "<li>Faz mediação, e daí sai publicar e assinar</li>" +
+            "<li>A inteligência está em quem escreveu as regras</li>" +
+            "</ul>"
+        }
+      ]
+    },
+    {
+      title: "Do par ao grupo",
+      html:
+        "<p>Todas as seções anteriores tratam de uma mensagem que sai de um lugar e chega " +
+        "a outro. Muitos problemas, porém, precisam de uma mensagem que sai de um lugar e " +
+        "chega a muitos, como manter réplicas em dia, avisar um conjunto de serviços de " +
+        "que um dado mudou ou distribuir uma atualização de configuração.</p>" +
+        "<p>O tópico 03 já mostrou o multicast IP, e cabe explicar por que ele não resolveu " +
+        "o assunto. Durante muitos anos o multicast pertenceu ao domínio dos protocolos de " +
+        "rede, e o problema central de todas as propostas era montar os caminhos de " +
+        "disseminação. Isso exigia um esforço de administração enorme, muitas vezes com " +
+        "intervenção humana, e enquanto as propostas não convergiam os provedores se " +
+        "mostravam pouco dispostos a sustentar o serviço.</p>" +
+        "<p>O que destravou a situação veio de outro lugar. Com a tecnologia par a par e " +
+        "com a gerência estruturada de sobreposições, montar caminhos de comunicação " +
+        "ficou mais fácil, e como essas soluções vivem na camada de aplicação, o multicast " +
+        "desceu junto com elas.</p>" +
+        "<h3>Multicast no nível da aplicação</h3>" +
+        "<p>A ideia básica organiza os nós numa rede de sobreposição, que passa a ser usada " +
+        "para disseminar a informação entre os membros. Uma observação define tudo o que " +
+        "vem depois, porque <strong>os roteadores da rede não participam da associação ao " +
+        "grupo</strong>. Quem sabe quem é membro são os nós, e a rede por baixo não faz " +
+        "ideia de que existe um grupo.</p>" +
+        "<p>Daí decorre o preço. As ligações entre nós da sobreposição podem atravessar " +
+        "vários enlaces físicos, e o roteamento dentro da sobreposição pode ficar bem pior " +
+        "do que o roteamento que a rede faria se soubesse do assunto.</p>" +
+        '<figure class="figura" id="fig-alongamento-sobreposicao">' +
+        '<svg viewBox="0 0 600 220" role="img" ' +
+        'aria-labelledby="fig-alongamento-sobreposicao-titulo">' +
+        '<title id="fig-alongamento-sobreposicao-titulo">Comparação entre dois níveis. No ' +
+        "nível da aplicação, os nós B e C são vizinhos ligados por um único salto. Na " +
+        "rede física, os mesmos dois nós estão separados por quatro enlaces que passam por " +
+        "roteadores intermediários.</title>" +
+        '<text class="rotulo-secundario" x="8" y="22" font-size="13">no nível da ' +
+        "aplicação</text>" +
+        '<circle class="caixa-destaque" cx="110" cy="58" r="21"/>' +
+        '<text x="110" y="63" text-anchor="middle" font-size="15">B</text>' +
+        '<circle class="caixa-destaque" cx="490" cy="58" r="21"/>' +
+        '<text x="490" y="63" text-anchor="middle" font-size="15">C</text>' +
+        '<path class="traco" d="M131 58 L469 58"/>' +
+        '<text class="rotulo-secundario" x="300" y="48" text-anchor="middle" ' +
+        'font-size="13">um salto</text>' +
+        '<path class="traco" stroke-dasharray="3 6" d="M20 104 L580 104"/>' +
+        '<text class="rotulo-secundario" x="8" y="128" font-size="13">na rede</text>' +
+        '<circle class="caixa" cx="110" cy="168" r="21"/>' +
+        '<text x="110" y="173" text-anchor="middle" font-size="15">B</text>' +
+        '<rect class="caixa" x="184" y="152" width="42" height="32" rx="6"/>' +
+        '<text x="205" y="173" text-anchor="middle" font-size="13">R</text>' +
+        '<rect class="caixa" x="264" y="152" width="42" height="32" rx="6"/>' +
+        '<text x="285" y="173" text-anchor="middle" font-size="13">R</text>' +
+        '<rect class="caixa" x="344" y="152" width="42" height="32" rx="6"/>' +
+        '<text x="365" y="173" text-anchor="middle" font-size="13">R</text>' +
+        '<circle class="caixa" cx="490" cy="168" r="21"/>' +
+        '<text x="490" y="173" text-anchor="middle" font-size="15">C</text>' +
+        '<path class="traco" d="M131 168 L184 168"/>' +
+        '<path class="traco" d="M226 168 L264 168"/>' +
+        '<path class="traco" d="M306 168 L344 168"/>' +
+        '<path class="traco" d="M386 168 L469 168"/>' +
+        '<path class="traco" stroke-dasharray="2 4" d="M110 79 L110 147"/>' +
+        '<path class="traco" stroke-dasharray="2 4" d="M490 79 L490 147"/>' +
+        "</svg>" +
+        "<figcaption>Um salto entre vizinhos na sobreposição esconde vários enlaces " +
+        "físicos, e nada garante que o caminho percorrido seja o mais curto. A razão entre " +
+        "o custo do caminho lógico e o do caminho que a rede escolheria chama-se " +
+        "alongamento. No exemplo do van Steen, 73 unidades contra 47, o que dá um " +
+        "alongamento de 1,55.</figcaption>" +
+        "</figure>" +
+        "<p>Montar a sobreposição admite dois desenhos. Os nós podem se organizar " +
+        "diretamente em <strong>árvore</strong>, com um caminho único entre cada par de " +
+        "nós, ou em <strong>malha</strong>, em que cada nó tem vários vizinhos e existem " +
+        "vários caminhos entre cada par.</p>" +
+        "<p>A malha é mais robusta, e a razão é prática. Se uma ligação se rompe, porque um " +
+        "nó falhou, ainda há por onde disseminar a informação, sem precisar reorganizar a " +
+        "rede inteira na hora.</p>" +
+        "<p>Escolher o pai de cada nó novo na árvore parece trivial e não é. Num grupo com " +
+        "uma única origem, o melhor pai é obviamente a própria origem, porque assim o " +
+        "alongamento vale 1. Só que fazer isso para todo mundo produz uma estrela com a " +
+        "origem no centro, e a origem afunda sob a carga.</p>" +
+        "<p>A saída limita a escolha aos nós que tenham no máximo um certo número de " +
+        "vizinhos, e esse número vira parâmetro de projeto. A restrição complica " +
+        "seriamente o algoritmo, porque encaixar um nó novo pode exigir reconfigurar parte " +
+        "da árvore que já existia.</p>" +
+        "<p>Existe ainda um caminho mais bruto, que é a <strong>inundação</strong>. Cada nó " +
+        "repassa a mensagem aos vizinhos que ainda não a receberam, e num sistema " +
+        "estruturado dá para dividir o espaço de identificadores de modo que a difusão " +
+        "termine com N menos 1 mensagens, sendo N o número de nós. É simples e não exige " +
+        "árvore nenhuma.</p>" +
+        "<h3>Disseminação epidêmica</h3>" +
+        "<p>Há uma terceira família, e ela abre mão da estrutura por completo. Os " +
+        "<strong>protocolos epidêmicos</strong>, também chamados de fofoca, propagam " +
+        "informação rapidamente entre muitos nós usando apenas informação local, sem " +
+        "componente central nenhum coordenando a disseminação.</p>" +
+        "<p>O vocabulário vem do estudo de epidemias, com a diferença de que aqui o " +
+        "objetivo se inverte. Um nó está <strong>infectado</strong> quando tem um dado que " +
+        "está disposto a espalhar, está <strong>suscetível</strong> quando ainda não viu " +
+        "aquele dado, e está <strong>removido</strong> quando foi atualizado mas não " +
+        "espalha mais. Quem projeta o protocolo quer infectar todo mundo o mais rápido " +
+        "possível.</p>" +
+        "<p>O modelo mais conhecido chama-se <strong>anti-entropia</strong>. Um nó P " +
+        "escolhe outro nó Q ao acaso e troca atualizações com ele, e essa troca acontece de " +
+        "três maneiras. P pode apenas puxar de Q o que lhe falta, pode apenas empurrar " +
+        "para Q o que tem, ou os dois podem trocar nos dois sentidos.</p>" +
+        "<p>Aqui aparece o resultado que costuma surpreender. <strong>Só empurrar é a pior " +
+        "escolha.</strong> Num arranjo puramente de empurrar, quem propaga são os nós " +
+        "infectados, e quando muitos já estão infectados a chance de cada um sortear " +
+        "justamente um nó suscetível fica pequena. O resultado é que um nó pode continuar " +
+        "sem a informação por muito tempo apenas porque ninguém o sorteou.</p>" +
+        "<p>Puxar funciona melhor exatamente na situação inversa. Com muitos nós " +
+        "infectados, quem dispara a propagação é o nó suscetível, e a chance de ele " +
+        "encontrar alguém já infectado é grande. Combinar as duas direções é a melhor " +
+        "estratégia, e o número de rodadas necessárias para levar uma atualização a todos " +
+        "os nós cresce com o logaritmo do número de nós, o que é o mesmo que dizer que a " +
+        "propagação é rápida e, sobretudo, escalável.</p>" +
+        "<p>Uma variante chamada <strong>propagação de boato</strong> imita ainda mais de " +
+        "perto a fofoca humana. O nó recém-atualizado procura outro e tenta empurrar a " +
+        "novidade, mas se descobre que aquele outro já sabia, perde o interesse com certa " +
+        "probabilidade e para de espalhar. É o que faz quem liga para um amigo com uma " +
+        "notícia quente e desanima ao ouvir que ele já ficou sabendo.</p>" +
+        "<p>Essa variante espalha notícia muito bem e traz um defeito que não dá para " +
+        "esconder, porque ela <strong>não garante que todos os nós sejam atualizados</strong>. " +
+        "A fração que permanece ignorante depende da probabilidade de desistir, e fica " +
+        "sempre abaixo de mais ou menos 0,2. Para uma probabilidade de desistência de 0,20, " +
+        "a fração que fica sem saber é de 0,0025, ou seja, cerca de um nó em cada " +
+        "quatrocentos. Quando a desistência é alta, o sistema precisa de medida adicional " +
+        "para fechar a conta.</p>" +
+        "<p>Feche o tópico comparando as três famílias, porque a escolha entre elas é uma " +
+        "troca e não um ranking.</p>" +
+        '<div class="tabela-rolagem">' +
+        '<table class="tabela-conteudo" id="tab-familias-multicast">' +
+        "<tr><th>Família</th><th>O que ela exige</th><th>O que ela entrega</th></tr>" +
+        "<tr><td>Árvore no nível da aplicação</td>" +
+        "<td>Exige montar e manter a árvore, e reconfigurá-la quando um nó entra ou " +
+        "sai.</td>" +
+        "<td>Entrega a todos os membros por um caminho conhecido, com alongamento que " +
+        "dá para medir e melhorar.</td></tr>" +
+        "<tr><td>Inundação</td>" +
+        "<td>Exige apenas que cada nó conheça os vizinhos dele.</td>" +
+        "<td>Alcança todo mundo com N menos 1 mensagens, sem estrutura para " +
+        "manter.</td></tr>" +
+        "<tr><td>Epidemia</td>" +
+        "<td>Exige só a capacidade de sortear outro nó e trocar atualizações com " +
+        "ele.</td>" +
+        "<td>Propaga em tempo logarítmico e escala muito bem, sem prometer que todos " +
+        "serão alcançados.</td></tr>" +
+        "</table>" +
+        "</div>" +
+        "<p>Guarde a anti-entropia com carinho, porque ela volta. Quando o curso chegar à " +
+        "replicação, o problema de manter cópias em dia vai ser resolvido com esse mesmo " +
+        "mecanismo, e o vocabulário de infectado, suscetível e removido vai reaparecer " +
+        "aplicado a réplicas em vez de a nós.</p>" +
+        /* Demonstração interativa do tópico, montada aqui porque só neste ponto o aluno
+           já leu tudo o que as cinco etapas cobram. */
         '<div class="demo-area" data-demo="sockets-mensagens">' +
         '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para uma simulação de troca de mensagens entre processos (sockets UDP/TCP, multicast).</p>" +
+        "<p><strong>Demonstração interativa</strong></p>" +
+        "<p>Simulação da troca de mensagens entre processos, das portas e soquetes ao " +
+        "multicast para réplicas.</p>" +
         "</div>",
       slides: [
         {
-          title: "Multicast: falar com o grupo",
+          title: "Por que o multicast desceu de camada",
           html:
             "<ul>" +
-            "<li>Uma mensagem → <strong>todos os membros</strong>; grupo transparente " +
-            "ao remetente</li>" +
-            "<li><strong>Replicação</strong> tolerante a falhas · " +
-            "<strong>descoberta</strong> de serviços</li>" +
-            "<li>Dados replicados por desempenho · <strong>notificações</strong> " +
-            "(publicar-assinar)</li>" +
+            "<li>Montar caminhos de disseminação na rede custava caro</li>" +
+            "<li>Provedores relutaram enquanto as propostas não convergiam</li>" +
+            "<li>Par a par e sobreposições estruturadas destravaram</li>" +
+            "<li>Os roteadores <strong>não participam</strong> da associação ao grupo</li>" +
             "</ul>"
         },
         {
-          title: "Multicast IP: UDP para grupos",
+          title: "O preço de não conhecer a rede",
           html:
             "<ul>" +
-            "<li>Endereço <strong>classe D</strong> (224.x, 239.x) · entra/sai quando quiser</li>" +
-            "<li>Só via <strong>UDP</strong> · <strong>TTL</strong> limita o alcance " +
-            "(padrão: rede local)</li>" +
-            "<li>Permanentes (IANA, NTP: 224.0.1.1) × temporários</li>" +
+            "<li>Um salto lógico esconde vários enlaces físicos</li>" +
+            "<li><strong>Alongamento</strong> mede o desvio, 73 contra 47</li>" +
+            "<li>Árvore dá caminho único, malha dá robustez</li>" +
+            "<li>O melhor pai sobrecarrega, então a escolha é limitada</li>" +
+            "</ul>",
+          ref: "fig-alongamento-sobreposicao"
+        },
+        {
+          title: "Epidemia",
+          html:
+            "<ul>" +
+            "<li>Infectado, suscetível, removido</li>" +
+            "<li><strong>Só empurrar é a pior escolha</strong></li>" +
+            "<li>Puxar funciona quando muitos já sabem</li>" +
+            "<li>Propaga em tempo logarítmico, sem garantir todos</li>" +
             "</ul>"
         },
         {
-          title: "O que falta: confiabilidade e ordem",
-          html:
-            "<ul>" +
-            "<li>Falhas do UDP: alguns membros recebem, outros não</li>" +
-            "<li>→ multicast IP é <strong>não confiável</strong>, sem ordem garantida</li>" +
-            "<li>Réplicas exigem: <strong>tudo ou nada</strong> + <strong>mesma " +
-            "ordem</strong> em todos</li>" +
-            "<li>Multicast confiável e totalmente ordenado → Tópico 10</li>" +
-            "</ul>"
-        },
-        {
-          title: "Sobreposições (overlays) e o Skype",
-          html:
-            "<ul>" +
-            "<li>Rede <strong>virtual</strong> sobre a rede: endereçamento e " +
-            "roteamento próprios</li>" +
-            "<li>DHTs · peer-to-peer · CDNs · MBone · VPNs</li>" +
-            "<li>Novos serviços <strong>sem mudar a Internet</strong> · custo: indireção</li>" +
-            "<li><strong>Skype</strong>: supernós, busca P2P, áudio por UDP</li>" +
-            "</ul>"
-        },
-        {
-          title: "MPI: mensagens de alto desempenho",
-          html:
-            "<ul>" +
-            "<li>Padrão portável (1994) · &gt;115 operações</li>" +
-            "<li>Bloqueantes: <strong>MPI_Send</strong> · Ssend (entregue) · Bsend " +
-            "(buffer) · Rsend (“pronto”)</li>" +
-            "<li>Não bloqueantes: MPI_Isend… + <strong>MPI_Wait/MPI_Test</strong></li>" +
-            "<li>Coletivas: <strong>scatter</strong> (1→N) · <strong>gather</strong> (N→1)</li>" +
-            "</ul>"
+          title: "As três famílias comparadas",
+          ref: "tab-familias-multicast"
         }
       ]
     }
@@ -501,212 +1119,337 @@ SD.content["04"] = {
   quiz: [
     {
       question:
-        "Na forma SÍNCRONA de comunicação por passagem de mensagens, o que acontece quando um processo executa a operação send?",
+        "Um sistema em que o remetente pode encerrar logo depois de submeter a mensagem, e em que o destinatário nem precisava estar em execução naquele momento, é de que tipo?",
       options: [
-        "O send retorna imediatamente, assim que a mensagem é copiada para um buffer local.",
-        "O processo remetente fica bloqueado até que o receive correspondente seja executado no destino.",
-        "A mensagem é descartada se o destinatário não estiver esperando naquele momento.",
-        "O send retorna um identificador de pedido para consulta posterior, como no MPI_Isend."
+        "Transiente, porque a mensagem só existe enquanto os dois lados executam.",
+        "Persistente, porque o middleware guarda a mensagem até conseguir entregá-la.",
+        "Síncrona, porque o remetente aguarda a confirmação antes de seguir adiante.",
+        "Bloqueante, porque o destinatário controla quando a entrega vai acontecer."
       ],
       answer: 1,
       explanation:
-        "Na comunicação síncrona, send e receive são operações bloqueantes e os " +
-        "dois processos se sincronizam a cada mensagem: quem envia espera o receive " +
-        "correspondente; quem recebe espera a mensagem chegar. O retorno imediato " +
-        "após a cópia para um buffer local descreve o send ASSÍNCRONO."
+        "O eixo da persistência responde por quanto tempo o sistema guarda a " +
+        "mensagem. Na comunicação persistente, o middleware a armazena pelo tempo " +
+        "que for preciso, e por isso os dois lados podem estar fora do ar em " +
+        "momentos diferentes. O correio eletrônico é o exemplo clássico. Na " +
+        "transiente, a mensagem é descartada quando a entrega não é possível."
     },
     {
       question:
-        "O DNS e o VoIP são implementados sobre UDP. O que torna o UDP atraente para esses usos?",
+        "Numa comunicação síncrona, o remetente é desbloqueado somente quando o destinatário processa o pedido e devolve o resultado. Qual arranjo isso descreve?",
       options: [
-        "Ele garante entrega ordenada usando menos mensagens que o TCP.",
-        "Ele usa endereços classe D, que os roteadores encaminham mais rápido.",
-        "Ele retransmite datagramas perdidos automaticamente, sem manter estado.",
-        "Ele evita as sobrecargas da entrega garantida: manter estado na origem e no destino, mensagens extras de confirmação e a latência imposta ao remetente."
+        "O ponto de sincronização mais barato, usado pelos sistemas de fila.",
+        "O ponto intermediário, em que a mensagem apenas chegou ao destino.",
+        "O ponto mais forte e mais caro, que corresponde à chamada remota.",
+        "Um ponto inexistente, porque a resposta é sempre entregue de forma assíncrona."
       ],
-      answer: 3,
+      answer: 2,
       explanation:
-        "O UDP não promete nada, e por isso não paga as três sobrecargas da " +
-        "entrega garantida: informações de estado nos dois lados, mensagens de " +
-        "confirmação e latência do remetente. Para o DNS, basta repetir a consulta " +
-        "perdida; para o VoIP, retransmitir áudio atrasado seria inútil."
+        "A sincronização pode acontecer em três lugares. No primeiro, o remetente " +
+        "espera só o middleware assumir a transmissão. No segundo, espera a " +
+        "mensagem chegar ao destinatário. No terceiro, espera o processamento e a " +
+        "resposta, que é a promessa mais forte e também a mais cara, porque o " +
+        "remetente passa a pagar o tempo de processamento alheio."
     },
     {
       question:
-        "Quando o software TCP declara uma conexão desfeita (após retransmissões demais sem confirmação), o que os processos que a usavam NÃO conseguem saber?",
+        "Por que a operação accept devolve um soquete NOVO, em vez de reaproveitar aquele em que o servidor estava escutando?",
       options: [
-        "Se a falha foi da rede ou do processo do outro lado, e se as últimas mensagens enviadas chegaram ou não.",
-        "Qual era o número da porta remota usada pela conexão.",
-        "Quantos bytes haviam sido transmitidos desde o início da conexão.",
-        "Se as somas de verificação dos segmentos recebidos estavam corretas."
+        "Porque o soquete original continua livre para receber os próximos pedidos.",
+        "Porque cada protocolo de transporte exige um soquete diferente do outro.",
+        "Porque o soquete original perde o vínculo com a porta ao aceitar.",
+        "Porque o cliente precisa vincular o soquete dele a uma porta fixa."
       ],
       answer: 0,
       explanation:
-        "A notificação de conexão desfeita não distingue falha de rede de falha do " +
-        "processo remoto, e não diz o destino das mensagens recentes. Por isso o " +
-        "TCP não fornece comunicação confiável no sentido forte: a incerteza " +
-        "'caiu ou está lenta?' do Tópico 1 permanece."
+        "Quando um pedido de conexão chega, o sistema operacional cria um soquete " +
+        "com as mesmas propriedades do original e o devolve a quem chamou. O " +
+        "servidor entrega essa conversa a uma thread ou a um processo filho e volta " +
+        "a esperar no soquete original. É esse desdobramento que permite atender " +
+        "vários clientes ao mesmo tempo."
     },
     {
       question:
-        "Por que uma mensagem no CDR do CORBA pode omitir os tipos dos dados que transporta?",
+        "O software TCP declarou uma conexão desfeita depois de retransmitir sem receber confirmação. O que os processos que a usavam NÃO conseguem descobrir?",
       options: [
-        "Porque o CDR transporta apenas strings, que dispensam informação de tipo.",
-        "Porque o destinatário deduz os tipos a partir do tamanho total da mensagem.",
-        "Porque remetente e destinatário têm conhecimento prévio da ordem e dos tipos dos itens, descritos na interface (IDL) da qual as operações de empacotamento são geradas.",
-        "Porque os tipos viajam separadamente, em um documento XML anexo."
+        "Quantos bytes tinham sido transmitidos desde o início daquela conexão TCP.",
+        "Se a soma de verificação dos últimos segmentos recebidos estava correta.",
+        "Qual era o número da porta remota que a conexão desfeita usava.",
+        "Se a falha foi da rede ou do processo, e se o que enviou chegou."
       ],
-      answer: 2,
+      answer: 3,
       explanation:
-        "No CORBA, os tipos dos argumentos e resultados estão especificados na IDL, " +
-        "e o compilador da interface gera o empacotamento e o desempacotamento a " +
-        "partir dela. Como os dois lados compartilham esse acordo prévio, a " +
-        "mensagem só precisa carregar os valores: ao contrário da serialização " +
-        "Java e da XML, que embutem a informação de tipo."
+        "A notificação de conexão desfeita tem duas propriedades incômodas. Ela não " +
+        "distingue falha de rede de falha do processo do outro lado, e não informa " +
+        "se as mensagens enviadas há pouco foram recebidas. É por isso que se diz " +
+        "que o TCP não fornece comunicação confiável, e é daqui que sai a incerteza " +
+        "que atravessa o curso inteiro."
     },
     {
       question:
-        "Qual é o modelo de falhas do multicast IP?",
+        "Num formato com etiquetas de campo, como os buffers de protocolo, qual mudança de esquema é segura de fazer?",
       options: [
-        "Entrega atômica, ou todos os membros do grupo recebem a mensagem, ou nenhum recebe.",
-        "O mesmo do UDP: falhas por omissão: alguns membros do grupo podem receber a mensagem e outros não (multicast não confiável), sem garantias de ordem.",
-        "Entrega garantida a todos, mas possivelmente em ordens diferentes.",
-        "Perda só ocorre quando o TTL do datagrama chega a zero."
+        "Renomear um campo, porque o nome não aparece nos dados codificados.",
+        "Trocar a etiqueta de um campo por um número ainda não usado.",
+        "Reaproveitar a etiqueta de um campo que foi removido do esquema.",
+        "Estreitar um inteiro de 64 para 32 bits sem avisar os leitores."
+      ],
+      answer: 0,
+      explanation:
+        "Os dados codificados carregam a etiqueta numérica, nunca o nome, então " +
+        "renomear é livre. Mudar a etiqueta invalidaria todo dado já escrito, e " +
+        "reaproveitar a etiqueta de um campo removido faz o código novo interpretar " +
+        "dado antigo como se fosse outra coisa. Estreitar um inteiro trunca valores " +
+        "que não couberem no tamanho menor."
+    },
+    {
+      question:
+        "O Avro codifica um registro em 32 bytes, contra 81 do mesmo registro em JSON textual. O que ele cobra em troca dessa compactação?",
+      options: [
+        "Exige que cada campo receba um número de etiqueta estável no esquema.",
+        "Exige que o leitor tenha exatamente o esquema usado por quem escreveu.",
+        "Exige que todos os valores sejam convertidos para texto antes do envio.",
+        "Exige que remetente e destinatário usem a mesma linguagem de programação."
       ],
       answer: 1,
       explanation:
-        "O multicast IP herda as falhas por omissão do UDP: um destino pode " +
-        "descartar por buffer cheio, e uma perda entre roteadores elimina a " +
-        "mensagem para todos os membros além daquele ponto. Alguns recebem, outros " +
-        "não, e a ordem também não é garantida. Entrega 'tudo ou nada' é " +
-        "justamente o que o multicast CONFIÁVEL acrescenta."
+        "A mensagem em Avro é a concatenação pura dos valores, sem nome e sem " +
+        "etiqueta, e nada nela identifica campo ou tipo. Decodificar exige o esquema " +
+        "de quem escreveu, e qualquer divergência produz dado interpretado errado, " +
+        "não erro de leitura. A saída do Avro para a evolução usa dois esquemas ao " +
+        "mesmo tempo, o do escritor e o do leitor."
     },
     {
       question:
-        "Um serviço replicado no qual todas as réplicas partem do mesmo estado e executam as mesmas operações exige quais garantias do multicast?",
+        "Por que um agrupamento de servidores costuma exigir que as máquinas dele sejam servidores sem estado?",
       options: [
-        "Apenas baixa latência: réplicas inconsistentes se corrigem sozinhas.",
-        "Criptografia fim-a-fim entre as réplicas.",
-        "Multicast confiável (entrega tudo ou nada) e totalmente ordenado (todos os membros recebem as mensagens na mesma ordem).",
-        "Somente um TTL alto, para que os datagramas alcancem todas as réplicas."
+        "Porque servidores sem estado consomem bem menos memória que os demais.",
+        "Porque o comutador precisa mandar qualquer pedido a qualquer máquina.",
+        "Porque o estado só pode ser guardado na terceira camada, nunca antes.",
+        "Porque a tradução de endereços apaga o contexto de cada cliente."
+      ],
+      answer: 1,
+      explanation:
+        "O comutador é o único endereço que o cliente conhece, e ele decide qual " +
+        "máquina atende cada requisição. Essa liberdade só existe se nenhuma máquina " +
+        "guardar contexto daquele cliente, porque senão o segundo pedido precisaria " +
+        "cair exatamente onde o primeiro caiu. É o servidor sem estado que torna o " +
+        "agrupamento possível."
+    },
+    {
+      question:
+        "Que garantia um sistema de fila de mensagens realmente oferece a quem envia uma mensagem?",
+      options: [
+        "Que a mensagem será lida pelo destinatário dentro do prazo combinado.",
+        "Que a mensagem será entregue na mesma ordem em que foi enviada.",
+        "Que a mensagem será eventualmente inserida na fila do destinatário.",
+        "Que a mensagem será descartada se o destinatário estiver fora do ar."
       ],
       answer: 2,
       explanation:
-        "Se uma réplica perde uma operação, ela diverge das demais: por isso a " +
-        "entrega precisa ser atômica (tudo ou nada). E se as réplicas aplicarem as " +
-        "mesmas operações em ordens diferentes, também divergem: por isso o " +
-        "ordenamento total. O multicast IP não dá nenhuma das duas garantias; o " +
-        "Tópico 10 mostra como construí-las."
+        "A promessa é apenas de inserção na fila do destino. Nada é dito sobre " +
+        "quando a mensagem será lida, nem sequer sobre se ela será lida, porque isso " +
+        "depende inteiramente do comportamento de quem recebe. Essa garantia fraca é " +
+        "justamente o que compra o desacoplamento no tempo, já que os dois lados " +
+        "passam a executar de forma independente."
+    },
+    {
+      question:
+        "Na anti-entropia, por que a estratégia de APENAS empurrar atualizações se sai mal quando muitos nós já estão infectados?",
+      options: [
+        "Porque cada nó infectado tem pouca chance de sortear um nó suscetível.",
+        "Porque empurrar exige que o nó conheça todos os outros do sistema.",
+        "Porque a mensagem empurrada perde a marca de tempo pelo caminho.",
+        "Porque nós infectados param de espalhar assim que são atualizados."
+      ],
+      answer: 0,
+      explanation:
+        "Num arranjo puramente de empurrar, quem propaga são os nós infectados. " +
+        "Quando muitos já estão infectados, a chance de cada um sortear justamente " +
+        "um nó que ainda não sabe fica pequena, e um nó pode ficar sem a informação " +
+        "por muito tempo só porque ninguém o sorteou. Puxar inverte isso, porque a " +
+        "propagação passa a ser disparada por quem ainda não sabe."
+    },
+    {
+      question:
+        "No multicast em nível de aplicação, o que explica o alongamento entre o caminho lógico e o caminho que a rede escolheria?",
+      options: [
+        "Os nós do grupo trocam mensagens sempre por datagramas UDP.",
+        "A árvore de disseminação precisa ser reconstruída a cada mensagem.",
+        "Os roteadores da rede não participam da associação ao grupo.",
+        "O tempo de vida do datagrama limita quantos saltos ele percorre."
+      ],
+      answer: 2,
+      explanation:
+        "Quem sabe quem é membro do grupo são os nós da sobreposição, e a rede por " +
+        "baixo não faz ideia de que existe um grupo. Por isso uma ligação entre dois " +
+        "vizinhos lógicos pode atravessar vários enlaces físicos, às vezes o mesmo " +
+        "enlace mais de uma vez. A razão entre o custo do caminho lógico e o do " +
+        "caminho da rede é o alongamento."
     }
   ],
 
   glossary: [
     {
-      term: "Comunicação síncrona",
+      term: "Comunicação persistente",
       definition:
-        "Forma de passagem de mensagens em que send e receive são operações " +
-        "bloqueantes: o remetente espera o receive correspondente e o destinatário " +
-        "espera a mensagem chegar: os dois processos se sincronizam a cada " +
-        "mensagem."
+        "Arranjo em que o middleware armazena a mensagem pelo tempo que for " +
+        "preciso para entregá-la. O remetente pode encerrar depois de submetê-la, e " +
+        "o destinatário não precisa estar em execução no momento do envio."
+    },
+    {
+      term: "Comunicação transiente",
+      definition:
+        "Arranjo em que o sistema guarda a mensagem apenas enquanto as duas " +
+        "aplicações estiverem em execução. Se a entrega não puder acontecer, a " +
+        "mensagem é descartada. Todo serviço de nível de transporte é transiente."
     },
     {
       term: "Comunicação assíncrona",
       definition:
-        "Forma de passagem de mensagens em que o send é não bloqueante: retorna " +
-        "assim que a mensagem é copiada para um buffer local, e a transmissão " +
-        "ocorre em paralelo com o processo remetente."
+        "Forma de troca em que o remetente prossegue imediatamente depois de " +
+        "submeter a mensagem, que fica guardada pelo middleware no ato da submissão."
     },
     {
-      term: "Porta",
+      term: "Comunicação síncrona",
       definition:
-        "Destino de mensagem dentro de um computador, identificado por um valor " +
-        "inteiro (2¹⁶ por computador). Tem exatamente um destino (processo " +
-        "receptor), mas pode ter muitos remetentes; junto com o endereço IP, forma " +
-        "o destino completo de uma mensagem na Internet."
+        "Forma de troca em que o remetente fica bloqueado até saber que o pedido " +
+        "dele foi aceito. A sincronização pode acontecer na submissão, na entrega ao " +
+        "destinatário ou apenas quando a resposta volta."
     },
     {
       term: "Soquete (socket)",
       definition:
-        "Abstração de ponto de destino da comunicação entre processos, originária " +
-        "do UNIX BSD. Para receber mensagens, é vinculado a uma porta local e a um " +
-        "endereço IP; o mesmo soquete envia e recebe, e cada soquete é associado a " +
-        "um único protocolo (UDP ou TCP)."
+        "Ponto de extremidade da comunicação, no qual a aplicação escreve os dados " +
+        "que saem e do qual lê os dados que chegam. Funciona como abstração sobre a " +
+        "porta que o sistema operacional usa para um protocolo de transporte, e cada " +
+        "soquete pertence a um protocolo só."
+    },
+    {
+      term: "Porta",
+      definition:
+        "Destino de mensagem dentro de um computador, identificado por um número " +
+        "inteiro. Tem um único destinatário e pode ter muitos remetentes, e um " +
+        "processo não compartilha uma porta com outro processo da mesma máquina."
     },
     {
       term: "Empacotamento (marshalling)",
       definition:
-        "Procedimento de montar um conjunto de itens de dados em uma forma " +
-        "conveniente para transmissão em uma mensagem, convertendo-os para a " +
-        "representação externa de dados. O inverso, na chegada, é o " +
-        "desempacotamento (unmarshalling)."
+        "Procedimento de montar um conjunto de itens de dados numa forma " +
+        "conveniente para viajar em uma mensagem, convertendo-os para a " +
+        "representação externa de dados. O inverso, feito na chegada, é o " +
+        "desempacotamento."
     },
     {
       term: "Representação externa de dados",
       definition:
-        "Padrão aceito para representar estruturas de dados e valores primitivos " +
-        "de forma independente das diferenças entre computadores (ordem de bytes, " +
-        "ponto flutuante, códigos de caracteres). Exemplos: CDR do CORBA, XDR da " +
-        "Sun, XML, JSON."
+        "Padrão acordado para representar estruturas de dados e valores primitivos " +
+        "de forma independente das diferenças entre computadores, que incluem a " +
+        "ordem dos bytes de um inteiro, a representação do ponto flutuante e o " +
+        "código de caracteres."
     },
     {
-      term: "Serialização (Java)",
+      term: "Etiqueta de campo",
       definition:
-        "Atividade de simplificar um objeto (ou um grafo de objetos conectados) " +
-        "em uma forma sequencial que inclui nome, versão e tipos da classe, " +
-        "adequada para transmissão ou armazenamento. Usa reflexão para funcionar " +
-        "de forma genérica, sem código específico por tipo."
+        "Número que identifica um campo dentro de um formato com esquema, como os " +
+        "buffers de protocolo. Ela substitui o nome do campo nos dados codificados, " +
+        "e é por isso que renomear um campo é livre enquanto trocar a etiqueta " +
+        "invalida todo dado já escrito."
     },
     {
-      term: "Referência de objeto remoto",
+      term: "Evolução do esquema",
       definition:
-        "Identificador de um objeto remoto válido em todo o sistema distribuído, " +
-        "único no espaço e no tempo (nunca reutilizado após a exclusão do objeto). " +
-        "Construção clássica: endereço IP + porta do processo criador + hora da " +
-        "criação + número do objeto + interface."
+        "Capacidade de mudar a estrutura das mensagens sem parar o sistema. Há " +
+        "compatibilidade para a frente quando o código antigo lê dados escritos pelo " +
+        "novo, e compatibilidade para trás quando o código novo lê dados escritos " +
+        "pelo antigo."
     },
     {
-      term: "Multicast IP",
+      term: "Servidor sem estado",
       definition:
-        "Transmissão de um único datagrama a um grupo multicast, identificado por " +
-        "um endereço IP classe D. A participação é dinâmica, o acesso do " +
-        "programador é via UDP e o TTL limita o alcance. Sofre de falhas por " +
-        "omissão. É um multicast não confiável."
+        "Servidor que não guarda informação sobre a situação dos clientes, ou que " +
+        "guarda apenas informação cuja perda não interrompe o serviço. Recuperar de " +
+        "uma queda é trivial, porque basta voltar a executar e esperar requisições."
     },
     {
-      term: "Multicast confiável",
+      term: "Estado leve (soft state)",
       definition:
-        "Multicast com entrega atômica ('tudo ou nada'): qualquer mensagem " +
-        "transmitida é recebida por todos os membros do grupo ou por nenhum. Na " +
-        "variante totalmente ordenada, todos os membros recebem todas as mensagens " +
-        "na mesma ordem: requisito típico de serviços replicados."
+        "Meio-termo em que o servidor promete guardar informação em nome do cliente " +
+        "por um tempo limitado. Vencido o prazo, ele volta ao comportamento padrão e " +
+        "descarta o que guardava."
     },
     {
-      term: "Rede de sobreposição (overlay)",
+      term: "Agrupamento de servidores",
       definition:
-        "Rede virtual de nós e enlaces virtuais construída sobre uma rede " +
-        "existente (como a Internet), com endereçamento, protocolos e roteamento " +
-        "próprios, para oferecer serviços que a rede subjacente não fornece: " +
-        "DHTs, peer-to-peer, CDNs, multicast, VPNs."
+        "Conjunto de máquinas ligadas por rede, cada uma executando um ou mais " +
+        "servidores, organizado com frequência em três camadas. Na primeira fica o " +
+        "comutador que despacha as requisições, na segunda os servidores de " +
+        "aplicação e na terceira os servidores de dados."
     },
     {
-      term: "MPI (Message Passing Interface)",
+      term: "Sistema de fila de mensagens",
       definition:
-        "Padrão de passagem de mensagens da computação de alto desempenho (1994), " +
-        "portável entre sistemas operacionais e linguagens, com mais de 115 " +
-        "operações que separam explicitamente as dimensões síncrono/assíncrono e " +
-        "bloqueante/não bloqueante, além de comunicação coletiva (scatter/gather)."
+        "Middleware que oferece armazenamento de médio prazo para mensagens, sem " +
+        "exigir que remetente ou destinatário estejam ativos durante a transmissão. " +
+        "A garantia dada a quem envia é apenas a de inserção na fila do destino."
+    },
+    {
+      term: "Intermediário de mensagens",
+      definition:
+        "Nó especial de uma rede de filas que converte mensagens para que a " +
+        "aplicação de destino as entenda. Para o sistema de filas ele é apenas mais " +
+        "uma aplicação, e não uma peça interna, e também faz a mediação de onde nasce " +
+        "o modelo publicar e assinar."
+    },
+    {
+      term: "Alongamento (stretch)",
+      definition:
+        "Razão entre o custo do caminho percorrido na rede de sobreposição e o " +
+        "custo do caminho que a rede escolheria entre os mesmos dois nós. Ele existe " +
+        "porque os roteadores não participam da associação ao grupo."
+    },
+    {
+      term: "Anti-entropia",
+      definition:
+        "Modelo de propagação epidêmica em que um nó escolhe outro ao acaso e troca " +
+        "atualizações com ele, puxando, empurrando ou fazendo as duas coisas. O " +
+        "número de rodadas para alcançar todos cresce com o logaritmo do número de " +
+        "nós."
+    },
+    {
+      term: "Propagação de boato",
+      definition:
+        "Variante epidêmica em que o nó recém-atualizado empurra a novidade e " +
+        "desiste de espalhar, com certa probabilidade, ao descobrir que o outro já " +
+        "sabia. Espalha depressa, mas não garante que todos os nós sejam " +
+        "atualizados."
     }
   ],
 
   references: [
+    "VAN STEEN, M.; TANENBAUM, A. S. Distributed Systems. 4. ed. (versão DS 4.03). " +
+    "distributed-systems.net. Cap. 4. Communication, seções 4.1.2, 4.3 e 4.4, mais as " +
+    "seções 3.4.1 e 3.4.4 do Cap. 3. Processes. Fonte principal deste tópico, de onde " +
+    "vêm a classificação da comunicação em dois eixos, os três pontos de " +
+    "sincronização, a interface de soquetes, o desenho de servidores e o agrupamento " +
+    "em três camadas, os sistemas de fila de mensagens com o intermediário, e o " +
+    "multicast em nível de aplicação com a disseminação epidêmica.",
     "COULOURIS, G.; DOLLIMORE, J.; KINDBERG, T.; BLAIR, G. Sistemas Distribuídos: " +
     "Conceitos e Projeto. 5. ed. Porto Alegre: Bookman, 2013. Cap. 4. Comunicação " +
-    "Entre Processos (pp. 145-183).",
-    "VAN STEEN, M.; TANENBAUM, A. S. Distributed Systems. 4. ed. (versão DS 4.03). " +
-    "distributed-systems.net. Cap. 4. Communication (leitura complementar: " +
-    "fundamentos, RPC, comunicação orientada a mensagens e multicast).",
-    "KLEPPMANN, M. Designing Data-Intensive Applications. Sebastopol: O'Reilly, " +
-    "2017. Cap. 5. Encoding and Evolution (leitura complementar: JSON, Protocol " +
-    "Buffers e evolução de esquemas)."
+    "Entre Processos (pp. 145-183) e Cap. 6. Comunicação Indireta, seções 6.2 e 6.4. " +
+    "Organiza a progressão do tópico e é a fonte do modelo de falhas do UDP e do TCP " +
+    "vistos pela aplicação, e do empacotamento com a representação comum de dados.",
+    "KLEPPMANN, M. Designing Data-Intensive Applications. 2. ed. Sebastopol: " +
+    "O'Reilly, 2026. Cap. 5. Encoding and Evolution. Leitura complementar que " +
+    "atualiza o empacotamento, com JSON, buffers de protocolo, Avro e evolução de " +
+    "esquema, e que traz os balanceadores de carga, a descoberta de serviço e as " +
+    "malhas de serviço.",
+    "TORNOW, S. Thinking Distributed Systems. Cap. 5. Message Delivery and " +
+    "Processing. Leitura complementar sobre as garantias de entrega no máximo uma " +
+    "vez, ao menos uma vez e exatamente uma vez.",
+    "KSHEMKALYANI, A. D.; SINGHAL, M. Distributed Computing: Principles, Algorithms, " +
+    "and Systems. Cambridge University Press, 2011. Cap. 6. Message Ordering and " +
+    "Group Communication. Leitura complementar sobre as ordens FIFO, causal e total " +
+    "na comunicação em grupo."
   ]
 };

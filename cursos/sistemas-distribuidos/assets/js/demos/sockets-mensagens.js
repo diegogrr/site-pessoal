@@ -5,12 +5,17 @@
    Processos): o aluno vincula soquetes a portas (e vê mensagens
    sumirem em silêncio), sincroniza send/receive (e provoca um
    deadlock), empacota uma struct entre máquinas de arquiteturas
-   diferentes (bytes crus × CDR × JSON × XML), sofre a requisição
-   duplicada criada pela própria retransmissão (débito executado
-   duas vezes; filtro de duplicatas = at-most-once) e faz
-   multicast para réplicas que divergem por omissão e por ordem.
+   diferentes (bytes crus × JSON × buffers de protocolo × CDR) e
+   faz multicast para réplicas que divergem por omissão e por
+   ordem.
    Plano e fundamentação:
    docs/demos/2026-07-15-demo-sockets-mensagens-plano.md
+
+   Ajustada em 2026-08-06, junto da reescrita do tópico: a etapa da
+   requisição duplicada saiu, porque as semânticas de chamada
+   passaram ao tópico 5, cuja demo (rpc-fluxo) já as cobre na
+   etapa 2. A etapa 3 trocou o XML pelos buffers de protocolo,
+   para acompanhar a seção 2 reescrita.
 
    Não há sockets reais: processos e máquinas são simulados na
    página. Sorteios (qual perda ocorre depois das cenas roteirizadas,
@@ -27,11 +32,16 @@ SD.demos["sockets-mensagens"] = (function () {
 
   /* ---- Etapa 3: a struct Person do Coulouris (§4.3, Figs. 4.8/4.10) ---- */
   var JSON_TXT = '{"name":"Smith","place":"London","year":1984}';
-  var XML_TXT = '<person id="123456789"><name>Smith</name>' +
-    "<place>London</place><year>1984</year></person>";
   var CDR_BYTES = "00 00 00 05 | 53 6D 69 74 | 68 00 00 00 |" +
     " 00 00 00 06 | 4C 6F 6E 64 | 6F 6E 00 00 | 00 00 07 C0";
   var CDR_SIZE = 28; /* Fig. 4.8: índices 0–27 */
+  /* Buffers de protocolo, derivado das regras de codificação (KLEPPMANN 5).
+     A etiqueta e o tipo cabem num byte; o inteiro usa comprimento variável. */
+  var PB_BYTES =
+    "campo 1 (name)   0A 05 “Smith”     7 bytes\n" +
+    "campo 2 (place)  12 06 “London”    8 bytes\n" +
+    "campo 3 (year)   18 C0 0F          3 bytes";
+  var PB_SIZE = 18;
   var YEAR_GARBLED = "3.221.684.224"; /* 0x000007C0 lido na ordem trocada = 0xC0070000 */
 
   /* ---- PRNG com semente (mulberry32) para testes reproduzíveis ---- */
@@ -53,20 +63,16 @@ SD.demos["sockets-mensagens"] = (function () {
 
     var state = {
       stage: 1,
-      delivered: 0, dropped: 0, dups: 0, retx: 0,
+      delivered: 0, dropped: 0,
       /* etapa 1 */ bound: false, bindErrSeen: false, dropSeen: false,
                     delC1: 0, delC2: 0, inbox: [], msgN: 0, busy1: false,
       /* etapa 2 */ a: "run", b: "run", transit: null, deadlock: false,
                     exchanges: 0, deadlockSeen: false, timeoutLost: false,
                     expTimeout: 500, expBusy: false,
       /* etapa 3 */ fmt: "crus", mismatch: false, rawSeen: false, swappedSeen: false,
-                    sizes: { cdr: 0, json: 0, xml: 0 }, busy3: false,
-      /* etapa 4 */ saldo: 100, esperado: 100, execs: 0, filterOn: false,
-                    history: {}, opSeq: 0, firstCon: false, firstDebNoF: false,
-                    firstDebF: false, doubleSeen: false, filterFixSeen: false,
-                    busy4: false,
-      /* etapa 5 */ reps: [10, 10, 10], reliable: false, divLoss: false,
-                    divOrder: false, convergedSeen: false, busy5: false
+                    sizes: { cdr: 0, json: 0, pb: 0 }, busy3: false,
+      /* etapa 4 */ reps: [10, 10, 10], reliable: false, divLoss: false,
+                    divOrder: false, convergedSeen: false, busy4: false
     };
 
     function to(fn, ms) {
@@ -88,19 +94,16 @@ SD.demos["sockets-mensagens"] = (function () {
       '  <dl class="demo-cf-metrics">' +
       '    <div><dt>Entregues</dt><dd data-metric="delivered">0</dd></div>' +
       '    <div><dt>Descartadas</dt><dd data-metric="dropped">0</dd></div>' +
-      '    <div><dt>Duplicatas</dt><dd data-metric="dups">0</dd></div>' +
-      '    <div><dt>Retransmissões</dt><dd data-metric="retx">0</dd></div>' +
       '  </dl>' +
       '  <div class="demo-cf-summary callout" hidden>' +
       '    <p class="callout-title">🎓 O que você fez à mão → quem faz por você</p>' +
       '    <p><strong>Vincular e localizar</strong> portas e serviços → servidor de nomes/' +
       "<em>binder</em> (Tópico 9). <strong>Empacotar e desempacotar</strong> structs → o " +
-      "middleware de RPC/RMI gera isso a partir da interface (Tópico 5). <strong>Timeout, " +
-      "retransmissão e filtro de duplicatas</strong> → protocolos requisição-resposta e a " +
-      "semântica de invocação <em>at-least-once</em> × <em>at-most-once</em> (Tópico 5). " +
-      "<strong>Multicast confiável e totalmente ordenado</strong> → comunicação em grupo " +
-      "(Tópicos 6 e 10). A comunicação entre processos é o porão de TODO o resto do curso, " +
-      "e agora você sabe o que tem lá embaixo.</p>" +
+      "middleware de RPC/RMI gera isso a partir da interface (Tópico 5). <strong>Escolher " +
+      "o formato</strong> entre carregar nomes, etiquetas ou nada → o contrato de serviço " +
+      "versionado (Tópico 5). <strong>Multicast confiável e totalmente ordenado</strong> → " +
+      "as garantias que a replicação exige (Tópico 10). A comunicação entre processos é o " +
+      "porão de TODO o resto do curso, e agora você sabe o que tem lá embaixo.</p>" +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
       '    <p class="demo-cf-log-title">O que está acontecendo:</p>' +
@@ -400,7 +403,12 @@ SD.demos["sockets-mensagens"] = (function () {
     /* ============ Etapa 3 — Empacotar (representação externa) ============ */
 
     function fmtName(f) {
-      return { crus: "bytes crus", cdr: "CDR (binário + acordo IDL)", json: "JSON", xml: "XML" }[f];
+      return {
+        crus: "bytes crus",
+        json: "JSON",
+        pb: "buffers de protocolo (esquema + etiquetas)",
+        cdr: "representação comum do CORBA (só valores)"
+      }[f];
     }
 
     function renderStage3() {
@@ -426,19 +434,20 @@ SD.demos["sockets-mensagens"] = (function () {
         "  </div>" +
         "</div>" +
         '<pre class="demo-sm-bytes" data-bytes hidden></pre>' +
-        '<p class="demo-sm-sizes">tamanho da mensagem: ' +
-        'CDR: <strong data-size-cdr="' + s.cdr + '">' + (s.cdr || "n/d") + "</strong> bytes · " +
-        'JSON: <strong data-size-json="' + s.json + '">' + (s.json || "n/d") + "</strong> bytes · " +
-        'XML: <strong data-size-xml="' + s.xml + '">' + (s.xml || "n/d") + "</strong> bytes</p>";
+        '<p class="demo-sm-sizes">tamanho da mensagem · ' +
+        'JSON <strong data-size-json="' + s.json + '">' + (s.json || "n/d") + "</strong> bytes · " +
+        'buffers de protocolo <strong data-size-pb="' + s.pb + '">' + (s.pb || "n/d") +
+        "</strong> bytes · " +
+        'CDR <strong data-size-cdr="' + s.cdr + '">' + (s.cdr || "n/d") + "</strong> bytes</p>";
       els.controls.innerHTML =
         '<label><input type="radio" name="demo-sm-fmt" value="crus"' +
         (state.fmt === "crus" ? " checked" : "") + "> bytes crus</label>" +
-        '<label><input type="radio" name="demo-sm-fmt" value="cdr"' +
-        (state.fmt === "cdr" ? " checked" : "") + "> CDR</label>" +
         '<label><input type="radio" name="demo-sm-fmt" value="json"' +
         (state.fmt === "json" ? " checked" : "") + "> JSON</label>" +
-        '<label><input type="radio" name="demo-sm-fmt" value="xml"' +
-        (state.fmt === "xml" ? " checked" : "") + "> XML</label>" +
+        '<label><input type="radio" name="demo-sm-fmt" value="pb"' +
+        (state.fmt === "pb" ? " checked" : "") + "> buffers de protocolo</label>" +
+        '<label><input type="radio" name="demo-sm-fmt" value="cdr"' +
+        (state.fmt === "cdr" ? " checked" : "") + "> CDR</label>" +
         '<label class="demo-sm-mismatch"><input type="checkbox" class="demo-sm-mm"' +
         (state.mismatch ? " checked" : "") + "> as pontas discordam da ordem dos campos (CDR)</label>" +
         '<button type="button" class="btn demo-sm-send3"' + (state.busy3 ? " disabled" : "") +
@@ -504,21 +513,32 @@ SD.demos["sockets-mensagens"] = (function () {
               "mensagem só carrega VALORES: a ordem e os tipos vêm do acordo prévio (IDL) " +
               "das duas pontas.");
           }
-        } else {
-          var txt = f === "json" ? JSON_TXT : XML_TXT;
-          state.sizes[f] = txt.length;
-          showBytes(f.toUpperCase() + ", " + txt.length + " bytes:\n" + txt);
+        } else if (f === "pb") {
+          state.sizes.pb = PB_SIZE;
           bump("delivered");
+          showBytes("buffers de protocolo, " + PB_SIZE + " bytes:\n" + PB_BYTES);
           showRx("Smith", "London", "1984", true, false);
-          log("✅ Íntegra em <strong>" + txt.length + " bytes</strong>, " +
-            (state.mismatch ? "e a ordem dos campos NEM IMPORTA: " : "") + "o formato é " +
-            "<strong>autodescritivo</strong> (cada valor viaja rotulado), por isso é maior " +
-            "que o CDR.");
+          log("✅ Íntegra em <strong>" + PB_SIZE + " bytes</strong>. O nome do campo não " +
+            "viaja, e no lugar dele vai uma <strong>etiqueta numérica</strong> declarada no " +
+            "esquema, com o tipo colado nela. O inteiro usa comprimento variável, então " +
+            "1984 ocupa dois bytes em vez de quatro.");
+        } else {
+          state.sizes.json = JSON_TXT.length;
+          bump("delivered");
+          showBytes("JSON, " + JSON_TXT.length + " bytes:\n" + JSON_TXT);
+          showRx("Smith", "London", "1984", true, false);
+          log("✅ Íntegra em <strong>" + JSON_TXT.length + " bytes</strong>, " +
+            (state.mismatch ? "e a ordem dos campos NEM IMPORTA, porque " : "porque ") +
+            "o formato é <strong>autodescritivo</strong> e cada valor viaja rotulado com o " +
+            "nome dele. É o maior dos três, e é o único que as duas pontas leem sem ter " +
+            "combinado nada antes.");
         }
-        if (state.sizes.cdr && state.sizes.json && state.sizes.xml) {
-          log("📏 Compare: CDR " + state.sizes.cdr + " × JSON " + state.sizes.json + " × XML " +
-            state.sizes.xml + " bytes: o preço da autodescrição. (Buffers de protocolo e " +
-            "afins buscam o meio-termo: binário compacto COM esquema.)");
+        if (state.sizes.cdr && state.sizes.json && state.sizes.pb) {
+          log("📏 Compare os três. JSON " + state.sizes.json + " bytes carrega os nomes, " +
+            "buffers de protocolo " + state.sizes.pb + " troca o nome por uma etiqueta, e o " +
+            "CDR " + state.sizes.cdr + " não carrega nem etiqueta. Repare que carregar menos " +
+            "<strong>não garante ficar menor</strong>, porque o CDR alinha cada valor em " +
+            "múltiplos do tamanho dele e paga o preenchimento com zeros.");
         }
         state.busy3 = false;
         if (state.stage === 3) refreshStage3();
@@ -531,210 +551,19 @@ SD.demos["sockets-mensagens"] = (function () {
     function refreshStage3() {
       var sizesEl = els.area.querySelector(".demo-sm-sizes");
       if (sizesEl) {
-        sizesEl.innerHTML = "tamanho da mensagem: " +
-          'CDR: <strong data-size-cdr="' + state.sizes.cdr + '">' + (state.sizes.cdr || "n/d") +
+        sizesEl.innerHTML = "tamanho da mensagem · " +
+          'JSON <strong data-size-json="' + state.sizes.json + '">' + (state.sizes.json || "n/d") +
           "</strong> bytes · " +
-          'JSON: <strong data-size-json="' + state.sizes.json + '">' + (state.sizes.json || "n/d") +
-          "</strong> bytes · " +
-          'XML: <strong data-size-xml="' + state.sizes.xml + '">' + (state.sizes.xml || "n/d") +
+          'buffers de protocolo <strong data-size-pb="' + state.sizes.pb + '">' +
+          (state.sizes.pb || "n/d") + "</strong> bytes · " +
+          'CDR <strong data-size-cdr="' + state.sizes.cdr + '">' + (state.sizes.cdr || "n/d") +
           "</strong> bytes";
       }
       var btn = els.controls.querySelector(".demo-sm-send3");
       if (btn) btn.disabled = false;
     }
 
-    /* ============ Etapa 4 — A requisição duplicada ============ */
-
-    function bankUpdate() {
-      var saldoEl = els.area.querySelector("[data-saldo]");
-      if (!saldoEl) return;
-      saldoEl.textContent = state.saldo;
-      els.area.querySelector("[data-esperado]").textContent = state.esperado;
-      els.area.querySelector("[data-execs]").textContent = state.execs;
-      var div = els.area.querySelector("[data-diverge]");
-      var ok = state.saldo === state.esperado;
-      div.textContent = ok ? "✓ saldo confere" : "✗ DIVERGIU (R$ " +
-        Math.abs(state.esperado - state.saldo) + " a " +
-        (state.saldo < state.esperado ? "menos" : "mais") + ")";
-      div.className = "demo-sm-diverge " + (ok ? "is-ok" : "is-bad");
-      var stat = els.area.querySelector("[data-double-seen]");
-      stat.setAttribute("data-double-seen", state.doubleSeen);
-      stat.setAttribute("data-filter-fix", state.filterFixSeen);
-    }
-
-    function renderStage4() {
-      els.area.innerHTML =
-        '<div class="demo-sm-world">' +
-        '  <div class="demo-sm-machine">' +
-        '    <p class="demo-sm-machine-title">💻 Cliente</p>' +
-        '    <p class="demo-sm-note">última resposta: <strong data-client-view>n/d</strong></p>' +
-        "  </div>" +
-        '  <div class="demo-sm-machine">' +
-        '    <p class="demo-sm-machine-title">🏦 Banco (servidor)</p>' +
-        '    <p class="demo-sm-big">saldo: R$ <strong data-saldo>' + state.saldo + "</strong></p>" +
-        '    <p class="demo-sm-note">débitos executados: <strong data-execs>' + state.execs +
-        "</strong> · filtro de duplicatas: <strong data-filter>" +
-        (state.filterOn ? "LIGADO" : "desligado") + "</strong></p>" +
-        "  </div>" +
-        "</div>" +
-        '<p class="demo-sm-status" data-double-seen="' + state.doubleSeen +
-        '" data-filter-fix="' + state.filterFixSeen + '">se nada se perdesse, o saldo seria ' +
-        "R$ <strong data-esperado>" + state.esperado + "</strong> · " +
-        '<span class="demo-sm-diverge" data-diverge></span></p>' +
-        '<p class="demo-sm-note">E com TCP? A duplicata some, mas se a CONEXÃO cair depois do ' +
-        "envio, o cliente continua sem saber se o débito aconteceu. A incerteza muda de lugar, " +
-        "não desaparece.</p>";
-      els.controls.innerHTML =
-        '<button type="button" class="btn btn-secondary demo-sm-consulta"' +
-        (state.busy4 ? " disabled" : "") + ">🔍 Consultar saldo</button>" +
-        '<button type="button" class="btn demo-sm-debito"' +
-        (state.busy4 ? " disabled" : "") + ">💸 Debitar R$ 10</button>" +
-        '<label class="demo-sm-filterlabel"><input type="checkbox" class="demo-sm-filter"' +
-        (state.filterOn ? " checked" : "") + (state.busy4 ? " disabled" : "") +
-        "> filtro de duplicatas (id + histórico)</label>" +
-        '<button type="button" class="btn-ghost demo-sm-reopen"' +
-        (state.busy4 ? " disabled" : "") + ">↺ Reabrir conta (R$ 100)</button>";
-      els.controls.querySelector(".demo-sm-consulta").addEventListener("click", function () { op4("consulta"); });
-      els.controls.querySelector(".demo-sm-debito").addEventListener("click", function () { op4("debito"); });
-      els.controls.querySelector(".demo-sm-filter").addEventListener("change", function (ev) {
-        state.filterOn = ev.target.checked;
-        log(state.filterOn
-          ? "🛡️ Filtro LIGADO: cada requisição leva um id; o servidor guarda as respostas e " +
-            "reconhece reenvios (semântica <strong>at-most-once</strong>)."
-          : "🚫 Filtro desligado: reenvio será tratado como requisição nova " +
-            "(<strong>at-least-once</strong>).");
-        var f = els.area.querySelector("[data-filter]");
-        if (f) f.textContent = state.filterOn ? "LIGADO" : "desligado";
-      });
-      els.controls.querySelector(".demo-sm-reopen").addEventListener("click", function () {
-        state.saldo = 100; state.esperado = 100; state.execs = 0; state.history = {};
-        log("↺ Conta reaberta: saldo R$ 100 (o histórico do filtro foi limpo).");
-        bankUpdate();
-        var cv = els.area.querySelector("[data-client-view]");
-        if (cv) cv.textContent = "n/d";
-      });
-      bankUpdate();
-    }
-
-    function serverExec(kind, id, isRetx) {
-      if (isRetx) bump("dups"); /* o reenvio chega como mensagem duplicada no servidor */
-      if (state.filterOn && state.history[id] !== undefined) {
-        log("🛡️ O servidor reconheceu a requisição #" + id + " no histórico: <strong>reenviou a " +
-          "resposta guardada SEM reexecutar</strong>.");
-        return state.history[id];
-      }
-      var resp;
-      if (kind === "debito") {
-        state.saldo -= 10;
-        state.execs++;
-        resp = "débito OK · saldo R$ " + state.saldo;
-        log("🏦 Servidor executou o débito #" + id + (isRetx ? " <strong>DE NOVO</strong>" : "") +
-          ": saldo agora R$ " + state.saldo + ".");
-        if (isRetx && !state.filterOn) {
-          state.doubleSeen = true;
-          log("💥 A MESMA operação executou <strong>duas vezes</strong>: a retransmissão virou " +
-            "requisição nova. Débito não é idempotente: o saldo divergiu.");
-        }
-      } else {
-        resp = "saldo R$ " + state.saldo;
-        if (isRetx) {
-          log("🔁 Consulta #" + id + " reexecutada, <strong>idempotente</strong>: ler duas vezes " +
-            "não muda nada.");
-        }
-      }
-      if (state.filterOn) state.history[id] = resp;
-      bankUpdate();
-      return resp;
-    }
-
-    function op4(kind) {
-      if (state.busy4) return;
-      state.busy4 = true;
-      renderStage4();
-      state.opSeq++;
-      var id = state.opSeq;
-      var execsBefore = state.execs;
-      if (kind === "debito") state.esperado -= 10;
-      bankUpdate();
-      /* cenas roteirizadas primeiro (didática garantida); depois, sorteio */
-      var lossLeg = null;
-      if (kind === "debito" && !state.filterOn && !state.firstDebNoF) {
-        lossLeg = "resp"; state.firstDebNoF = true;
-      } else if (kind === "debito" && state.filterOn && !state.firstDebF) {
-        lossLeg = "resp"; state.firstDebF = true;
-      } else if (kind === "consulta" && !state.firstCon) {
-        lossLeg = "resp"; state.firstCon = true;
-      } else {
-        var r = rand();
-        lossLeg = r < 0.18 ? "req" : (r < 0.4 ? "resp" : null);
-      }
-      runRequest4(kind, id, lossLeg, execsBefore);
-    }
-
-    function runRequest4(kind, id, lossLeg, execsBefore) {
-      var t = 0;
-      var label = kind === "debito" ? "débito de R$ 10" : "consulta de saldo";
-      log("✉️ Requisição #" + id + " (" + label + ") enviada por UDP.");
-      if (lossLeg === "req") {
-        to(function () {
-          bump("dropped");
-          log("💥 A <strong>requisição</strong> #" + id + " se perdeu no caminho: o servidor " +
-            "nem ficou sabendo.");
-        }, (t += 700));
-        to(function () {
-          bump("retx");
-          log("⏲️ Sem resposta no prazo → o cliente <strong>retransmite</strong> #" + id + ".");
-        }, (t += 900));
-        to(function () {
-          var resp = serverExec(kind, id, false);
-          finishOp4(kind, resp, false, execsBefore);
-        }, (t += 700));
-        return;
-      }
-      to(function () {
-        serverExec(kind, id, false);
-      }, (t += 700));
-      if (lossLeg === "resp") {
-        to(function () {
-          bump("dropped");
-          log("💥 A <strong>resposta</strong> de #" + id + " se perdeu: o cliente não sabe que " +
-            "a operação JÁ foi executada.");
-        }, (t += 500));
-        to(function () {
-          bump("retx");
-          log("⏲️ Timeout no cliente → <strong>retransmite</strong> a requisição #" + id + ".");
-        }, (t += 900));
-        to(function () {
-          var resp = serverExec(kind, id, true);
-          finishOp4(kind, resp, true, execsBefore);
-        }, (t += 700));
-      } else {
-        to(function () {
-          finishOp4(kind, kind === "debito" ? "débito OK · saldo R$ " + state.saldo :
-            "saldo R$ " + state.saldo, false, execsBefore);
-        }, (t += 500));
-      }
-    }
-
-    function finishOp4(kind, resp, wasRetx, execsBefore) {
-      bump("delivered");
-      log("📬 Resposta chegou ao cliente: <strong>" + resp + "</strong>.");
-      if (wasRetx && state.filterOn && kind === "debito" &&
-          state.execs - execsBefore === 1) {
-        state.filterFixSeen = true;
-        log("✅ Perda + reenvio COM filtro: o débito executou UMA vez só, o reenvio foi " +
-          "reconhecido, não reexecutado. É a semântica <strong>at-most-once</strong>.");
-      }
-      state.busy4 = false;
-      if (state.stage === 4) {
-        renderStage4(); /* re-render primeiro; a resposta visível vem depois */
-        var cv = els.area.querySelector("[data-client-view]");
-        if (cv) cv.textContent = resp;
-      }
-      updateNav();
-    }
-
-    /* ============ Etapa 5 — Multicast para as réplicas ============ */
+    /* ============ Etapa 4 — Multicast para as réplicas ============ */
 
     function allEqual5() {
       return state.reps[0] === state.reps[1] && state.reps[1] === state.reps[2];
@@ -756,7 +585,7 @@ SD.demos["sockets-mensagens"] = (function () {
       }
     }
 
-    function renderStage5() {
+    function renderStage4() {
       var cards = state.reps.map(function (v, i) {
         return '<div class="demo-sm-machine demo-sm-rep">' +
           '<p class="demo-sm-machine-title">🗄️ Réplica R' + (i + 1) + "</p>" +
@@ -769,9 +598,9 @@ SD.demos["sockets-mensagens"] = (function () {
         state.divLoss + '" data-div-order="' + state.divOrder + '" data-converged5="' +
         state.convergedSeen + '"></p>';
       els.controls.innerHTML =
-        '<button type="button" class="btn demo-sm-mc1"' + (state.busy5 ? " disabled" : "") +
+        '<button type="button" class="btn demo-sm-mc1"' + (state.busy4 ? " disabled" : "") +
         ">📢 Multicast: +10 (uma origem)</button>" +
-        '<button type="button" class="btn demo-sm-mc2"' + (state.busy5 ? " disabled" : "") +
+        '<button type="button" class="btn demo-sm-mc2"' + (state.busy4 ? " disabled" : "") +
         ">📢📢 Duas origens: +10 e ×2</button>" +
         '<label class="demo-sm-filterlabel"><input type="checkbox" class="demo-sm-rel"' +
         (state.reliable ? " checked" : "") +
@@ -796,9 +625,9 @@ SD.demos["sockets-mensagens"] = (function () {
     }
 
     function mc1() {
-      if (state.busy5) return;
-      state.busy5 = true;
-      renderStage5();
+      if (state.busy4) return;
+      state.busy4 = true;
+      renderStage4();
       log("📢 Coordenador envia <strong>+10</strong> por multicast para R1, R2 e R3…");
       to(function () {
         if (state.reliable) {
@@ -815,16 +644,16 @@ SD.demos["sockets-mensagens"] = (function () {
           if (!allEqual5()) state.divLoss = true;
         }
         if (state.reliable && allEqual5()) state.convergedSeen = true;
-        state.busy5 = false;
-        if (state.stage === 5) renderStage5();
+        state.busy4 = false;
+        if (state.stage === 4) renderStage4();
         updateNav();
       }, 900);
     }
 
     function mc2() {
-      if (state.busy5) return;
-      state.busy5 = true;
-      renderStage5();
+      if (state.busy4) return;
+      state.busy4 = true;
+      renderStage4();
       log("📢📢 Duas origens enviam ao MESMO tempo: origem 1 manda <strong>+10</strong>, " +
         "origem 2 manda <strong>×2</strong>…");
       to(function () {
@@ -845,8 +674,8 @@ SD.demos["sockets-mensagens"] = (function () {
           if (!allEqual5()) state.divOrder = true;
         }
         if (state.reliable && allEqual5()) state.convergedSeen = true;
-        state.busy5 = false;
-        if (state.stage === 5) renderStage5();
+        state.busy4 = false;
+        if (state.stage === 4) renderStage4();
         updateNav();
       }, 900);
     }
@@ -884,37 +713,26 @@ SD.demos["sockets-mensagens"] = (function () {
       {
         title: "Etapa 3: Empacotar (representação externa de dados)",
         instructions: "A máquina A (big-endian, Unicode) envia a struct Person à máquina B " +
-          "(little-endian, ASCII). Envie primeiro em bytes crus; depois compare CDR, JSON e XML, " +
-          "e experimente violar o acordo de ordem do CDR.",
-        goalText: "Meta: ver os bytes crus chegarem adulterados e entregar a struct íntegra em " +
-          "CDR, JSON e XML.",
+          "(little-endian, ASCII). Envie primeiro em bytes crus; depois compare JSON, buffers " +
+          "de protocolo e CDR, e experimente violar o acordo de ordem do CDR.",
+        goalText: "Meta: ver os bytes crus chegarem adulterados e entregar a struct íntegra " +
+          "nos três formatos.",
         setup: function () { state.busy3 = false; },
         render: renderStage3,
         goalMet: function () {
           return state.rawSeen && state.sizes.cdr > 0 && state.sizes.json > 0 &&
-            state.sizes.xml > 0;
+            state.sizes.pb > 0;
         }
       },
       {
-        title: "Etapa 4: A requisição duplicada",
-        instructions: "Requisição-resposta sobre UDP: respostas se perdem e o cliente retransmite " +
-          "por timeout. Faça um débito SEM o filtro e observe o saldo; depois ligue o filtro de " +
-          "duplicatas e debite de novo.",
-        goalText: "Meta: ver um débito executar DUAS vezes, e depois um reenvio com filtro " +
-          "manter o saldo certo.",
-        setup: function () { state.busy4 = false; },
-        render: renderStage4,
-        goalMet: function () { return state.doubleSeen && state.filterFixSeen; }
-      },
-      {
-        title: "Etapa 5: Multicast para as réplicas",
+        title: "Etapa 4: Multicast para as réplicas",
         instructions: "Três réplicas guardam o mesmo valor. Com multicast IP, veja a omissão e a " +
           "ordem quebrarem a igualdade; depois reinicie as réplicas, ligue as garantias e repita " +
           "as duas jogadas.",
         goalText: "Meta: divergir por omissão, divergir por ordem e convergir com as garantias " +
           "ligadas.",
-        setup: function () { state.busy5 = false; },
-        render: renderStage5,
+        setup: function () { state.busy4 = false; },
+        render: renderStage4,
         goalMet: function () {
           return state.divLoss && state.divOrder && state.convergedSeen;
         }
