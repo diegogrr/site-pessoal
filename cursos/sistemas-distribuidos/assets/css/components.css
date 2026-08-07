@@ -418,6 +418,42 @@ p.hint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
   text-align: center;
 }
 
+/* Diagrama de arquitetura da AWS, gerado por tools/diagramas com os ícones oficiais.
+   Tem classe própria, e não `.figura`, por dois motivos. Ele traz o próprio CSS já
+   escopado, então as regras de `.figura svg` acima venceriam as dele por
+   especificidade e apagariam as setas. E ele é largo, então em tela estreita rola
+   dentro do próprio bloco em vez de encolher a ponto de o rótulo sumir, que é o
+   mesmo tratamento das tabelas largas. */
+.figura-diagrama { margin: var(--space-5) 0; }
+.figura-diagrama .diagrama-rolagem { overflow-x: auto; }
+.figura-diagrama svg {
+  display: block;
+  width: 100%;
+  min-width: 46rem;
+  height: auto;
+}
+.figura-diagrama figcaption {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* Crédito de figura reproduzida de um autor (regra em docs/fontes/README.md, seção 4.1).
+   Vem logo abaixo da imagem e antes da legenda, e serve a qualquer figura do projeto, o
+   que inclui as notas de aprofundamento do roteiro e da demo. Fica menor que a legenda de
+   propósito: é atribuição, não é o que a figura ensina. */
+.figura-fonte {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.figura > .figura-fonte {
+  text-align: center;
+}
+
 .tabela-conteudo {
   width: 100%;
   margin: var(--space-5) 0;

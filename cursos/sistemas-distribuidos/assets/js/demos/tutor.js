@@ -41,6 +41,7 @@ SD.demoTutor = (function () {
     return '<figure class="demo-tutor-nota-figura">' +
       '<img src="' + figura.src + '" alt="' + figura.alt + '"' + dim +
       ' loading="lazy" decoding="async">' +
+      (figura.fonte ? '<p class="figura-fonte">' + figura.fonte + "</p>" : "") +
       (figura.legenda ? "<figcaption>" + figura.legenda + "</figcaption>" : "") +
       "</figure>";
   }

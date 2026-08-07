@@ -15,12 +15,17 @@
      leia[] → ponteiros opcionais { rotulo, topico } para o curso;
               quem consome monta a URL (o roteiro de prática está
               dois níveis abaixo de app/, o app está na raiz).
-     figura → opcional { src, alt, legenda, largura, altura }. O src é
+     figura → opcional { src, alt, legenda, largura, altura, fonte }. O src é
               relativo à raiz de app/ e quem consome monta a URL, pela
               mesma razão do leia[]. O lugar dela no texto é marcado
               com {{figura}}; sem o marcador, ela entra no fim.
               O alt não é enfeite: é o que resta para quem usa leitor
               de tela e para quando a imagem não carrega.
+              O fonte é obrigatório quando a figura reproduz o desenho
+              de um autor com as legendas traduzidas, e proibido quando
+              o desenho é original do projeto. Ele sai logo abaixo da
+              imagem, e o formato exato está em docs/fontes/README.md,
+              seção 4.1 (sobrenomes e ano da edição, sem página).
 
    Escopo: a nota explica o que o aluno precisa para entender o
    que acabou de acontecer na tela, não o assunto inteiro.

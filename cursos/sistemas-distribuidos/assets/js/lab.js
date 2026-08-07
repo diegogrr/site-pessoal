@@ -231,6 +231,7 @@ SD.lab = (function () {
     return '<figure class="nota-figura">' +
       '<img src="' + BASE_APP_DIR + figura.src + '" alt="' + figura.alt + '"' + dim +
       ' loading="lazy" decoding="async">' +
+      (figura.fonte ? '<p class="figura-fonte">' + figura.fonte + "</p>" : "") +
       (figura.legenda ? "<figcaption>" + figura.legenda + "</figcaption>" : "") +
       "</figure>";
   }
