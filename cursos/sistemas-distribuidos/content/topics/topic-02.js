@@ -684,6 +684,16 @@ SD.content["02"] = {
         "reescrito para cada combinação de hardware e sistema operacional. Além disso, " +
         "oferece abstrações de programação de nível mais alto, como a invocação remota, " +
         "a notificação de eventos e a replicação.</p>" +
+        "<p>Uma comparação ajuda a fixar essa posição. O middleware está para o sistema " +
+        "distribuído assim como o sistema operacional está para um computador, porque " +
+        "também é um gerente de recursos, só que de recursos espalhados pela rede. Ele " +
+        "presta, por isso, serviços que qualquer sistema operacional também presta, entre " +
+        "eles a comunicação entre aplicações, a segurança, a contabilização do uso e o " +
+        "mascaramento de falhas com a recuperação delas. O que muda é que esses serviços " +
+        "são oferecidos num ambiente em rede, e que quase todos servem a muitas aplicações " +
+        "ao mesmo tempo. Daí a outra forma de enxergá-lo, como um repositório de " +
+        "componentes de uso comum que cada aplicação não precisa mais escrever por conta " +
+        "própria.</p>" +
         "<h3>Camadas físicas (tiers)</h3>" +
         "<p>As camadas lógicas dizem respeito à organização interna do software. As " +
         "camadas físicas respondem a outra pergunta, que é em quantas máquinas essa " +
@@ -782,6 +792,196 @@ SD.content["02"] = {
         "e-mail gigante, por exemplo, precisa de retomada própria além da que o TCP " +
         "oferece.</p>" +
         "</div>" +
+        "<h3>Como o middleware se abre</h3>" +
+        "<p>As classes acima dizem o que cada middleware faz, e nenhuma delas nasce " +
+        "sabendo qual aplicação vai usá-la. Reaparece aqui a abertura estudada no tópico " +
+        "01, agora como problema de projeto interno. Middleware aberto é o que pode ser " +
+        "estendido para o caso que ninguém previu sem ser reescrito por dentro, e dois " +
+        "padrões de projeto carregam quase toda essa responsabilidade. O empacotador " +
+        "resolve um problema, o interceptador resolve outro, e os dois perseguem o mesmo " +
+        "objetivo.</p>" +
+        "<h4>Empacotadores, quando a interface não serve</h4>" +
+        "<p>Montar um sistema distribuído a partir de peças que já existem esbarra num " +
+        "obstáculo imediato. A interface que o componente antigo oferece dificilmente é a " +
+        "que a aplicação nova precisa chamar. O <strong>empacotador</strong> (wrapper), " +
+        "também chamado de adaptador, é um componente que oferece uma interface aceitável " +
+        "para quem chama e traduz cada função dela para as que o componente de fato tem. " +
+        "Ele resolve o problema da interface incompatível, e nada além disso.</p>" +
+        "<p>O <code>S3</code>, visto na seção anterior, é um exemplo direto. Ele publica " +
+        "duas interfaces, uma no estilo de recursos sobre HTTP e outra mais tradicional. " +
+        "Quem usa a primeira conversa com um servidor Web comum, e esse servidor age como " +
+        "adaptador do serviço de armazenamento real, porque disseca a requisição que chega " +
+        "e repassa as partes a servidores especializados internos. O cliente nunca fala " +
+        "com o armazenamento. Ele fala com o empacotador.</p>" +
+        "<p>Enquanto foram poucos, os empacotadores davam conta da extensibilidade " +
+        "sozinhos. Se a aplicação A guardava dados de que a aplicação B precisava, bastava " +
+        "escrever um empacotador específico para B. O problema aparece na hora de contar " +
+        "quantos esse arranjo exige, porque com <em>N</em> aplicações que dependem umas " +
+        "das outras são <em>N</em> × (<em>N</em> - 1) empacotadores, número que cresce com " +
+        "o quadrado de <em>N</em>.</p>" +
+        "<p>A saída é o <strong>corretor</strong> (broker), um componente logicamente " +
+        "centralizado por onde passam todos os acessos entre aplicações. Cada aplicação " +
+        "manda ao corretor um pedido dizendo do que precisa. O corretor conhece todas as " +
+        "aplicações relevantes, procura as adequadas, combina e transforma as respostas " +
+        "quando é o caso, e devolve o resultado a quem pediu. Como ele oferece uma " +
+        "interface só para cada aplicação, bastam 2<em>N</em> empacotadores, conta que " +
+        "cresce em proporção direta ao número de aplicações. É a mesma corretagem descrita " +
+        "acima, agora com o número que justifica a escolha.</p>" +
+        '<figure class="figura" id="fig-empacotadores">' +
+        '<svg viewBox="0 0 600 270" role="img" aria-labelledby="fig-empacotadores-titulo">' +
+        '<title id="fig-empacotadores-titulo">Quatro aplicações ligadas todas com todas, ' +
+        "do lado esquerdo, e as mesmas quatro ligadas a um corretor central, do lado " +
+        "direito, que reduz as seis ligações a quatro.</title>" +
+        '<path class="traco" d="M80 67 L200 67"/>' +
+        '<path class="traco" d="M80 187 L200 187"/>' +
+        '<path class="traco" d="M80 67 L80 187"/>' +
+        '<path class="traco" d="M200 67 L200 187"/>' +
+        '<path class="traco" d="M80 67 L200 187"/>' +
+        '<path class="traco" d="M200 67 L80 187"/>' +
+        '<rect class="caixa" x="48" y="52" width="64" height="30" rx="6"/>' +
+        '<text x="80" y="72" text-anchor="middle" font-size="15">A</text>' +
+        '<rect class="caixa" x="168" y="52" width="64" height="30" rx="6"/>' +
+        '<text x="200" y="72" text-anchor="middle" font-size="15">B</text>' +
+        '<rect class="caixa" x="48" y="172" width="64" height="30" rx="6"/>' +
+        '<text x="80" y="192" text-anchor="middle" font-size="15">C</text>' +
+        '<rect class="caixa" x="168" y="172" width="64" height="30" rx="6"/>' +
+        '<text x="200" y="192" text-anchor="middle" font-size="15">D</text>' +
+        '<text x="140" y="26" text-anchor="middle" font-size="15">Sem corretor</text>' +
+        '<text class="rotulo-secundario" x="140" y="240" text-anchor="middle" font-size="13">' +
+        "N × (N - 1), aqui 12</text>" +
+        '<path class="traco" d="M300 40 L300 216" stroke-dasharray="5 5"/>' +
+        '<path class="traco" d="M400 67 L460 127"/>' +
+        '<path class="traco" d="M520 67 L460 127"/>' +
+        '<path class="traco" d="M400 187 L460 127"/>' +
+        '<path class="traco" d="M520 187 L460 127"/>' +
+        '<rect class="caixa-destaque" x="422" y="112" width="76" height="30" rx="6"/>' +
+        '<text x="460" y="132" text-anchor="middle" font-size="13">corretor</text>' +
+        '<rect class="caixa" x="368" y="52" width="64" height="30" rx="6"/>' +
+        '<text x="400" y="72" text-anchor="middle" font-size="15">A</text>' +
+        '<rect class="caixa" x="488" y="52" width="64" height="30" rx="6"/>' +
+        '<text x="520" y="72" text-anchor="middle" font-size="15">B</text>' +
+        '<rect class="caixa" x="368" y="172" width="64" height="30" rx="6"/>' +
+        '<text x="400" y="192" text-anchor="middle" font-size="15">C</text>' +
+        '<rect class="caixa" x="488" y="172" width="64" height="30" rx="6"/>' +
+        '<text x="520" y="192" text-anchor="middle" font-size="15">D</text>' +
+        '<text x="460" y="26" text-anchor="middle" font-size="15">Com corretor</text>' +
+        '<text class="rotulo-secundario" x="460" y="240" text-anchor="middle" font-size="13">' +
+        "2N, aqui 8</text>" +
+        "</svg>" +
+        '<p class="figura-fonte">Fonte: traduzido de Van Steen e Tanenbaum (2023).</p>' +
+        "<figcaption>Cada ligação exige um empacotador em cada ponta, e é por isso que a " +
+        "conta cresce com o quadrado. Com quatro aplicações são 12 empacotadores sem " +
+        "corretor e 8 com ele, e a distância entre as duas contas aumenta a cada aplicação " +
+        "nova.</figcaption>" +
+        "</figure>" +
+        "<h4>Interceptadores, quando o fluxo precisa desviar</h4>" +
+        "<p>O <strong>interceptador</strong> é apenas uma construção de software que quebra " +
+        "o fluxo normal de controle e deixa outro código, escrito para uma aplicação " +
+        "específica, executar naquele ponto. É o meio principal de adaptar o middleware às " +
+        "necessidades de uma aplicação, e daí ser o segundo pilar da abertura. Torná-lo " +
+        "genérico custa um esforço de implementação considerável, e nem sempre compensa, " +
+        "porque instalações de interceptação limitadas costumam deixar o software e o " +
+        "sistema inteiro mais fáceis de administrar.</p>" +
+        "<p>A invocação de um objeto remoto deixa a ideia concreta, e ela acontece em três " +
+        "passos que os próximos tópicos detalham. Primeiro, o objeto A recebe uma interface " +
+        "local idêntica à do objeto B, que está em outra máquina, e chama o método nessa " +
+        "interface. Depois, a chamada vira uma invocação genérica, oferecida pelo " +
+        "middleware da máquina de A, de modo que <code>B.doit(val)</code> se torna " +
+        "<code>invoke(B, &amp;doit, val)</code>. Por fim, a invocação genérica vira uma " +
+        "mensagem, entregue à interface de rede do sistema operacional local.</p>" +
+        '<figure class="figura" id="fig-interceptadores">' +
+        '<svg viewBox="0 0 600 300" role="img" aria-labelledby="fig-interceptadores-titulo">' +
+        '<title id="fig-interceptadores-titulo">Os três passos da invocação de um objeto ' +
+        "remoto empilhados, da interface local até a mensagem na rede, com um interceptador " +
+        "de requisição entre o primeiro e o segundo passo e um interceptador de mensagem " +
+        "entre o segundo e o terceiro.</title>" +
+        '<path class="traco" d="M155 97 L322 97"/>' +
+        '<path class="seta" d="M322 91 L322 103 L330 97 Z"/>' +
+        '<path class="traco" d="M155 207 L322 207"/>' +
+        '<path class="seta" d="M322 201 L322 213 L330 207 Z"/>' +
+        '<path class="traco" d="M155 66 L155 120"/>' +
+        '<path class="seta" d="M149 120 L161 120 L155 128 Z"/>' +
+        '<path class="traco" d="M155 176 L155 230"/>' +
+        '<path class="seta" d="M149 230 L161 230 L155 238 Z"/>' +
+        '<rect class="caixa" x="30" y="18" width="250" height="48" rx="8"/>' +
+        '<text x="155" y="39" text-anchor="middle" font-size="15">1. Interface local, igual à de B</text>' +
+        '<text class="rotulo-secundario" x="155" y="57" text-anchor="middle" font-size="12">' +
+        "A chama B.doit(val)</text>" +
+        '<rect class="caixa" x="30" y="128" width="250" height="48" rx="8"/>' +
+        '<text x="155" y="149" text-anchor="middle" font-size="15">2. Invocação genérica</text>' +
+        '<text class="rotulo-secundario" x="155" y="167" text-anchor="middle" font-size="12">' +
+        "vira invoke(B, &amp;doit, val)</text>" +
+        '<rect class="caixa" x="30" y="238" width="250" height="48" rx="8"/>' +
+        '<text x="155" y="259" text-anchor="middle" font-size="15">3. Mensagem na rede</text>' +
+        '<text class="rotulo-secundario" x="155" y="277" text-anchor="middle" font-size="12">' +
+        "entregue ao sistema operacional</text>" +
+        '<rect class="caixa-destaque" x="330" y="73" width="240" height="48" rx="8"/>' +
+        '<text x="450" y="94" text-anchor="middle" font-size="15">Interceptador de requisição</text>' +
+        '<text class="rotulo-secundario" x="450" y="112" text-anchor="middle" font-size="12">' +
+        "chama uma vez por réplica de B</text>" +
+        '<rect class="caixa-destaque" x="330" y="183" width="240" height="48" rx="8"/>' +
+        '<text x="450" y="204" text-anchor="middle" font-size="15">Interceptador de mensagem</text>' +
+        '<text class="rotulo-secundario" x="450" y="222" text-anchor="middle" font-size="12">' +
+        "quebra o vetor grande em partes</text>" +
+        "</svg>" +
+        '<p class="figura-fonte">Fonte: traduzido de Van Steen e Tanenbaum (2023).</p>' +
+        "<figcaption>O interceptador não substitui nenhum dos três passos. Ele se instala " +
+        "entre dois deles e faz o desvio de que a aplicação precisa, sem que os passos " +
+        "vizinhos tomem conhecimento.</figcaption>" +
+        "</figure>" +
+        "<p>Cada uma das duas passagens é um ponto de corte. Suponha que B esteja " +
+        "replicado, porque então cada réplica precisa ser invocada. O " +
+        "<strong>interceptador de requisição</strong> resolve isso sozinho, chamando " +
+        "<code>invoke</code> uma vez para cada réplica. O ganho está em quem não fica " +
+        "sabendo. O objeto A não precisa saber que B está replicado, e o middleware de " +
+        "objetos não precisa de componente nenhum dedicado à chamada replicada. Só o " +
+        "interceptador sabe, e ele foi acrescentado ao middleware depois de o middleware " +
+        "estar pronto.</p>" +
+        "<p>O <strong>interceptador de mensagem</strong> age no nível de baixo, onde a " +
+        "chamada finalmente vira tráfego de rede. Imagine que o parâmetro " +
+        "<code>val</code> seja um vetor enorme de dados. Convém quebrá-lo em partes " +
+        "menores e remontá-lo no destino, o que pode melhorar o desempenho ou a " +
+        "confiabilidade. De novo o middleware não precisa tomar conhecimento, porque o " +
+        "interceptador de nível mais baixo cuida sozinho do resto da conversa com o " +
+        "sistema operacional local.</p>" +
+        "<h4>Middleware modificável</h4>" +
+        "<p>Empacotadores e interceptadores são meios de estender e adaptar o middleware, " +
+        "e a necessidade de adaptar vem de fora. O ambiente em que a aplicação distribuída " +
+        "executa muda o tempo todo, com mobilidade, variação forte na qualidade de serviço " +
+        "da rede, hardware que falha e bateria que acaba. Em vez de responsabilizar cada " +
+        "aplicação por reagir a essas mudanças, a tarefa é colocada no middleware. Some a " +
+        "isso o tamanho, porque um sistema distribuído grande raramente pode ser desligado " +
+        "para ter uma parte trocada.</p>" +
+        "<p>Daí o nome <strong>middleware modificável</strong>, proposto por Parlavantzas " +
+        "e Coulson em 2007. Ele diz mais do que middleware adaptativo, porque não basta o " +
+        "software reagir ao ambiente. É preciso poder modificá-lo de propósito sem " +
+        "derrubá-lo, e o interceptador é justamente o que permite adaptar o fluxo padrão de " +
+        "controle. Trocar um componente de software em execução é um exemplo de " +
+        "modificação, e a abordagem mais popular constrói o middleware dinamicamente a " +
+        "partir de componentes.</p>" +
+        "<p>O projeto baseado em componentes sustenta a modificabilidade pela composição, " +
+        "que pode ser configurada estaticamente, em tempo de projeto, ou dinamicamente, em " +
+        "tempo de execução. A segunda exige <strong>ligação tardia</strong> (late " +
+        "binding), técnica bem-sucedida em ambientes de linguagem de programação e também " +
+        "em sistemas operacionais que carregam e descarregam módulos à vontade. Selecionar " +
+        "automaticamente a melhor implementação de um componente durante a execução já é " +
+        "bem compreendido, mas continua complexo em sistemas distribuídos, porque " +
+        "substituir um componente exige saber exatamente o efeito da troca sobre os " +
+        "outros. Componentes costumam ser menos independentes do que parecem.</p>" +
+        "<p>Três exigências mínimas resultam disso.</p>" +
+        "<ul>" +
+        "<li>O middleware precisa <strong>carregar e descarregar componentes em " +
+        "execução</strong>, sem parar para isso</li>" +
+        "<li>Cada componente precisa <strong>declarar as interfaces que oferece e também " +
+        "as que exige</strong>, que é exatamente o traço do middleware de componentes " +
+        "distribuídos listado acima</li>" +
+        "<li>Componente que guarda <strong>estado entre chamadas</strong> pede medidas " +
+        "próprias, porque a troca não pode esquecer o que já aconteceu</li>" +
+        "</ul>" +
+        "<p>Repare que a reflexão, citada entre os padrões recorrentes, é a peça que fecha " +
+        "esse quadro. Um sistema capaz de examinar a própria estrutura em execução tem como " +
+        "descobrir quais componentes estão no ar e quais interfaces eles declaram, que é a " +
+        "informação de que a modificação em tempo de execução depende.</p>" +
         "<h3>Arquiteturas híbridas</h3>" +
         "<p>Os padrões vistos até aqui aparecem isolados só no material didático. Um " +
         "sistema real combina traços centralizados com traços peer-to-peer e com " +
@@ -1011,6 +1211,44 @@ SD.content["02"] = {
             "buscá-la (WebSphere MQ)</li>" +
             "<li>O <strong>princípio fim-a-fim</strong> limita todos eles. Parte da " +
             "correção só pode ser implementada na aplicação</li>" +
+            "</ul>"
+        },
+        {
+          title: "O empacotador, e por que veio o corretor",
+          ref: "fig-empacotadores",
+          html:
+            "<ul>" +
+            "<li>O <strong>empacotador</strong> traduz a interface que existe para a que " +
+            "a aplicação precisa chamar</li>" +
+            "<li>Sem corretor, N aplicações pedem N × (N - 1) empacotadores</li>" +
+            "<li>O <strong>corretor</strong> centraliza os acessos e derruba a conta " +
+            "para 2N</li>" +
+            "</ul>"
+        },
+        {
+          title: "O interceptador desvia o fluxo",
+          ref: "fig-interceptadores",
+          html:
+            "<ul>" +
+            "<li>Quebra o fluxo de controle e deixa código específico executar ali</li>" +
+            "<li>O de <strong>requisição</strong> chama uma vez por réplica, e A não " +
+            "fica sabendo</li>" +
+            "<li>O de <strong>mensagem</strong> fragmenta o parâmetro grande antes da " +
+            "rede</li>" +
+            "</ul>"
+        },
+        {
+          title: "Middleware modificável",
+          html:
+            "<ul>" +
+            "<li>O ambiente muda o tempo todo, com mobilidade, rede irregular, hardware " +
+            "que falha e bateria que acaba</li>" +
+            "<li>Sistema grande não é desligado para trocar uma peça, então a mudança " +
+            "tem que acontecer em execução</li>" +
+            "<li>Exige <strong>ligação tardia</strong>, mais componentes que declaram o " +
+            "que oferecem <em>e</em> o que exigem</li>" +
+            "<li>Componentes costumam ser <strong>menos independentes</strong> do que " +
+            "parecem</li>" +
             "</ul>"
         },
         {
@@ -1557,10 +1795,10 @@ SD.content["02"] = {
       question:
         "Somas de verificação (checksums) fazem mensagens corrompidas serem descartadas, restando apenas a perda da mensagem. De que isso é exemplo?",
       options: [
-        "Mascaramento de falhas: converter uma falha arbitrária em falha por omissão.",
-        "Transparência de replicação.",
-        "Falha de temporização de canal.",
-        "Comunicação síncrona confiável."
+        "Mascaramento de falhas, com conversão para um tipo mais fácil de tratar.",
+        "Transparência de replicação, que esconde do usuário a existência das cópias.",
+        "Falha de temporização de canal, por atraso além do limite prometido.",
+        "Comunicação síncrona confiável, com validade e integridade garantidas."
       ],
       answer: 0,
       explanation:
@@ -1572,10 +1810,10 @@ SD.content["02"] = {
       question:
         "Comparada à solução de duas camadas físicas, qual é a principal vantagem da arquitetura de três camadas físicas?",
       options: [
-        "Menor latência: cada operação exige uma única troca de mensagens.",
-        "Eliminar a necessidade de um servidor de banco de dados.",
-        "Reduzir o tráfego total na rede.",
-        "Mapeamento um-para-um dos elementos lógicos em servidores: a lógica da aplicação fica em um só lugar, melhorando a manutenibilidade."
+        "Menor latência, porque cada operação exige uma única troca de mensagens.",
+        "Eliminar a necessidade de um servidor de banco de dados separado.",
+        "Reduzir o tráfego total na rede entre o cliente e o servidor.",
+        "Mapeamento um-para-um dos elementos lógicos em servidores, que melhora a manutenibilidade."
       ],
       answer: 3,
       explanation:
@@ -1827,6 +2065,46 @@ SD.content["02"] = {
         "Canal de comunicação entre processos que garante a identidade dos principais, " +
         "a privacidade e integridade dos dados e proteção contra reprodução de " +
         "mensagens. O SSL com o TLS e as VPN são as realizações mais comuns."
+    },
+    {
+      term: "Empacotador (wrapper)",
+      definition:
+        "Componente que oferece uma interface aceitável para quem chama e traduz cada " +
+        "função dela para as que o componente de destino de fato tem. Também chamado de " +
+        "adaptador, resolve o problema da interface incompatível ao montar um sistema a " +
+        "partir de peças que já existem."
+    },
+    {
+      term: "Corretor (broker)",
+      definition:
+        "Componente logicamente centralizado por onde passam todos os acessos entre " +
+        "aplicações. Ele conhece as aplicações relevantes, procura as adequadas e " +
+        "devolve o resultado a quem pediu, o que derruba o número de empacotadores " +
+        "necessários de N × (N - 1) para 2N."
+    },
+    {
+      term: "Interceptador",
+      definition:
+        "Construção de software que quebra o fluxo normal de controle e deixa executar " +
+        "ali um código escrito para uma aplicação específica. É o meio principal de " +
+        "adaptar o middleware sem reescrevê-lo, e aparece em dois níveis na invocação " +
+        "remota, o de requisição e o de mensagem."
+    },
+    {
+      term: "Middleware modificável",
+      definition:
+        "Middleware que pode ser alterado de propósito enquanto executa, e não apenas " +
+        "reagir sozinho ao ambiente. Depende de carregar e descarregar componentes em " +
+        "execução e de cada componente declarar as interfaces que oferece e também as " +
+        "que exige."
+    },
+    {
+      term: "Ligação tardia (late binding)",
+      definition:
+        "Técnica que adia para o tempo de execução a escolha de qual implementação de " +
+        "um componente será usada. É o que permite configurar dinamicamente um " +
+        "middleware montado a partir de componentes, em vez de fixar a composição em " +
+        "tempo de projeto."
     }
   ],
 
@@ -1834,7 +2112,8 @@ SD.content["02"] = {
     "VAN STEEN, M.; TANENBAUM, A. S. Distributed Systems. 4. ed. (versão DS 4.03). " +
     "distributed-systems.net. Cap. 2. Architectures (fonte principal deste tópico: " +
     "estilos de arquitetura, orientação a serviços, microsserviços, REST, " +
-    "publicar-assinar, middleware, multicamadas, par a par, nuvem, borda e blockchain).",
+    "publicar-assinar, middleware com empacotadores, corretor, interceptadores e " +
+    "modificabilidade, multicamadas, par a par, nuvem, borda e blockchain).",
     "VAN STEEN, M.; TANENBAUM, A. S. Op. cit. Cap. 8. Fault tolerance, seção 8.1 " +
     "(defeito, erro e falha; a taxonomia de falhas e a escala de detecção) e seção " +
     "8.2.3 (sistema parcialmente síncrono).",
