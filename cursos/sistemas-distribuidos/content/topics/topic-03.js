@@ -988,10 +988,10 @@ SD.content["03"] = {
       question:
         "Por que as mensagens são divididas em pacotes de comprimento limitado antes da transmissão?",
       options: [
-        "Porque o modelo OSI exige exatamente sete fragmentos por mensagem.",
-        "Para que cada pacote possa seguir obrigatoriamente a mesma rota.",
-        "Para permitir que cada nó aloque buffers suficientes e para evitar que mensagens longas monopolizem os canais de comunicação.",
-        "Para eliminar a necessidade de somas de verificação."
+        "Porque o modelo OSI exige exatamente sete fragmentos por mensagem enviada.",
+        "Para obrigar todos os pacotes de uma mensagem a seguir sempre a mesma rota.",
+        "Para dimensionar os buffers de cada nó e impedir que uma mensagem longa ocupe o canal.",
+        "Para dispensar a soma de verificação, que sai cara em mensagens grandes."
       ],
       answer: 2,
       explanation:
@@ -1004,7 +1004,7 @@ SD.content["03"] = {
       question:
         "O IP oferece uma semântica de entrega descrita como 'de melhor esforço' (best effort). O que isso significa?",
       options: [
-        "Não há garantias: datagramas podem ser perdidos, duplicados, retardados ou entregues fora de ordem.",
+        "Não há garantia nenhuma, e o datagrama pode se perder, duplicar, atrasar ou chegar fora de ordem.",
         "Os datagramas são sempre entregues, mas possivelmente fora de ordem.",
         "O IP retransmite cada datagrama perdido até três vezes antes de desistir.",
         "As perdas só ocorrem em redes sem fio; nas cabeadas a entrega é garantida."
@@ -1020,10 +1020,10 @@ SD.content["03"] = {
       question:
         "Um roteador NAT recebe da Internet uma mensagem TCP de resposta. Como ele decide a qual computador da rede interna entregá-la?",
       options: [
-        "Pelo endereço MAC de destino gravado no quadro Ethernet externo.",
-        "Transmitindo a mensagem em broadcast para todos os computadores internos.",
-        "Pelo endereço IP de origem do servidor externo que respondeu.",
-        "Pelo número da porta de destino da mensagem, que indexa em sua tabela o endereço IP e a porta internos reais."
+        "Pelo endereço MAC de destino gravado no quadro Ethernet que chegou de fora.",
+        "Em broadcast para todos os computadores internos, deixando cada um decidir.",
+        "Pelo endereço IP de origem do servidor externo que produziu a resposta.",
+        "Pelo número da porta de destino, que indexa na tabela o IP e a porta internos."
       ],
       answer: 3,
       explanation:
@@ -1036,10 +1036,10 @@ SD.content["03"] = {
       question:
         "Qual mecanismo do TCP impede que um remetente rápido sobrecarregue um destinatário (ou nós intermediários) mais lento?",
       options: [
-        "A soma de verificação de cabeçalho e dados.",
-        "O controle de fluxo: as confirmações anunciam uma janela com o volume que o remetente pode enviar antes da próxima confirmação.",
-        "A fragmentação dos datagramas conforme o MTU.",
-        "O rótulo de fluxo do cabeçalho IPv6."
+        "A soma de verificação, que cobre o cabeçalho e também os dados do segmento.",
+        "O controle de fluxo, em que a confirmação anuncia a janela que o outro aceita.",
+        "A fragmentação dos datagramas conforme o MTU de cada rede do caminho.",
+        "O rótulo de fluxo do cabeçalho IPv6, que reserva capacidade para a conexão."
       ],
       answer: 1,
       explanation:
@@ -1052,10 +1052,10 @@ SD.content["03"] = {
       question:
         "Por que o WiFi (IEEE 802.11) previne a colisão, com o CSMA/CA e os quadros RTS e CTS, em vez de detectá-la como faz o CSMA/CD da Ethernet?",
       options: [
-        "Porque colisões são fisicamente impossíveis em transmissões de rádio.",
-        "Porque os quadros RTS/CTS transportam os dados mais rapidamente.",
-        "Porque no rádio o sinal local abafa o remoto e há estações ocultas e desvanecimento: o transmissor não consegue perceber a colisão que causou.",
-        "Por exigência do protocolo de segurança WEP."
+        "Porque a colisão é fisicamente impossível numa transmissão de rádio aberta.",
+        "Porque os quadros RTS e CTS transportam os dados com mais rapidez que o resto.",
+        "Porque no rádio o transmissor não escuta a colisão que ele mesmo provocou.",
+        "Porque o protocolo de segurança WEP exige a reserva prévia do canal."
       ],
       answer: 2,
       explanation:

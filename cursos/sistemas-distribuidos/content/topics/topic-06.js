@@ -844,10 +844,10 @@ SD.content["06"] = {
       question:
         "Por que NÃO existem sistemas operacionais distribuídos (imagem única do sistema) de uso geral?",
       options: [
-        "Porque é tecnicamente impossível escalonar processos entre nós diferentes.",
-        "Porque os usuários não abandonariam seus aplicativos existentes, e as emulações de SOs sobre núcleos novos tiveram desempenho insatisfatório: além de os usuários preferirem manter autonomia sobre a própria máquina.",
-        "Porque o custo do hardware necessário é proibitivo.",
-        "Porque a Internet impede qualquer forma de transparência de localização."
+        "Porque escalonar processos entre nós diferentes é tecnicamente impossível.",
+        "Porque ninguém trocaria os aplicativos que já tem, nem cederia a própria máquina.",
+        "Porque o hardware exigido por uma imagem única do sistema sai caro demais.",
+        "Porque a Internet impede a transparência de localização entre máquinas."
       ],
       answer: 1,
       explanation:
@@ -860,10 +860,10 @@ SD.content["06"] = {
       question:
         "O que a técnica de cópia na escrita (copy-on-write) faz quando uma região é herdada logicamente copiada no fork?",
       options: [
-        "Copia imediatamente todos os quadros de memória da região para o processo filho.",
-        "Impede qualquer escrita na região herdada até o processo pai terminar.",
-        "Compartilha os quadros entre pai e filho, protegidos contra escrita; só quando um deles tenta escrever é que o quadro atingido é fisicamente copiado (disparado pela exceção de erro de página).",
-        "Move a região para o espaço de endereçamento do núcleo, que passa a intermediar todos os acessos."
+        "Copia na hora todos os quadros de memória da região para o processo filho.",
+        "Bloqueia qualquer escrita na região herdada enquanto o processo pai não terminar.",
+        "Compartilha os quadros protegidos contra escrita, e copia só o que alguém escrever.",
+        "Passa a região para o núcleo, que intermedeia cada acesso dos dois processos."
       ],
       answer: 2,
       explanation:
@@ -876,10 +876,10 @@ SD.content["06"] = {
       question:
         "Um servidor single-threaded processa requisições que custam 2 ms de CPU + 8 ms de E/S de disco. Qual é sua vazão máxima, e por que adicionar uma segunda thread ajuda?",
       options: [
-        "100 requisições/s; a segunda thread computa enquanto a primeira espera o disco, elevando a vazão (para 125/s, com o disco como novo gargalo).",
-        "500 requisições/s; a segunda thread dobra esse valor para 1000/s.",
-        "125 requisições/s; a segunda thread não muda nada em um único processador.",
-        "100 requisições/s; a segunda thread só ajuda se houver dois discos."
+        "100 por segundo, e a segunda thread computa enquanto a primeira espera o disco.",
+        "500 por segundo, e a segunda thread dobra esse valor, chegando a 1000 por segundo.",
+        "125 por segundo, e a segunda thread não muda nada em um único processador.",
+        "100 por segundo, e a segunda thread só ajuda se a máquina tiver dois discos."
       ],
       answer: 0,
       explanation:
@@ -892,10 +892,10 @@ SD.content["06"] = {
       question:
         "Uma invocação remota nula entre processos em uma rede local leva cerca de 0,1 ms, dos quais a transmissão dos cerca de 100 bytes pela rede explica cerca de 0,01 ms. O que consome o restante do tempo?",
       options: [
-        "A propagação do sinal elétrico pelos cabos.",
-        "A espera obrigatória por três confirmações do TCP.",
-        "O algoritmo de roteamento dos comutadores da rede local.",
-        "Sobrecargas de software: empacotamento, cópias de dados entre usuário/núcleo e camadas, inicialização de pacotes, chamadas de sistema, escalonamento e trocas de contexto."
+        "A propagação do sinal elétrico pelos cabos que ligam as duas máquinas.",
+        "A espera obrigatória pelas três confirmações que o TCP troca antes dos dados.",
+        "O algoritmo de roteamento executado pelos comutadores da rede local.",
+        "O software, com o empacotamento, as cópias e as trocas de contexto que ele faz."
       ],
       answer: 3,
       explanation:
@@ -911,10 +911,10 @@ SD.content["06"] = {
       question:
         "Qual é o principal trade-off entre núcleos monolíticos e micronúcleos?",
       options: [
-        "Monolíticos são mais seguros; micronúcleos são maiores.",
-        "Micronúcleos ganham em extensibilidade, modularidade imposta por proteção de memória e confiabilidade (núcleo menor); monolíticos ganham em eficiência de invocação, pois a travessia entre espaços de usuário custa mais que uma chamada de sistema.",
-        "Micronúcleos não suportam sistemas de arquivos.",
-        "Monolíticos só rodam em mainframes; micronúcleos, em qualquer máquina."
+        "O monolítico é mais seguro, e o micronúcleo ocupa mais espaço em memória.",
+        "O micronúcleo ganha em extensibilidade e confiabilidade, e perde em invocação.",
+        "O micronúcleo não consegue suportar um sistema de arquivos completo.",
+        "O monolítico só roda em mainframe, e o micronúcleo roda em qualquer máquina."
       ],
       answer: 1,
       explanation:
@@ -928,10 +928,10 @@ SD.content["06"] = {
       question:
         "Segundo a condição de Popek e Goldberg, por que a família x86 clássica é difícil de virtualizar totalmente, e como a paravirtualização do Xen contorna isso?",
       options: [
-        "Porque o x86 não tem registrador de modo; o Xen adiciona um por software.",
-        "Porque o x86 tem instruções demais; o Xen remove as que não usa.",
-        "Porque 17 instruções sensíveis do x86 NÃO são privilegiadas (não podem ser capturadas pelo hipervisor); o Xen porta o SO convidado (instruções privilegiadas viram hiperchamadas e os efeitos das sensíveis são tratados no próprio convidado) em troca de desempenho.",
-        "Porque o x86 só tem dois anéis de privilégio, insuficientes para qualquer virtualização."
+        "Porque o x86 não tem registrador de modo, e o Xen acrescenta um por software.",
+        "Porque o x86 tem instruções demais, e o Xen remove da máquina as que não usa.",
+        "Porque 17 instruções sensíveis não são privilegiadas, e o Xen porta o convidado.",
+        "Porque os dois anéis de privilégio do x86 não bastam para virtualizar nada."
       ],
       answer: 2,
       explanation:

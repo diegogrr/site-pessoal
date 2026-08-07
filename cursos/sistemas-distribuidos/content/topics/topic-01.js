@@ -410,15 +410,15 @@ SD.content["01"] = {
     {
       question: "Segundo Coulouris et al., o que caracteriza um sistema distribuído?",
       options: [
-        "Um sistema em que um servidor central coordena todos os demais computadores.",
-        "Um sistema com múltiplos processadores que compartilham um relógio global preciso.",
-        "Componentes em computadores interligados em rede que se comunicam e coordenam suas ações apenas por troca de mensagens.",
-        "Qualquer conjunto de computadores que compartilha memória física comum."
+        "Um sistema em que um servidor central coordena as ações de todos os demais computadores.",
+        "Um sistema com múltiplos processadores que compartilham memória e um relógio global preciso.",
+        "Componentes em computadores interligados em rede que se coordenam apenas por troca de mensagens.",
+        "Qualquer conjunto de computadores que compartilha uma memória física comum entre si."
       ],
       answer: 2,
       explanation:
         "A definição exige comunicação e coordenação exclusivamente por troca de " +
-        "mensagens pela rede: não há memória compartilhada, relógio global nem " +
+        "mensagens pela rede, sem memória compartilhada, sem relógio global e sem " +
         "coordenador central obrigatório."
     },
     {
@@ -434,7 +434,7 @@ SD.content["01"] = {
       explanation:
         "As três consequências clássicas são concorrência, inexistência de relógio " +
         "global e falhas independentes. Memória compartilhada global contradiz a " +
-        "definição: a única comunicação é por mensagens."
+        "definição, em que a única comunicação é por mensagens."
     },
     {
       question:
@@ -463,23 +463,24 @@ SD.content["01"] = {
       answer: 1,
       explanation:
         "O arquivo central era um gargalo de desempenho e de administração. " +
-        "Particionar a tabela entre muitos servidores descentraliza o algoritmo: a " +
-        "recomendação geral para sistemas escaláveis."
+        "Particionar a tabela entre muitos servidores descentraliza o algoritmo, que " +
+        "é a recomendação geral para sistemas escaláveis."
     },
     {
       question:
         "Na classificação de van Steen e Tanenbaum, o que distingue uma grade (grid) de um cluster?",
       options: [
-        "A grade usa nós idênticos executando o mesmo sistema operacional.",
-        "O cluster é uma federação de sistemas de várias organizações.",
-        "A grade é uma federação de sistemas sob diferentes domínios administrativos, com hardware, software e redes possivelmente muito diferentes.",
-        "O cluster só existe como serviço de computação em nuvem."
+        "A grade usa nós idênticos executando o mesmo sistema operacional na mesma organização.",
+        "O cluster federa sistemas de várias organizações, com administração e hardware distintos.",
+        "A grade federa sistemas de domínios administrativos distintos, com hardware e software heterogêneos.",
+        "O cluster só existe como serviço contratado de computação em nuvem."
       ],
       answer: 2,
       explanation:
-        "Cluster: nós semelhantes, mesma organização, rede de alta velocidade, mesmo " +
-        "SO. Grade: federação entre domínios administrativos distintos e " +
-        "heterogêneos. É exatamente o inverso das duas primeiras alternativas."
+        "O cluster tem nós semelhantes, de uma só organização, ligados por rede de " +
+        "alta velocidade e rodando o mesmo sistema operacional. A grade federa " +
+        "domínios administrativos distintos e heterogêneos. As alternativas erradas " +
+        "trocam os dois nomes de lugar."
     },
     {
       question:
