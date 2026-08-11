@@ -728,15 +728,21 @@ SD.content["02"] = {
         "precisa e atualiza somente a parte afetada da página. O Google Maps é o exemplo " +
         "clássico, porque o mapa se desloca continuamente enquanto o resto da interface " +
         "permanece onde está.</p>" +
-        /* A demo é montada aqui por views/topic.js; o conteúdo abaixo só aparece se o
-           módulo da demonstração não carregar. Ela fica neste ponto, e não no fim da
-           seção anterior, porque é aqui que o aluno já leu tudo o que as cinco etapas
+        /* A demo saiu daqui para página própria em 2026-08-07 (formato em avaliação,
+           ver docs/demos/). O cartão fica neste ponto, e não no fim do tópico como o
+           da prática, porque é aqui que o aluno já leu tudo o que as cinco etapas
            cobram: papéis e posicionamento na seção 2, camadas físicas logo acima. */
-        '<div class="demo-area" data-demo="modelos-arquitetura">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>A demonstração interativa não pôde ser carregada</strong></p>" +
-        "<p>Recarregue a página para tentar de novo.</p>" +
-        "</div>" +
+        '<a class="lab-card" href="demos/modelos-arquitetura/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 5 etapas · ' +
+        "cerca de 10 min</span>" +
+        '<span class="lab-card-title">Arquiteto de Sistemas</span>' +
+        '<span class="lab-card-summary">Monte um sistema que aguente a carga que ' +
+        "os usuários impõem. Você começa com um servidor só, descobre onde ele " +
+        "quebra e escolhe entre replicar, guardar em cache e separar em camadas, " +
+        "medindo o efeito de cada decisão.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>" +
         "<h3>Thin client e outros padrões</h3>" +
         "<p>Existe uma tendência de tirar complexidade do equipamento do usuário, e ela " +
         "leva ao <strong>thin client</strong>. Nesse arranjo, o equipamento do usuário " +

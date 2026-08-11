@@ -704,12 +704,20 @@ SD.content["06"] = {
         "anteriores mostram o seu valor mais claro. Migrar uma máquina virtual inteira, ou " +
         "uma imagem de contêiner, resolve a heterogeneidade de uma vez, porque o ambiente " +
         "viaja junto com o que ele executa.</p>" +
-        /* Área reservada para demonstração interativa futura. */
-        '<div class="demo-area" data-demo="virtualizacao">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para um comparativo interativo entre máquinas virtuais e contêineres.</p>" +
-        "</div>",
+        /* A demo saiu daqui para página própria em 2026-08-07. O cartão fica neste
+           ponto porque a última etapa dela compara máquina virtual com contêiner,
+           que é exatamente o que o parágrafo acima acabou de argumentar. */
+        '<a class="lab-card" href="demos/virtualizacao/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 5 etapas · ' +
+        "cerca de 12 min</span>" +
+        '<span class="lab-card-title">A Sala de Máquinas</span>' +
+        '<span class="lab-card-summary">Monte um servidor e persiga o gargalo, ' +
+        "que muda de lugar a cada otimização que você faz. No fim, empacote o " +
+        "mesmo servidor numa máquina virtual e num contêiner, e compare o que " +
+        "cada um cobra.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>",
       slides: [
         {
           title: "Monolítico × micronúcleo",

@@ -324,13 +324,6 @@ SD.content["09"] = {
         "<em>usar</em> um dado obsoleto. É a mesma troca das caches do Tópico 8, " +
         "agora em escala de Internet: abrir mão da consistência estrita em nome " +
         "da disponibilidade e da escala.</p>" +
-        "</div>" +
-
-        /* Área reservada para demonstração interativa futura. */
-        '<div class="demo-area" data-demo="resolucao-dns">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para uma simulação passo a passo da resolução de um nome no DNS.</p>" +
         "</div>",
       slides: [
         {

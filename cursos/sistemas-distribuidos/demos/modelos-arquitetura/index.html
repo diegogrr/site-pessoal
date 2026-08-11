@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Demonstração interativa do Tópico 2 de Sistemas Distribuídos (IFSP Campus Salto): monte um sistema que aguente a carga, comparando cliente-servidor, replicação, cache e camadas físicas.">
+  <title>Arquiteto de Sistemas · Demonstração do Tópico 2</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <!-- Estilos internos das demos (formato antigo), compartilhados sem alteração -->
+  <link rel="stylesheet" href="../../assets/css/demos.css">
+  <!-- Casca da página e grade de zonas (formato em avaliação), carregada depois -->
+  <link rel="stylesheet" href="../../assets/css/demo-pagina.css">
+</head>
+<body>
+
+<div class="demo-topbar">
+  <a class="voltar" href="../../index.html#/topico/02">‹ Tópico 2</a>
+  <span class="titulo">Demonstração · Modelos de arquitetura</span>
+  <span class="espaco"></span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="demo-pagina-wrap">
+
+  <div class="demo-aviso-retrato">
+    <span class="icone" aria-hidden="true">📱</span>
+    <span>Vire o aparelho para o lado. O gráfico e as barras passam a ter mais
+    que o dobro de largura, e a página encurta cerca de um terço. Em tela de
+    computador a demonstração ainda se abre em duas colunas, com os controles ao
+    lado da simulação.</span>
+  </div>
+
+  <p class="demo-pagina-intro">
+    Cinco etapas para montar um sistema que aguente a carga que os usuários impõem.
+  </p>
+
+  <div id="demo-mount"></div>
+
+</div>
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/demos/tutor.js"></script>
+<script src="../../assets/js/demos/modelos-arquitetura.js"></script>
+<script src="../../assets/js/demo-pagina.js"></script>
+<script>
+  /* Esta é a única demo que foge do mapa padrão de demo-pagina.js, porque a
+     camada de tutoria reorganizou a estrutura dela: os passos e a previsão
+     entram no comando, e o palco não é uma `stage-area`. As zonas não citadas
+     aqui (cabeçalho, painel, explicação e navegação) vêm do padrão. */
+  SD.demoPagina.montar({
+    demo: "modelos-arquitetura",
+    montarEm: "demo-mount",
+    zonas: {
+      comando: [
+        ".demo-tutor-passos", ".demo-tutor-previsao", ".demo-ma-goalrow",
+        ".demo-ma-userrow", ".demo-cf-controls"
+      ],
+      palco: [".demo-ma-world", ".demo-ma-chart-caption", ".demo-ma-tiers"]
+    }
+  });
+</script>
+</body>
+</html>

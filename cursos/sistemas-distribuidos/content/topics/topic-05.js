@@ -467,14 +467,19 @@ SD.content["05"] = {
         "voltou na seção 2 como a fonte de onde os stubs são gerados, e reaparece agora " +
         "como o contrato que versiona a evolução do serviço. É sempre a mesma barganha, " +
         "que troca acoplamento prévio por economia depois.</p>" +
-        /* Demonstração interativa do tópico, montada aqui porque as cinco etapas cobram
-           o que as seções 1 a 3 explicaram. */
-        '<div class="demo-area" data-demo="rpc-fluxo">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa</strong></p>" +
-        "<p>Simulação do caminho de uma chamada remota, das semânticas de chamada à " +
-        "passagem de parâmetros.</p>" +
-        "</div>",
+        /* A demo saiu daqui para página própria em 2026-08-07. O cartão fica neste
+           ponto porque as cinco etapas cobram o que as seções 1 a 3 explicaram. */
+        '<a class="lab-card" href="demos/rpc-fluxo/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 5 etapas · ' +
+        "cerca de 12 min</span>" +
+        '<span class="lab-card-title">A Chamada Invisível</span>' +
+        '<span class="lab-card-summary">Abra uma chamada que parece local e veja ' +
+        "o que ela esconde. Você vai escolher a promessa que o sistema faz quando " +
+        "a resposta não volta, decidir entre mandar a referência e mandar a cópia, " +
+        "e descobrir por que um nome vale por prazo.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>",
       slides: [
         {
           title: "Quando a chamada deixa de bloquear",

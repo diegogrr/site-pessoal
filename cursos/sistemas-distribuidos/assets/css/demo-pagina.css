@@ -1,0 +1,216 @@
+/* ============================================================================
+   demo-pagina.css — casca das demonstrações em página própria
+
+   FORMATO EM AVALIAÇÃO (2026-08-07), convivendo com o formato antigo. Este
+   arquivo NÃO altera nenhuma regra de demos.css. Ele acrescenta a casca da
+   página e a grade de zonas, e vence a pilha vertical do formato antigo por
+   ser carregado depois e por agir sobre a classe `demo-zoneada`, que só existe
+   quando demo-pagina.js reorganizou a árvore. Demo embutida no tópico nunca
+   recebe essa classe, e por isso continua exatamente como estava.
+
+   Só usa variáveis de tokens.css, então serve aos dois temas sem duplicação.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   Barra superior
+   Mesmo papel da barra dos roteiros de prática, escrita aqui em vez de
+   reaproveitada de lab.css, para a página não carregar 15 KB de estilos de
+   roteiro por causa de uma faixa.
+   ------------------------------------------------------------------------ */
+.demo-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+.demo-topbar .voltar {
+  color: var(--color-link);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+.demo-topbar .voltar:hover { text-decoration: underline; }
+.demo-topbar .titulo {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+.demo-topbar .espaco { flex: 1; }
+
+@media (max-width: 620px) {
+  .demo-topbar .titulo { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   Corpo da página
+   ------------------------------------------------------------------------ */
+.demo-pagina-wrap {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+}
+.demo-pagina-intro {
+  max-width: var(--reading-max);
+  margin-bottom: var(--space-4);
+  color: var(--color-text-muted);
+}
+.demo-pagina-erro {
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Aviso de orientação
+   Só aparece em tela estreita e em pé. Virar o aparelho dá largura para as
+   duas colunas existirem, que é a diferença entre a grade e a pilha.
+   ------------------------------------------------------------------------ */
+.demo-aviso-retrato { display: none; }
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .demo-aviso-retrato {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    background: var(--color-warn-soft);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+  }
+  .demo-aviso-retrato .icone { font-size: 1.4em; line-height: 1; }
+}
+
+/* ---------------------------------------------------------------------------
+   A grade de zonas
+   Duas colunas. À esquerda o que o aluno opera e o que a demo explica, à
+   direita o que ele observa. A coluna de comando tem largura própria porque
+   ela é feita de texto curto e controle, e esticá-la não melhora nada.
+   ------------------------------------------------------------------------ */
+/* A largura da coluna de comando foi medida, não escolhida. Abaixo de 24rem o
+   texto dos passos e da previsão quebra em linhas demais e a coluna cresce em
+   altura; acima de 32rem nada melhora, porque já não há o que quebrar. Entre os
+   dois extremos medidos a demo 02 vai de 819px para 710px de altura. */
+.demo-zoneada {
+  display: grid;
+  grid-template-columns: minmax(24rem, 32rem) minmax(0, 1fr);
+  grid-template-areas:
+    "cabecalho  cabecalho"
+    "comando    palco"
+    "explicacao painel"
+    "navegacao  navegacao";
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* Demo sem camada de tutoria não tem a zona de explicação, e demo sem bloco de
+   medições não tem a de painel. Em vez de deixar a célula vazia abrindo um vão
+   na coluna, a que sobra se estica pelas duas linhas.
+
+   Estes arranjos vivem DENTRO da consulta de mídia de propósito, e não podem
+   sair dela. Eles têm especificidade 0,2,0 contra os 0,1,0 do bloco de uma
+   coluna lá embaixo, e consulta de mídia não acrescenta especificidade: soltos,
+   eles venciam e impunham uma grade de duas colunas em tela estreita, enquanto
+   `grid-template-columns` já valia uma só. O navegador criava a segunda coluna
+   implicitamente e a primeira ficava espremida (medido em 195px contra 837px
+   num monitor em retrato de 1080px, 2026-08-08). */
+@media (min-width: 1101px) {
+  .demo-zoneada.sem-explicacao {
+    grid-template-areas:
+      "cabecalho cabecalho"
+      "comando   palco"
+      "comando   painel"
+      "navegacao navegacao";
+  }
+  .demo-zoneada.sem-painel {
+    grid-template-areas:
+      "cabecalho  cabecalho"
+      "comando    palco"
+      "explicacao palco"
+      "navegacao  navegacao";
+  }
+  .demo-zoneada.sem-explicacao.sem-painel {
+    grid-template-areas:
+      "cabecalho cabecalho"
+      "comando   palco"
+      "navegacao navegacao";
+  }
+}
+
+.demo-zona-cabecalho  { grid-area: cabecalho; }
+.demo-zona-comando    { grid-area: comando; }
+.demo-zona-palco      { grid-area: palco; }
+.demo-zona-painel     { grid-area: painel; }
+.demo-zona-explicacao { grid-area: explicacao; }
+.demo-zona-navegacao  { grid-area: navegacao; }
+
+/* As zonas com moldura são as que o aluno usa como referência fixa. Cabeçalho
+   e navegação ficam sem, para não picotar a página em seis caixas. */
+.demo-zona-comando,
+.demo-zona-palco,
+.demo-zona-painel,
+.demo-zona-explicacao {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+
+.demo-zona-palco {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 14rem;
+}
+
+.demo-zona::before {
+  content: attr(data-rotulo);
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.demo-zona-cabecalho::before,
+.demo-zona-navegacao::before { content: none; }
+
+/* O primeiro bloco de cada zona não repete a margem que tinha na pilha. */
+.demo-zona > *:first-of-type { margin-top: 0; }
+.demo-zona > *:last-child { margin-bottom: 0; }
+
+/* ---------------------------------------------------------------------------
+   Uma coluna
+
+   O ponto de quebra é 1100px, e ele foi medido, não arbitrado. A visualização
+   da demo tem largura mínima própria (as barras e o gráfico ficam lado a lado
+   e não quebram), e ela vem de demos.css, cujas consultas de mídia respondem à
+   largura da JANELA e não à do contêiner. Abaixo de 1100px a coluna de palco
+   fica menor que esse mínimo e o conteúdo transborda, sem que exista daqui como
+   pedir a ele que se reorganize. Medido em 2026-08-07: transborda em 780, 900 e
+   1000, e para de transbordar em 1100.
+
+   A consequência prática é que celular deitado (844px) continua em uma coluna.
+   Ainda assim vale virar, porque a largura útil vai de 343px para 797px e a
+   altura cai de 1593px para 1111px. É isso, e nada mais que isso, que o aviso
+   de orientação promete.
+   ------------------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .demo-zoneada {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "cabecalho"
+      "comando"
+      "palco"
+      "explicacao"
+      "painel"
+      "navegacao";
+  }
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Demonstração interativa do Tópico 3 de Sistemas Distribuídos (IFSP Campus Salto): acompanhe um pacote atravessando as camadas, encaminhe você mesmo no roteador e veja a rede se refazer depois de uma falha.">
+  <title>A Viagem do Pacote · Demonstração do Tópico 3</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <!-- Estilos internos das demos, compartilhados sem alteração -->
+  <link rel="stylesheet" href="../../assets/css/demos.css">
+  <!-- Casca da página e grade de zonas, carregada depois -->
+  <link rel="stylesheet" href="../../assets/css/demo-pagina.css">
+</head>
+<body>
+
+<div class="demo-topbar">
+  <a class="voltar" href="../../index.html#/topico/03">‹ Tópico 3</a>
+  <span class="titulo">Demonstração · Redes de computadores e interligação em rede</span>
+  <span class="espaco"></span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="demo-pagina-wrap">
+
+  <div class="demo-aviso-retrato">
+    <span class="icone" aria-hidden="true">📱</span>
+    <span>Vire o aparelho para o lado. A simulação passa a ter mais que o dobro
+    de largura, e a página encurta bastante. Em tela de computador a
+    demonstração ainda se abre em duas colunas, com os controles ao lado da
+    simulação.</span>
+  </div>
+
+  <p class="demo-pagina-intro">
+    Cinco etapas para seguir um pacote da origem ao destino, inclusive a etapa em
+    que quem encaminha é você.
+  </p>
+
+  <div id="demo-mount"></div>
+
+</div>
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/demos/tutor.js"></script>
+<script src="../../assets/js/demos/camadas-rede.js"></script>
+<script src="../../assets/js/demo-pagina.js"></script>
+<script>
+  /* A camada de tutoria acrescenta blocos à zona de comando, e por isso esta
+     página declara a zona inteira em vez de herdar a do padrão: os passos e a
+     previsão vêm antes da meta, e a meta agora divide a linha com o botão de
+     conceito, dentro da `demo-cr-goalrow`. As zonas não citadas aqui (cabeçalho,
+     palco, painel, explicação e navegação) continuam vindo do padrão. */
+  SD.demoPagina.montar({
+    demo: "camadas-rede",
+    montarEm: "demo-mount",
+    zonas: {
+      comando: [
+        ".demo-tutor-passos", ".demo-tutor-previsao", ".demo-cr-goalrow",
+        ".demo-cf-controls"
+      ]
+    }
+  });
+</script>
+</body>
+</html>

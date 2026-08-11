@@ -182,13 +182,6 @@ SD.content["11"] = {
         "encanamento: você só sobe o seu código. No <strong>SaaS</strong>, você " +
         "apenas <em>entra</em> e usa (abre o Gmail): não gerencia nada. Mais " +
         "conveniência de um lado; mais controle e responsabilidade do outro.</p>" +
-        "</div>" +
-
-        /* Área reservada para demonstração interativa futura. */
-        '<div class="demo-area" data-demo="modelos-servico-nuvem">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para um comparativo interativo dos modelos de serviço (IaaS, PaaS, SaaS).</p>" +
         "</div>",
       slides: [
         {

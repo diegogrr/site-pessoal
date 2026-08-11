@@ -1,16 +1,11 @@
 /* ============================================================
    demos.css — Demonstrações interativas
-   Estilos do módulo "caracterizacao-falhas" (Tópico 1) e da
-   área de demo quando montada (deixa de ser placeholder).
+   Estilos INTERNOS dos módulos de demo, compartilhados por
+   todas elas. Quem posiciona os blocos na página é a grade de
+   zonas de demo-pagina.css, carregada depois deste arquivo.
+   Desde 2026-08-07 nenhuma demo é montada dentro do tópico, e
+   por isso as regras de .demo-area saíram daqui.
    ============================================================ */
-
-/* Área com demo montada: abandona o visual de placeholder */
-.demo-area.demo-mounted {
-  border-style: solid;
-  text-align: left;
-  color: var(--color-text);
-  padding: var(--space-4);
-}
 
 .demo-cf-head .demo-cf-badge {
   margin-bottom: var(--space-2);

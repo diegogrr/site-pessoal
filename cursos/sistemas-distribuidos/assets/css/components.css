@@ -524,23 +524,9 @@ p.hint { font-size: var(--font-size-sm); color: var(--color-text-muted); }
 .callout.is-danger { background-color: var(--color-danger-soft); border-left-color: var(--color-danger); }
 .callout.is-danger .callout-title { color: var(--color-danger); }
 
-/* ---------- Área de demonstração interativa (placeholder) ---------- */
-.demo-area {
-  border: var(--border-width) solid var(--color-border);
-  border-left: 3px solid var(--color-accent);
-  border-radius: var(--radius-md);
-  padding: var(--space-5);
-  color: var(--color-text-muted);
-  background-color: var(--color-bg-elevated);
-  box-shadow: var(--shadow-sm);
-  margin: var(--space-5) 0;
-}
-.demo-area .demo-placeholder-icon {
-  font-size: 1.8rem;
-  display: block;
-  margin-bottom: var(--space-2);
-}
-.demo-area p:last-child { margin-bottom: 0; }
+/* A área de demonstração (.demo-area) saiu daqui em 2026-08-07. A demo deixou de
+   ser montada dentro do tópico e ganhou página própria em app/demos/, então o
+   tópico só traz um cartão, que usa as regras de .lab-card logo abaixo. */
 
 
 /* ---------- Cartão da prática na AWS (link para app/labs/) ---------- */

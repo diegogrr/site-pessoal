@@ -345,15 +345,20 @@ SD.content["01"] = {
         "de transporte é zero; há um único administrador. Boa parte das técnicas desta " +
         "disciplina existe porque cada uma dessas frases é falsa.</p>" +
         "</div>" +
-        /* Área reservada para demonstração interativa futura.
-           O atributo data-demo identifica qual módulo JS de demo
-           deverá ser montado aqui quando for implementado. */
-        '<div class="demo-area" data-demo="caracterizacao-falhas">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para uma simulação sobre falhas parciais: nós que caem, " +
-        "mensagens que se perdem e como o sistema (não) percebe a diferença.</p>" +
-        "</div>",
+        /* A demo saiu daqui para página própria em 2026-08-07. O cartão fecha a
+           seção porque é aqui que o aluno acabou de ler as oito falácias, e a
+           demo é justamente onde ele descobre que a primeira delas custa caro. */
+        '<a class="lab-card" href="demos/caracterizacao-falhas/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 4 etapas · ' +
+        "cerca de 10 min</span>" +
+        '<span class="lab-card-title">Caiu ou está lenta?</span>' +
+        '<span class="lab-card-summary">Você está dentro do sistema e precisa ' +
+        "decidir se o servidor do outro lado caiu ou só demorou. Vai errar " +
+        "algumas vezes, e é errando que fica claro por que ninguém resolve isso " +
+        "só aumentando o tempo de espera.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>",
       slides: [
         {
           title: "Sete desafios de projeto",

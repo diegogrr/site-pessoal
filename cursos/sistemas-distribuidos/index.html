@@ -42,8 +42,11 @@
   <!-- Manifesto do curso (lista de tópicos e metadados) -->
   <script src="content/course.js"></script>
 
-  <!-- Notas de aprofundamento (texto dos conceitos: uma vez só, aqui e nos roteiros) -->
-  <script src="content/notas.js"></script>
+  <!-- As notas de aprofundamento (content/notas.js) NÃO entram aqui desde 2026-08-07.
+       Elas são carregadas pelas páginas que de fato as desenham, que são os roteiros
+       de prática e as demonstrações. Nenhum tópico usa `data-nota`, e views/topic.js
+       nunca soube renderizar nota, então o arquivo só pesava 34 KB na primeira carga
+       do SPA. Voltar a incluí-lo exige, antes, ensinar a view a desenhar a nota. -->
 
   <!-- Interface -->
   <script src="assets/js/ui/theme.js"></script>
@@ -53,17 +56,10 @@
   <script src="assets/js/ui/reading.js"></script>
   <script src="assets/js/ui/presentation.js"></script>
 
-  <!-- Camada de tutoria das demos (passos, previsão, painel de efeito, conceito) -->
-  <script src="assets/js/demos/tutor.js"></script>
-
-  <!-- Demonstrações interativas (registram-se em SD.demos) -->
-  <script src="assets/js/demos/caracterizacao-falhas.js"></script>
-  <script src="assets/js/demos/modelos-arquitetura.js"></script>
-  <script src="assets/js/demos/camadas-rede.js"></script>
-  <script src="assets/js/demos/sockets-mensagens.js"></script>
-  <script src="assets/js/demos/rpc-fluxo.js"></script>
-  <script src="assets/js/demos/virtualizacao.js"></script>
-  <script src="assets/js/demos/criptografia-basica.js"></script>
+  <!-- As demonstrações e a camada de tutoria saíram daqui em 2026-08-07, quando
+       passaram a ter página própria em demos/<nome>/index.html. Cada página carrega
+       só o seu módulo, e o tópico traz um cartão de link. Eram oito scripts que o
+       SPA baixava para montar, no máximo, uma demo por página. -->
 
   <!-- Views -->
   <script src="assets/js/views/home.js"></script>

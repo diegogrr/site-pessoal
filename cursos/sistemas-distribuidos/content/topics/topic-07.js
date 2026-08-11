@@ -1406,15 +1406,20 @@ SD.content["07"] = {
         "endereço correspondente àquele nome. Cada sessão ganha um identificador, e as " +
         "duas pontas podem guardá-lo para retomar a conversa depois sem repetir o aperto " +
         "de mãos inteiro.</p>" +
-        /* Demonstração interativa do tópico, montada aqui porque as cinco etapas cobram
-           a cifra da seção 2, a assinatura e o certificado da seção 3 e o aperto de mãos
-           que este trecho acabou de descrever. */
-        '<div class="demo-area" data-demo="criptografia-basica">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa</strong></p>" +
-        "<p>Você começa do lado errado da linha, grampeando a rede, e vai fechando as " +
-        "brechas até o cadeado acender.</p>" +
-        "</div>" +
+        /* A demo saiu daqui para página própria em 2026-08-07. O cartão fica neste
+           ponto porque as cinco etapas cobram a cifra da seção 2, a assinatura e o
+           certificado da seção 3 e o aperto de mãos que este trecho descreveu. */
+        '<a class="lab-card" href="demos/criptografia-basica/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 5 etapas · ' +
+        "cerca de 15 min</span>" +
+        '<span class="lab-card-title">Mallory na Linha</span>' +
+        '<span class="lab-card-summary">Você começa do lado errado da linha, ' +
+        "grampeando a rede de Alice e Bob, e vai fechando as brechas que você " +
+        "mesmo explorou até o cadeado acender. Termina montando o aperto de mãos " +
+        "peça por peça.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>" +
         "<h3>Confiança</h3>" +
         "<p>Autenticar é provar ser quem se diz. Feita a prova, aparece uma pergunta que a " +
         "criptografia não responde, que é o quanto aquela prova vale. É aí que começa a " +

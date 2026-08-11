@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Demonstração interativa do Tópico 4 de Sistemas Distribuídos (IFSP Campus Salto): portas e soquetes, o custo do bloqueio, o empacotamento de dados e o multicast para réplicas.">
+  <title>O Middleware é Você · Demonstração do Tópico 4</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <!-- Estilos internos das demos, compartilhados sem alteração -->
+  <link rel="stylesheet" href="../../assets/css/demos.css">
+  <!-- Casca da página e grade de zonas, carregada depois -->
+  <link rel="stylesheet" href="../../assets/css/demo-pagina.css">
+</head>
+<body>
+
+<div class="demo-topbar">
+  <a class="voltar" href="../../index.html#/topico/04">‹ Tópico 4</a>
+  <span class="titulo">Demonstração · Comunicação entre processos</span>
+  <span class="espaco"></span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="demo-pagina-wrap">
+
+  <div class="demo-aviso-retrato">
+    <span class="icone" aria-hidden="true">📱</span>
+    <span>Vire o aparelho para o lado. A simulação passa a ter mais que o dobro
+    de largura, e a página encurta bastante. Em tela de computador a
+    demonstração ainda se abre em duas colunas, com os controles ao lado da
+    simulação.</span>
+  </div>
+
+  <p class="demo-pagina-intro">
+    Quatro etapas em que você faz à mão o que o middleware faria por você.
+  </p>
+
+  <div id="demo-mount"></div>
+
+</div>
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/demos/tutor.js"></script>
+<script src="../../assets/js/demos/sockets-mensagens.js"></script>
+<script src="../../assets/js/demo-pagina.js"></script>
+<script>
+  /* Sem `zonas`: segue o mapa padrão de demo-pagina.js por inteiro. */
+  SD.demoPagina.montar({ demo: "sockets-mensagens", montarEm: "demo-mount" });
+</script>
+</body>
+</html>

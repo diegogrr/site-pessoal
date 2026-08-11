@@ -387,11 +387,20 @@ SD.content["03"] = {
         "<p>O exemplo mais conhecido é o de pacotes IPv6 atravessando ilhas de IPv4, " +
         "e a propriedade que interessa é a transparência. Quem entra no túnel não " +
         "precisa saber que ele existe.</p>" +
-        '<div class="demo-area" data-demo="camadas-rede">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>A demonstração interativa não pôde ser carregada</strong></p>" +
-        "<p>Recarregue a página para tentar de novo.</p>" +
-        "</div>",
+        /* A demo saiu daqui para página própria em 2026-08-07. O cartão fica neste
+           ponto porque o aluno acabou de ler encapsulamento, roteamento e túneis,
+           que é exatamente o que as cinco etapas cobram. */
+        '<a class="lab-card" href="demos/camadas-rede/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 5 etapas · ' +
+        "cerca de 12 min</span>" +
+        '<span class="lab-card-title">A Viagem do Pacote</span>' +
+        '<span class="lab-card-summary">Siga um pacote da origem ao destino, ' +
+        "camada por camada. Numa das etapas quem encaminha é você, e é ali que " +
+        "fica claro por que o roteador só precisa saber o próximo salto, e não o " +
+        "caminho inteiro.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>",
       slides: [
         {
           title: "Comutação de pacotes",

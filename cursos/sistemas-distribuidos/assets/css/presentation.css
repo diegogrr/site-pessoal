@@ -30,8 +30,9 @@
   font-size: 1.35rem; /* texto ampliado para projeção */
 }
 
-/* Placeholders de demo são material da página de leitura, não de projeção */
-.presentation-layer .demo-area {
+/* O cartão da demonstração é material da página de leitura, não de projeção.
+   Antes de 2026-08-07 a regra escondia a própria demo, montada no tópico. */
+.presentation-layer .lab-card {
   display: none;
 }
 

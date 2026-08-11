@@ -376,13 +376,6 @@ SD.content["12"] = {
         "a <strong>volatilidade e a integração física deixam de ser exceção e " +
         "viram a regra</strong>: o horizonte para onde os sistemas distribuídos " +
         "seguem.</p>" +
-        "</div>" +
-
-        /* Área reservada para demonstração interativa futura. */
-        '<div class="demo-area" data-demo="computacao-ubiqua">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para uma visualização de dispositivos móveis/sensores interagindo com serviços em nuvem.</p>" +
         "</div>",
       slides: [
         {

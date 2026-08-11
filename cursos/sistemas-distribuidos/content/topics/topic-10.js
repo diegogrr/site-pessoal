@@ -202,13 +202,6 @@ SD.content["10"] = {
         "sequencialmente consistente, esconde a falha sem pausa e pode " +
         "enfrentar bizantinos, ao custo de um multicast ordenado (isto é, " +
         "consenso).</p>" +
-        "</div>" +
-
-        /* Área reservada para demonstração interativa futura. */
-        '<div class="demo-area" data-demo="replicacao-grupo">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa (em breve)</strong></p>" +
-        "<p>Espaço reservado para uma simulação de replicação entre réplicas (consistência, falha de réplica, recuperação).</p>" +
         "</div>",
       slides: [
         {

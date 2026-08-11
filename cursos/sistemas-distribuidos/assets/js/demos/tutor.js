@@ -30,16 +30,24 @@ window.SD = window.SD || {};
 SD.demoTutor = (function () {
   "use strict";
 
-  /* Nota de aprofundamento no contexto do SPA. O texto vive em
-     content/notas.js e em nenhum outro lugar; quem monta a URL é o
-     consumidor, e aqui o consumidor está na raiz de app/. */
+  /* Nota de aprofundamento. O texto vive em content/notas.js e em nenhum
+     outro lugar, com o src da figura e o ponteiro de leia[] relativos à raiz
+     de app/, porque quem sabe a profundidade da página é quem a monta.
+
+     Desde a migração de 2026-08-07 toda demo mora em app/demos/<nome>/, dois
+     níveis abaixo, igual ao roteiro de prática em app/labs/<pratica>/. Sem
+     este prefixo o "No curso" apenas troca o hash da própria página da demo e
+     não leva a lugar nenhum. */
+  var BASE_APP_DIR = "../../";
+  var BASE_APP = BASE_APP_DIR + "index.html";
+
   function montarFigura(figura) {
     if (!figura || !figura.src) return "";
     var dim = figura.largura && figura.altura
       ? ' width="' + figura.largura + '" height="' + figura.altura + '"'
       : "";
     return '<figure class="demo-tutor-nota-figura">' +
-      '<img src="' + figura.src + '" alt="' + figura.alt + '"' + dim +
+      '<img src="' + BASE_APP_DIR + figura.src + '" alt="' + figura.alt + '"' + dim +
       ' loading="lazy" decoding="async">' +
       (figura.fonte ? '<p class="figura-fonte">' + figura.fonte + "</p>" : "") +
       (figura.legenda ? "<figcaption>" + figura.legenda + "</figcaption>" : "") +
@@ -54,7 +62,8 @@ SD.demoTutor = (function () {
     var leia = "";
     if (nota.leia && nota.leia.length) {
       leia = '<p class="demo-tutor-nota-leia">No curso: ' + nota.leia.map(function (item) {
-        return '<a href="#/topico/' + item.topico + '">' + item.rotulo + "</a>";
+        return '<a href="' + BASE_APP + "#/topico/" + item.topico + '">' +
+          item.rotulo + "</a>";
       }).join(" · ") + "</p>";
     }
     return '<p class="demo-tutor-nota-cabeca">Nota: ' + nota.termo + "</p>" + corpo + leia;

@@ -2,9 +2,10 @@
    views/topic.js — Página de um tópico
    Carrega o conteúdo sob demanda (SD.loader) e monta, em três
    zonas (trilha · leitura · índice): cabeçalho do tópico com
-   metadados, seções numeradas, área de demonstração, quiz,
-   glossário do tópico, referências, índice "Nesta página" com
-   scroll-spy e paginação anterior/próximo.
+   metadados, seções numeradas, quiz, glossário do tópico,
+   referências, índice "Nesta página" com scroll-spy e paginação
+   anterior/próximo. A demonstração não é montada aqui desde
+   2026-08-07: ela tem página própria e o tópico só linka.
    Namespace global: SD.views.topic
    ============================================================ */
 
@@ -201,26 +202,6 @@ SD.views.topic = function (params) {
 
     /* ---- Quiz ---- */
     SD.quiz.render(document.getElementById("quiz-mount"), meta.id, content.quiz);
-
-    /* ---- Demonstrações interativas ----
-       Cada seção declara um ponto de montagem .demo-area com
-       data-demo="nome". Se houver módulo registrado em SD.demos["nome"],
-       ele é montado no lugar do placeholder; sem módulo, o placeholder
-       permanece. O gancho content.initDemos segue disponível. */
-    Array.prototype.forEach.call(
-      view.querySelectorAll(".demo-area[data-demo]"),
-      function (area) {
-        var demo = SD.demos && SD.demos[area.getAttribute("data-demo")];
-        if (demo && demo.mount) {
-          area.classList.add("demo-mounted");
-          area.innerHTML = "";
-          demo.mount(area);
-        }
-      }
-    );
-    if (content.initDemos) {
-      content.initDemos(view);
-    }
 
     /* ---- Índice: rolagem suave sem interferir no roteador por hash ---- */
     Array.prototype.forEach.call(view.querySelectorAll(".topic-toc a[data-target]"), function (a) {

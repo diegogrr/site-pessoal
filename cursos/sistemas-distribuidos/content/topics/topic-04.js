@@ -1068,14 +1068,20 @@ SD.content["04"] = {
         "replicação, o problema de manter cópias em dia vai ser resolvido com esse mesmo " +
         "mecanismo, e o vocabulário de infectado, suscetível e removido vai reaparecer " +
         "aplicado a réplicas em vez de a nós.</p>" +
-        /* Demonstração interativa do tópico, montada aqui porque só neste ponto o aluno
-           já leu tudo o que as cinco etapas cobram. */
-        '<div class="demo-area" data-demo="sockets-mensagens">' +
-        '<span class="demo-placeholder-icon" aria-hidden="true">🧪</span>' +
-        "<p><strong>Demonstração interativa</strong></p>" +
-        "<p>Simulação da troca de mensagens entre processos, das portas e soquetes ao " +
-        "multicast para réplicas.</p>" +
-        "</div>",
+        /* A demo saiu daqui para página própria em 2026-08-07. O cartão fica neste
+           ponto porque só aqui o aluno já leu tudo o que as quatro etapas cobram,
+           das portas e soquetes até o multicast para réplicas. */
+        '<a class="lab-card" href="demos/sockets-mensagens/index.html" ' +
+        'target="_blank" rel="noopener">' +
+        '<span class="lab-card-eyebrow">Demonstração interativa · 4 etapas · ' +
+        "cerca de 10 min</span>" +
+        '<span class="lab-card-title">O Middleware é Você</span>' +
+        '<span class="lab-card-summary">Entregue mensagens à mão, sem middleware ' +
+        "nenhum para ajudar. Você vai escolher portas, esperar o outro lado " +
+        "responder, empacotar dados para atravessar a rede e mandar a mesma " +
+        "mensagem para várias réplicas.</span>" +
+        '<span class="lab-card-cta">Abrir a demonstração ↗</span>' +
+        "</a>",
       slides: [
         {
           title: "Por que o multicast desceu de camada",
