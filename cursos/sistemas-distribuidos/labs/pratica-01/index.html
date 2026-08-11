@@ -1956,8 +1956,9 @@ encerrar o laboratorio.</p>
         <tbody>
           <tr>
             <td><strong>Falhas independentes e parciais</strong></td>
-            <td>O nó C sumiu e o nó B continuou atendendo. Não existe "o sistema caiu". Existe
-              uma parte que caiu e outra que precisa seguir decidindo sem saber o que houve.</td>
+            <td>O nó C sumiu e o nó B continuou respondendo. Não existe "o sistema caiu".
+              Existe uma parte que caiu e outra que precisa seguir decidindo sem saber o que
+              houve.</td>
           </tr>
           <tr>
             <td><strong>Inexistência de relógio global</strong></td>
@@ -1966,13 +1967,16 @@ encerrar o laboratorio.</p>
           </tr>
           <tr>
             <td><strong>Concorrência</strong></td>
-            <td>Os três nós executam ao mesmo tempo, sem coordenação nenhuma. O contador de
-              pedidos de cada um avança no seu próprio ritmo, e ninguém sabe o total.</td>
+            <td>Os três nós executam ao mesmo tempo, sem coordenação nenhuma. O nó A só fica
+              sabendo de B e de C perguntando, uma vez por segundo, e entre uma pergunta e a
+              seguinte os dois seguem mudando de estado sem avisar ninguém.</td>
           </tr>
           <tr>
             <td><strong>Transparência e seu custo</strong></td>
-            <td>A mesma chamada, com o mesmo código, custou de 0,2 ms a 350 ms conforme o
-              destino. Transparência de localização esconde o endereço, não a distância.</td>
+            <td>A mesma chamada ao S3, mudando só a região, custou 17 ms na Virgínia e
+              342 ms em São Paulo. Dentro da mesma região ela quase não varia, porque os
+              quase 2 ms do próprio software enterram os 0,4 ms de rede até a zona vizinha.
+              Transparência de localização esconde o endereço, não a distância.</td>
           </tr>
           <tr>
             <td><strong>Detecção de falhas por timeout</strong></td>
@@ -1981,8 +1985,9 @@ encerrar o laboratorio.</p>
           </tr>
           <tr>
             <td><strong>Heterogeneidade e middleware</strong></td>
-            <td>Você falou com o EC2 pelo navegador e pelo terminal, e com o serviço de
-              metadados por HTTP. Camadas de software escondendo diferenças, o tempo todo.</td>
+            <td>Você falou com o EC2 pelo navegador e pelo terminal, e o script perguntou por
+              HTTP ao serviço de metadados quem era a própria máquina. Camadas de software
+              escondendo diferenças, o tempo todo.</td>
           </tr>
         </tbody>
       </table>
