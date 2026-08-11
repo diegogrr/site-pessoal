@@ -11,6 +11,13 @@
    Plano e fundamentação:
    docs/demos/2026-07-15-demo-camadas-rede-plano.md
 
+   Camada de tutoria (passos, previsão, painel de efeito e conceito
+   sob demanda) em demos/tutor.js; diagnóstico, previsões e critérios
+   em docs/demos/2026-08-08-demo-camadas-rede-tutoria-plano.md
+   Aqui vivem apenas os DADOS dessa camada: o que fazer, o que
+   perguntar antes e como explicar cada efeito. O motor é genérico
+   e não conhece este modelo.
+
    A inter-rede é pequena e didática; a simulação é determinística
    — a única aleatoriedade é o sorteio (etapa 5) de qual fragmento
    se perde e qual chega duplicado: ?demo-seed=<int> fixa o PRNG
@@ -99,12 +106,12 @@ SD.demos["camadas-rede"] = (function () {
       stage: 1,
       delivered: 0, lost: 0, dups: 0, hops: 0,
       /* etapa 1 */ wrapped: [],
-      /* etapa 2 */ sends: 0, arpCached: false, busy: false,
+      /* etapa 2 */ sends: 0, arpCached: false, busy: false, envios: [],
       /* etapa 3 */ roundIdx: 0, packetAt: null, delivered3: 0,
       /* etapa 4 */ linkDown: false, vectors: null, rounds: 0, converged: true,
-                    deliveredAfterConv: false,
+                    deliveredAfterConv: false, testouNoCaos: false,
       /* etapa 5 */ lostFrag: 0, dupFrag: 0, mode: "udp", sentUdp: false,
-                    sentTcp: false, tcpIntact: false
+                    sentTcp: false, tcpIntact: false, leituras: {}
     };
 
     function to(fn, ms) {
@@ -119,10 +126,16 @@ SD.demos["camadas-rede"] = (function () {
       '    <span class="badge demo-cf-badge">Demonstração</span>' +
       '    <p class="demo-cf-title"></p>' +
       '    <p class="demo-cf-instructions"></p>' +
-      '    <p class="demo-cf-goal"></p>' +
+      '    <div class="demo-tutor-passos" hidden></div>' +
+      '    <div class="demo-tutor-previsao" hidden></div>' +
+      '    <div class="demo-cr-goalrow">' +
+      '      <p class="demo-cf-goal"></p>' +
+      '      <div class="demo-tutor-conceito" hidden></div>' +
+      '    </div>' +
       '  </div>' +
       '  <div class="demo-cr-stage-area"></div>' +
       '  <div class="demo-cf-controls demo-cr-controls"></div>' +
+      '  <div class="demo-tutor-efeito" aria-live="polite"></div>' +
       '  <dl class="demo-cf-metrics">' +
       '    <div><dt>Saltos (pacote atual)</dt><dd data-metric="hops">0</dd></div>' +
       '    <div><dt>Entregues</dt><dd data-metric="delivered">0</dd></div>' +
@@ -169,10 +182,11 @@ SD.demos["camadas-rede"] = (function () {
       stageCounter: container.querySelector(".demo-cf-stage-counter")
     };
 
-    function log(text) {
+    function log(text, diff) {
       var li = document.createElement("li");
       var t = ((Date.now() - startedAt) / 1000).toFixed(1);
-      li.innerHTML = '<span class="demo-cf-log-time">+' + t + "s</span> " + text;
+      li.innerHTML = '<span class="demo-cf-log-time">+' + t + "s</span> " + text +
+        (diff ? ' <span class="demo-cf-log-diff">(' + diff + ")</span>" : "");
       els.log.insertBefore(li, els.log.firstChild);
       while (els.log.children.length > 48) els.log.removeChild(els.log.lastChild);
     }
@@ -183,6 +197,38 @@ SD.demos["camadas-rede"] = (function () {
     }
 
     function bump(name) { state[name]++; metric(name, state[name]); }
+
+    /* ============ Tutoria: retrato do estado ============ */
+
+    /* O tutor imprime só o que está em metricas[]; os demais campos existem
+       para as explicações desta demo. "Saltos" fica DE FORA da lista, e de
+       propósito: o painel colore cada linha de verde ou vermelho conforme a
+       direção boa, e salto a mais não é melhora nem piora, é o pacote andando.
+       Onde ele é a notícia (etapa 3), a linha vai escrita à mão em `numeros`. */
+    function retrato() {
+      return {
+        delivered: state.delivered, lost: state.lost, dups: state.dups,
+        hops: state.hops, sends: state.sends, envios: state.envios.length,
+        wrapped: state.wrapped.length, rounds: state.rounds
+      };
+    }
+
+    function fmtInt(v) { return String(v); }
+
+    var tutor = SD.demoTutor.criar({
+      alvos: {
+        passos: container.querySelector(".demo-tutor-passos"),
+        previsao: container.querySelector(".demo-tutor-previsao"),
+        efeito: container.querySelector(".demo-tutor-efeito"),
+        conceito: container.querySelector(".demo-tutor-conceito")
+      },
+      metricas: [
+        { chave: "delivered", rotulo: "Entregues", formatar: fmtInt, melhorQuando: "maior" },
+        { chave: "lost", rotulo: "Perdidos/descartados", formatar: fmtInt, melhorQuando: "menor" },
+        { chave: "dups", rotulo: "Duplicatas", formatar: fmtInt, melhorQuando: "menor" }
+      ],
+      snapshot: retrato
+    });
 
     /* ============ SVG da inter-rede (etapas 3–5) ============ */
 
@@ -229,7 +275,14 @@ SD.demos["camadas-rede"] = (function () {
     /* ============ Etapa 1 — Empacotar ============ */
 
     function renderStage1() {
-      var buttons = LAYERS.slice().reverse().map(function (l) {
+      /* A lista sai na ordem de LAYERS, da aplicação para o enlace, e NÃO invertida.
+         Até 2026-08-08 ela vinha com .reverse(), pondo o quadro Ethernet no topo, e o
+         aluno que lia de cima para baixo clicava justo na camada que só entra por
+         último. Pior, a recusa dizia que o quadro "embrulha o que vem de cima" quando
+         não havia nada acima dele na tela. Nesta ordem o clique de cima para baixo é o
+         certo, o desenho casa com a pilha que o tópico ensina e a frase de recusa passa
+         a ser literalmente verdadeira. */
+      var buttons = LAYERS.map(function (l) {
         var used = state.wrapped.indexOf(l.id) !== -1;
         return '<button type="button" class="btn btn-secondary demo-cr-layerbtn" data-layer="' +
           l.id + '"' + (used ? " disabled" : "") + "><strong>" + l.label +
@@ -251,33 +304,102 @@ SD.demos["camadas-rede"] = (function () {
         '  <div class="demo-cr-layers">' + buttons + "</div>" +
         '  <div class="demo-cr-envelope" data-wrapped="' + state.wrapped.length + '">' +
         envelope + "</div></div>";
+      /* A etapa 1 não tem controle na zona de comando, e sem esta limpeza o
+         botão da etapa anterior sobrevive ali quando o aluno volta. */
+      els.controls.innerHTML = "";
       els.area.querySelectorAll(".demo-cr-layerbtn").forEach(function (btn) {
         btn.addEventListener("click", function () {
           var layer = LAYERS.filter(function (x) { return x.id === btn.getAttribute("data-layer"); })[0];
           if (layer.order === state.wrapped.length) {
-            state.wrapped.push(layer.id);
-            log("✓ <strong>" + layer.label + "</strong>: " + layer.why + ".");
-            if (state.wrapped.length === LAYERS.length) {
-              log("📦 Quadro completo: envelope dentro de envelope, pronto para a rede física.");
-            }
-            renderStage1();
-            updateNav();
-          } else if (layer.order < state.wrapped.length) {
-            log("⚠️ " + layer.label + " já foi aplicada. Siga para a camada de fora.");
+            aplicarCamada(layer);
           } else {
-            var expected = LAYERS[state.wrapped.length];
-            log("✗ Ainda não: <strong>" + layer.label + "</strong> embrulha o que vem de cima, " +
-              "e ainda falta <strong>" + expected.label + "</strong>.");
-            var env = els.area.querySelector(".demo-cr-envelope");
-            env.classList.remove("is-shake");
-            void env.offsetWidth;
-            env.classList.add("is-shake");
+            recusarCamada(layer);
           }
         });
       });
     }
 
+    function aplicarCamada(layer) {
+      var antes = tutor.retrato();
+      state.wrapped.push(layer.id);
+      var fechou = state.wrapped.length === LAYERS.length;
+      log("✓ <strong>" + layer.label + "</strong>: " + layer.why + ".");
+      if (fechou) {
+        log("📦 Quadro completo: envelope dentro de envelope, pronto para a rede física.");
+      }
+      renderStage1();
+      if (state.wrapped.length >= 1) tutor.passoFeito("primeira");
+      if (fechou) tutor.passoFeito("fechar");
+      /* A camada de baixo da pilha não embrulha ninguém, então as frases sobre
+         "o que veio de cima" e "por fora da anterior" só valem a partir da
+         segunda. */
+      var primeira = layer.order === 0;
+      tutor.efeito({
+        acao: "Você embrulhou o pacote com <strong>" + layer.label + "</strong>.",
+        antes: antes,
+        numeros: "Camadas embrulhadas: " + antes.wrapped + " → " + state.wrapped.length +
+          " de " + LAYERS.length,
+        porque: layer.why + (primeira
+          ? ". É este conteúdo que os três envelopes seguintes vão carregar sem alterar."
+          : ". Os dados que vieram de cima não foram tocados, e o que cresceu foi o envelope."),
+        olhe: fechou
+          ? "a ordem em que você montou, da aplicação para o enlace. A transmissão é a " +
+            "inversa, porque o último envelope fechado é o primeiro a entrar no fio, e " +
+            "a mensagem da aplicação viaja no meio de todos eles."
+          : (primeira
+            ? "o envelope à direita, que deixou de estar vazio. Daqui em diante cada " +
+              "camada nova entra POR FORA desta."
+            : "o envelope à direita, em que a camada nova entrou POR FORA da anterior. A " +
+              "próxima é a primeira que ainda estiver ativa na lista à esquerda.")
+      });
+      updateNav();
+    }
+
+    function recusarCamada(layer) {
+      var expected = LAYERS[state.wrapped.length];
+      /* O que ESTA camada embrulharia é a de dentro dela, e não a próxima da
+         fila. Confundir as duas produzia a frase falsa "o quadro Ethernet
+         embrulharia a mensagem da aplicação". */
+      var interna = LAYERS[layer.order - 1];
+      log("✗ Ainda não: <strong>" + layer.label + "</strong> embrulha o que vem de cima, " +
+        "e ainda falta <strong>" + expected.label + "</strong>.");
+      var env = els.area.querySelector(".demo-cr-envelope");
+      env.classList.remove("is-shake");
+      void env.offsetWidth;
+      env.classList.add("is-shake");
+      tutor.efeito({
+        acao: "Você tentou embrulhar com <strong>" + layer.label + "</strong> antes da hora.",
+        antes: null,
+        numeros: "Camadas embrulhadas: " + state.wrapped.length + " de " + LAYERS.length +
+          " (nada mudou)",
+        porque: "cada camada embrulha o que a de cima já entregou, e " + layer.label +
+          " embrulharia " + (interna ? interna.label : expected.label) + ", que ainda não " +
+          "foi montado. A vez agora é de " + expected.label + ".",
+        olhe: "a lista à esquerda. A camada já usada fica desabilitada, então a próxima " +
+          "é sempre a primeira que ainda dá para clicar."
+      });
+    }
+
     /* ============ Etapa 2 — Entrega local (ARP) ============ */
+
+    /* Placar dos envios: a etapa promete comparar o primeiro envio com o
+       segundo, e a diferença entre eles é a lição inteira. Sem ele, comparar
+       exigiria guardar de cabeça as linhas do primeiro envio, esperar a
+       animação e reparar que não voltaram, o que é tarefa de memória e não de
+       observação (achado A2 do diagnóstico de 2026-08-08). */
+    function renderPlacar2() {
+      var linhas = state.envios.map(function (e, i) {
+        return "<tr><td>" + (i + 1) + "º</td><td>" + e.arp + "</td><td>" + e.dados +
+          "</td><td><strong>" + (e.arp + e.dados) + "</strong></td></tr>";
+      }).join("");
+      if (state.envios.length < 2) {
+        linhas += '<tr class="is-pendente"><td>' + (state.envios.length + 1) +
+          "º</td><td>?</td><td>?</td><td>?</td></tr>";
+      }
+      return '<table class="demo-cr-table demo-cr-placar"><caption>Quadros que cada envio ' +
+        "colocou no fio</caption><thead><tr><th>Envio</th><th>ARP</th><th>Dados</th>" +
+        "<th>Total</th></tr></thead><tbody>" + linhas + "</tbody></table>";
+    }
 
     function renderStage2() {
       var cards = STATIONS.map(function (s) {
@@ -292,12 +414,49 @@ SD.demos["camadas-rede"] = (function () {
         "rede 10.1 (um único segmento; sem roteamento)</p>" +
         '<div class="demo-cr-stations">' + cards + "</div>" +
         '<p class="demo-cr-arpcache" data-cached="' + state.arpCached + '">cache ARP do cliente: ' +
-        (state.arpCached ? "<code>10.1.0.7 ⇒ 02:C3</code>" : "<em>vazio</em>") + "</p></div>";
+        (state.arpCached ? "<code>10.1.0.7 ⇒ 02:C3</code>" : "<em>vazio</em>") + "</p>" +
+        renderPlacar2() + "</div>";
       els.controls.innerHTML =
         '<button type="button" class="btn demo-cr-send2"' + (state.busy ? " disabled" : "") +
         ">✉️ Enviar arquivo para 10.1.0.7</button>" +
         '<span class="demo-cr-sends">envios concluídos: <strong>' + state.sends + "</strong></span>";
       els.controls.querySelector(".demo-cr-send2").addEventListener("click", sendLocal);
+    }
+
+    function explicarEnvio2(antes, arpFrames) {
+      var total = arpFrames + 1;
+      if (state.sends === 1) {
+        return {
+          acao: "Você enviou o arquivo pela primeira vez, e o cliente precisou descobrir " +
+            "o MAC de 10.1.0.7.",
+          numeros: "Quadros no fio: " + total + " (" + arpFrames + " de ARP + 1 de dados)",
+          porque: "o quadro Ethernet precisa de um endereço MAC de destino, e o cliente " +
+            "tinha só o IP. O ARP perguntou em difusão quem tem 10.1.0.7, todas as " +
+            "estações receberam a pergunta e só o dono respondeu.",
+          olhe: "o placar logo abaixo das estações. Ele guarda o que este envio gastou, " +
+            "para você comparar com o próximo sem precisar lembrar de nada."
+        };
+      }
+      if (state.sends === 2) {
+        var e1 = state.envios[0];
+        return {
+          acao: "Você enviou o mesmo arquivo de novo, e desta vez o ARP não apareceu.",
+          numeros: "Quadros de ARP: " + e1.arp + " → " + arpFrames + " · quadros no fio: " +
+            (e1.arp + e1.dados) + " → " + total,
+          porque: "o par (IP, MAC) descoberto no primeiro envio ficou guardado no cache " +
+            "ARP, e o cliente montou o quadro direto. A difusão só volta quando a entrada " +
+            "expira ou quando o destino é outro.",
+          olhe: "as duas linhas do placar, uma embaixo da outra. A diferença entre elas é " +
+            "o cache, e a rede não ficou mais rápida, o que sumiu foi trabalho repetido."
+        };
+      }
+      return {
+        acao: "Você enviou o arquivo mais uma vez.",
+        numeros: "Quadros no fio: " + total + " (o cache continua valendo)",
+        porque: "enquanto a entrada do cache não expirar, todo envio para 10.1.0.7 custa " +
+          "um quadro só. A economia do ARP não é de uma vez, é de todas as seguintes.",
+        olhe: "o placar, em que as linhas a partir da segunda são todas iguais."
+      };
     }
 
     function stationNote(ip, text, cls) {
@@ -310,26 +469,35 @@ SD.demos["camadas-rede"] = (function () {
 
     function sendLocal() {
       if (state.busy) return;
+      var antes = tutor.retrato();
+      /* Dois quadros no fio quando o ARP roda, que são a pergunta em difusão e
+         a resposta de quem se reconhece. Guardar o par no cache é escrita em
+         memória local e não gasta quadro nenhum. */
+      var arpFrames = state.arpCached ? 0 : 2;
       state.busy = true;
       renderStage2();
+      tutor.aguardar("Enviando. Esta faixa conta quantos quadros o envio gastou assim que " +
+        "ele terminar.");
       var t = 0;
       if (!state.arpCached) {
         to(function () {
           log("❓ O cliente sabe o IP 10.1.0.7, mas não o MAC. Entra o <strong>ARP em " +
-            "broadcast</strong>: “quem tem 10.1.0.7?”");
+            "broadcast</strong>: “quem tem 10.1.0.7?” (1º quadro no fio)");
           STATIONS.forEach(function (s) { stationNote(s.ip, "recebeu o broadcast", "is-flash"); });
         }, (t += 200));
         to(function () {
           stationNote("10.1.0.6", "IP não é meu: ignora", "");
           stationNote("10.1.0.7", "sou eu! responde: MAC 02:C3", "is-target");
-          log("🙋 Só <strong>10.1.0.7</strong> responde, com seu MAC. Os demais ignoram.");
+          log("🙋 Só <strong>10.1.0.7</strong> responde, com seu MAC (2º quadro no fio). " +
+            "Os demais ignoram.");
         }, (t += 900));
         to(function () {
           state.arpCached = true;
           var badge = els.area.querySelector(".demo-cr-arpcache");
           badge.setAttribute("data-cached", "true");
           badge.innerHTML = "cache ARP do cliente: <code>10.1.0.7 ⇒ 02:C3</code>";
-          log("🗃️ Par (IP, MAC) guardado no <strong>cache ARP</strong>. O broadcast não se repete.");
+          log("🗃️ Par (IP, MAC) guardado no <strong>cache ARP</strong>, sem gastar quadro " +
+            "nenhum, porque isso é memória local. O broadcast não se repete.");
         }, (t += 800));
       } else {
         to(function () {
@@ -338,12 +506,25 @@ SD.demos["camadas-rede"] = (function () {
       }
       to(function () {
         state.sends++;
+        state.envios.push({ arp: arpFrames, dados: 1 });
         bump("delivered");
         state.busy = false;
         renderStage2();
         stationNote("10.1.0.6", "quadro não é para mim", "");
         stationNote("10.1.0.7", "MAC confere → entrega às camadas de cima", "is-target");
-        log("📬 Quadro entregue na interface certa; as outras estações o descartam em hardware.");
+        if (state.sends >= 1) tutor.passoFeito("envio1");
+        if (state.sends >= 2) tutor.passoFeito("envio2");
+        var exp = explicarEnvio2(antes, arpFrames);
+        /* O painel fala primeiro para que o resumo dele feche a linha do
+           registro, que é a última do envio. O log desta demo já narra o
+           conceito, então ele ganha o número e não uma linha nova. */
+        var diff = tutor.efeito({
+          acao: exp.acao, antes: antes, numeros: exp.numeros,
+          porque: exp.porque, olhe: exp.olhe
+        });
+        log("📬 Quadro entregue na interface certa; as outras estações o descartam em " +
+          "hardware. Este envio gastou " + (arpFrames + 1) + " quadro" +
+          (arpFrames ? "s" : "") + " no fio.", diff);
         updateNav();
       }, (t += 900));
     }
@@ -352,18 +533,22 @@ SD.demos["camadas-rede"] = (function () {
 
     function currentRound() { return ROUNDS[state.roundIdx]; }
 
+    /* Sem coluna de custo, desde 2026-08-08. Nesta etapa a decisão usa só a linha do
+       destino e a coluna de saída, e o custo apontava para a resposta errada: o pacote 1
+       vai para a rede 10.5, cuja linha custa 2, enquanto "rede em B" sai pelo mesmo
+       enlace e custa 1. O custo só ganha sentido na etapa 4, e é lá que ele aparece,
+       dentro do vetor de distância. */
     function renderTable(node, dest) {
       var t = TABLES[node];
       var rows = Object.keys(t).map(function (d) {
         var e = t[d];
         var out = e === "local" ? "local" : (e === "gateway" ? "→ Internet (gateway)" :
           "enlace " + e.l);
-        var cost = (e && e.c !== undefined) ? e.c : "n/d";
         return "<tr" + (d === dest ? ' data-dest-row="1"' : "") + "><td>" + DEST_LABEL[d] +
-          "</td><td>" + out + "</td><td>" + cost + "</td></tr>";
+          "</td><td>" + out + "</td></tr>";
       }).join("");
       return '<table class="demo-cr-table"><caption>Tabela de roteamento de <strong>' + node +
-        "</strong></caption><thead><tr><th>Para</th><th>Saída</th><th>Custo</th></tr></thead>" +
+        "</strong></caption><thead><tr><th>Para</th><th>Saída</th></tr></thead>" +
         "<tbody>" + rows + "</tbody></table>";
     }
 
@@ -392,7 +577,62 @@ SD.demos["camadas-rede"] = (function () {
       });
     }
 
+    /* O "por quê" e o "olhe para" de um salto. A ideia que a etapa persegue é
+       que a decisão coube a UMA linha da tabela, e que errar o enlace custa
+       caminho, não pacote. */
+    function explicarSalto(o) {
+      var destino = o.r.dest === "DEF" ? "203.0.113.9, na Internet"
+        : "a " + DEST_LABEL[o.r.dest];
+      if (o.arrived) {
+        if (o.r.dest === "DEF") {
+          return {
+            acao: "Você levou o pacote até <strong>E</strong>, o único roteador com saída " +
+              "para a Internet.",
+            porque: "nenhum roteador daqui conhece 203.0.113.9, e nenhum precisava. A rota " +
+              "padrão de E manda para o gateway tudo o que a tabela não reconhece.",
+            olhe: "o tamanho das tabelas que você consultou, com meia dúzia de linhas cada " +
+              "uma, num mundo de bilhões de endereços. É a rota padrão que torna isso " +
+              "possível."
+          };
+        }
+        return {
+          acao: "Você entregou o pacote em <strong>" + o.next + "</strong>, que é a rede de " +
+            "destino.",
+          porque: "cada roteador do caminho consultou uma linha da própria tabela e passou " +
+            "adiante. Em nenhum momento alguém conheceu a rota inteira.",
+          olhe: 'o contador "Saltos (pacote atual)", que zerou para o pacote seguinte. Daqui ' +
+            "em diante a entrega é local, como na etapa 2."
+        };
+      }
+      if (o.correct) {
+        return {
+          acao: "Você mandou o pacote pelo <strong>enlace " + o.l + "</strong>, de " + o.at +
+            " até <strong>" + o.next + "</strong>.",
+          porque: o.r.dest === "DEF"
+            ? "a tabela de " + o.at + " não tem linha para 203.0.113.9, então valeu a rota " +
+              "padrão, que aponta o enlace " + o.l + ". Ela existe justamente para o destino " +
+              "desconhecido."
+            : "a tabela de " + o.at + " associa " + DEST_LABEL[o.r.dest] + " ao enlace " +
+              o.l + ", e foi essa única linha que decidiu. As outras não foram consultadas, " +
+              "e nenhuma delas diz o caminho inteiro.",
+          olhe: "a tabela na tela, que trocou de dono. Quem decide agora é a de " + o.next +
+            ", e ela é outra."
+        };
+      }
+      return {
+        acao: "Você mandou o pacote pelo <strong>enlace " + o.l + "</strong>, e a tabela de " +
+          o.at + " mandava o <strong>enlace " + o.entry.l + "</strong>.",
+        porque: "o pacote não se perdeu, porque em " + o.next + " existe outra tabela, e ela " +
+          "também sabe alcançar " + destino + ". O desvio custou um salto a mais, e não a " +
+          "entrega.",
+        olhe: "a tabela de " + o.next + ", que já está na tela. Encaminhamento errado vira " +
+          "caminho mais longo, e é essa tolerância que sustenta uma rede cujas tabelas nunca " +
+          "estão todas em dia."
+      };
+    }
+
     function chooseLink(l) {
+      var antes = tutor.retrato();
       var r = currentRound();
       var at = state.packetAt;
       var entry = TABLES[at][r.dest] === undefined || r.dest === "DEF" ? TABLES[at].DEF : TABLES[at][r.dest];
@@ -410,6 +650,7 @@ SD.demos["camadas-rede"] = (function () {
       }
       var arrived = (r.dest !== "DEF" && next === r.dest) ||
         (r.dest === "DEF" && next === "E");
+      var saltosDoPacote = state.hops;
       if (arrived) {
         if (r.dest === "DEF") {
           log("🌐 Em E, a rota <strong>padrão</strong> aponta o gateway: o pacote segue para a " +
@@ -422,12 +663,30 @@ SD.demos["camadas-rede"] = (function () {
         state.roundIdx++;
         state.hops = 0;
         metric("hops", 0);
+        tutor.passoFeito("pacote" + state.delivered3);
         if (state.roundIdx < ROUNDS.length) {
           state.packetAt = currentRound().start;
           log("▶ " + currentRound().label);
         }
       }
       renderStage3();
+      var exp = explicarSalto({
+        at: at, l: l, entry: entry, correct: correct, next: next,
+        arrived: arrived, r: r, antes: antes
+      });
+      /* O registro desta etapa já narra cada salto e cada chegada, então aqui
+         o painel não devolve linha nova para ele. */
+      tutor.efeito({
+        acao: exp.acao,
+        antes: antes,
+        numeros: arrived
+          ? "Entregues: " + antes.delivered + " → " + state.delivered + " · o pacote andou " +
+            saltosDoPacote + " salto" + (saltosDoPacote > 1 ? "s" : "")
+          : "Saltos deste pacote: " + antes.hops + " → " + state.hops +
+            (correct ? "" : ", um deles desnecessário"),
+        porque: exp.porque,
+        olhe: exp.olhe
+      });
       updateNav();
     }
 
@@ -441,6 +700,28 @@ SD.demos["camadas-rede"] = (function () {
       state.rounds = 0;
       state.converged = true;
       state.deliveredAfterConv = false;
+      state.testouNoCaos = false;
+    }
+
+    /* Forma curta da rota, para a linha de antes/depois do painel. Sem
+       dois-pontos, porque ali várias rotas dividem a mesma linha. */
+    function rotaCurta(v) {
+      if (v === "local") return "local";
+      return v.c >= INFC ? "sem rota (∞)" : "enlace " + v.l + " (custo " + v.c + ")";
+    }
+
+    function retratoVetores() {
+      var m = {};
+      Object.keys(state.vectors).forEach(function (n) { m[n] = rotaCurta(state.vectors[n]); });
+      return m;
+    }
+
+    function mudancasDeRota(antes) {
+      return Object.keys(state.vectors).filter(function (n) {
+        return antes[n] !== rotaCurta(state.vectors[n]);
+      }).map(function (n) {
+        return n + " " + antes[n] + " → " + rotaCurta(state.vectors[n]);
+      });
     }
 
     function workingLinks(n) {
@@ -450,6 +731,8 @@ SD.demos["camadas-rede"] = (function () {
     function vecCost(n) { return state.vectors[n] === "local" ? 0 : state.vectors[n].c; }
 
     function exchangeRound() {
+      var antes = tutor.retrato();
+      var rotasAntes = retratoVetores();
       var snap = {};
       Object.keys(state.vectors).forEach(function (n) { snap[n] = vecCost(n); });
       var changed = false;
@@ -471,18 +754,82 @@ SD.demos["camadas-rede"] = (function () {
         state.vectors[n] = best;
       });
       state.rounds++;
+      var mudancas = mudancasDeRota(rotasAntes);
       if (changed) {
         state.converged = false;
         log("🔁 Rodada " + state.rounds + ": tabelas trocadas, rotas para a rede de C mudaram.");
       } else {
         state.converged = true;
         log("🟢 Rodada " + state.rounds + ": nada mudou, as tabelas <strong>convergiram</strong>.");
+        if (state.linkDown) tutor.passoFeito("trocar");
       }
       renderStage4();
+      tutor.efeito({
+        acao: changed
+          ? "Você mandou os roteadores trocarem tabelas (rodada " + state.rounds + ")."
+          : "Você trocou tabelas mais uma vez (rodada " + state.rounds +
+            "), e nada mudou.",
+        antes: antes,
+        numeros: mudancas.length ? mudancas.join(" · ") : "Nenhuma rota mudou nesta rodada",
+        porque: changed
+          ? "cada roteador somou 1 ao custo que cada vizinho anunciou e ficou com o menor. " +
+            "Ninguém calculou o caminho inteiro, e mesmo assim as rotas se acertaram."
+          : "uma rodada sem novidade é a definição de convergência no vetor de distância. " +
+            "Enquanto alguma rota muda, a rede ainda está se acertando, e por isso a rodada " +
+            "que parece inútil é justamente a que fecha o processo.",
+        olhe: changed
+          ? "de onde veio a correção. A notícia da queda chegou a A como o custo infinito " +
+            "anunciado por B, e não como um aviso sobre o enlace 2, que A nem enxerga."
+          : (state.linkDown
+            ? "a linha de estado, que passou a dizer estáveis, e o custo de A, que ficou em " +
+              vecCost("A") + " contra os 2 de antes da falha. Reconvergir custou um salto."
+            : "a linha de estado. As tabelas já concordavam, então esta troca não teve o " +
+              "que corrigir.")
+      });
       updateNav();
     }
 
+    function explicarEntrega4(ok, reason, path) {
+      if (!ok) {
+        return {
+          acao: "Você testou uma entrega com as tabelas ainda desatualizadas.",
+          porque: "A mandou o pacote para B, porque a tabela dela ainda dizia isso, e B já " +
+            "não tinha para onde mandar. O pacote foi descartado no meio do caminho, e " +
+            "ninguém avisou a origem.",
+          olhe: "a janela que se abriu entre a falha e a convergência. A rede erra ali " +
+            "porque a informação leva tempo para viajar de vizinho em vizinho, e não por " +
+            "defeito de projeto."
+        };
+      }
+      if (!state.linkDown) {
+        return {
+          acao: "Você entregou um pacote com a rede inteira de pé.",
+          porque: "o caminho " + path.join(" para ") + " é o que as tabelas apontam hoje, " +
+            "com custo 2 a partir de A. É este o estado que a falha vai desmanchar.",
+          olhe: "o enlace 2 no desenho, que é o próximo salto de B. Derrubá-lo é derrubar " +
+            "a rota preferida, e não a rede."
+        };
+      }
+      if (state.converged) {
+        return {
+          acao: "Você testou a entrega com as tabelas já estáveis.",
+          porque: "a rota de A passou a sair pelo enlace 3, e o pacote foi por D e por E " +
+            "até C, sem tocar no enlace caído.",
+          olhe: "o caminho no registro, um salto mais longo que o original. A rede se " +
+            "refez sozinha, e não de graça."
+        };
+      }
+      return {
+        acao: "Você testou a entrega, e ela já funciona.",
+        porque: "a rodada de troca que você acabou de rodar consertou as rotas de A e de " +
+          "B, e o pacote encontrou o caminho por D e por E.",
+        olhe: "a linha de estado, que ainda diz instáveis. As rotas já estão certas, e " +
+          "falta a rodada sem novidade que autoriza declarar isso."
+      };
+    }
+
     function testDelivery() {
+      var antes = tutor.retrato();
       var path = ["A"];
       var at = "A";
       var ok = false, reason = "";
@@ -495,18 +842,31 @@ SD.demos["camadas-rede"] = (function () {
         at = viaLink(at, v.l);
         path.push(at);
       }
+      if (state.linkDown && state.rounds === 0) state.testouNoCaos = true;
       if (ok) {
         log("🏁 Entregue: <strong>" + path.join(" → ") + "</strong> (" + (path.length - 1) +
           " saltos)" + (state.linkDown ? ". Rota alternativa, sem passar pelo enlace 2." : "."));
         bump("delivered");
         if (state.linkDown && state.converged) {
           state.deliveredAfterConv = true;
+          tutor.passoFeito("testar-ok");
         }
       } else {
         log("💥 Pacote perdido: " + (reason || "vagou demais (TTL)") + ". Durante a convergência, " +
           "a rede erra.");
         bump("lost");
       }
+      if (state.testouNoCaos) tutor.passoFeito("testar-caos");
+      var exp = explicarEntrega4(ok, reason, path);
+      tutor.efeito({
+        acao: exp.acao, antes: antes,
+        numeros: ok
+          ? "Entregues: " + antes.delivered + " → " + state.delivered + " · caminho " +
+            path.join(" → ") + ", " + (path.length - 1) + " saltos"
+          : "Perdidos/descartados: " + antes.lost + " → " + state.lost + " · caminho " +
+            path.join(" → ") + ", descartado antes de chegar",
+        porque: exp.porque, olhe: exp.olhe
+      });
       updateNav();
     }
 
@@ -532,12 +892,26 @@ SD.demos["camadas-rede"] = (function () {
         "(1 rodada)</button>" +
         '<button type="button" class="btn demo-cr-test">✉️ Testar entrega (A → servidor)</button>';
       els.controls.querySelector(".demo-cr-break").addEventListener("click", function () {
+        var antes = tutor.retrato();
+        var rotasAntes = retratoVetores();
         state.linkDown = true;
         state.converged = false;
         state.vectors.B = { l: 2, c: INFC };
         log("💥 Enlace 2 (B-C) caiu. B marca a rota pela saída 2 com <strong>custo ∞</strong> " +
           "(ações Envia/Recebe do RIP). Teste uma entrega agora, e depois troque tabelas.");
         renderStage4();
+        tutor.passoFeito("derrubar");
+        tutor.efeito({
+          acao: "Você derrubou o enlace 2, que era por onde B alcançava a rede de C.",
+          antes: antes,
+          numeros: mudancasDeRota(rotasAntes).join(" · "),
+          porque: "B percebeu a queda do enlace vizinho e marcou com custo infinito a rota " +
+            "que passava por ali. Só B sabe disso neste instante, e A continua achando que " +
+            "chega ao destino por B, com custo 2.",
+          olhe: "a tabela de rotas, em que só a linha de B mudou. As outras quatro ainda " +
+            "descrevem uma rede que não existe mais, e a próxima entrega vai mostrar o que " +
+            "isso custa."
+        });
         updateNav();
       });
       els.controls.querySelector(".demo-cr-exchange").addEventListener("click", exchangeRound);
@@ -572,6 +946,34 @@ SD.demos["camadas-rede"] = (function () {
       return evs;
     }
 
+    /* Placar dos dois protocolos: a etapa promete "os MESMOS acidentes, finais
+       diferentes", e sem guardar o que a aplicação leu no envio anterior a
+       comparação viraria exercício de memória, como era na etapa 2. */
+    function renderPlacar5() {
+      var linhas = ["udp", "tcp"].map(function (m) {
+        var r = state.leituras[m];
+        if (!r) {
+          return '<tr class="is-pendente"><td>' + m.toUpperCase() +
+            "</td><td>ainda não enviado</td><td>?</td></tr>";
+        }
+        return "<tr><td>" + m.toUpperCase() + '</td><td><code>«' + r.texto +
+          "»</code></td><td>" + r.distintos + " de " + FRAGS.length +
+          (r.intacto ? ", em ordem" : ", com falha") + "</td></tr>";
+      }).join("");
+      /* Antes do primeiro envio a legenda não nomeia os fragmentos, senão
+         entrega a resposta da previsão. Depois ela nomeia, porque aí a
+         afirmação "os mesmos acidentes" precisa ser verificável. */
+      var legenda = state.leituras.udp || state.leituras.tcp
+        ? "Nos dois envios o fragmento " + state.lostFrag + " se perde numa fila cheia e o " +
+          "fragmento " + state.dupFrag + " chega duas vezes"
+        : "Os dois envios enfrentam os mesmos acidentes, com um fragmento perdido numa " +
+          "fila cheia e outro chegando duas vezes";
+      return '<table class="demo-cr-table demo-cr-placar"><caption>' + legenda +
+        "</caption><thead><tr><th>Protocolo</th>" +
+        "<th>O que a aplicação leu</th><th>Fragmentos</th></tr></thead><tbody>" +
+        linhas + "</tbody></table>";
+    }
+
     function renderStage5() {
       initStage5();
       var slots = FRAGS.map(function (_, i) {
@@ -584,8 +986,34 @@ SD.demos["camadas-rede"] = (function () {
         '<div class="demo-cr-rx"><p>Recebido no servidor (rede 10.5):</p>' +
         '<div class="demo-cr-slots" data-done="0">' + slots + "</div>" +
         '<p class="demo-cr-apptext">O que a aplicação leu: <strong data-apptext data-intact="">n/d' +
-        "</strong></p></div>";
+        "</strong></p></div>" + renderPlacar5();
       renderControls5();
+    }
+
+    function explicarEnvio5(mode) {
+      if (mode === "udp") {
+        return {
+          numeros: null,   // o diff automático já conta a perda e a duplicata
+          porque: "o IP entregou no melhor esforço, com um fragmento descartado numa fila " +
+            "cheia e outro chegando em dobro por causa de uma retransmissão. O UDP repassou " +
+            "à aplicação o que chegou, na ordem em que chegou.",
+          olhe: 'a linha "O que a aplicação leu", com a lacuna do fragmento perdido e o ' +
+            "pedaço repetido. É exatamente o texto que o programa receberia."
+        };
+      }
+      var udp = state.leituras.udp;
+      return {
+        numeros: udp
+          ? "Fragmentos entregues à aplicação: " + udp.distintos + " de " + FRAGS.length +
+            " no UDP → " + FRAGS.length + " de " + FRAGS.length + " no TCP"
+          : "Fragmentos entregues à aplicação: " + FRAGS.length + " de " + FRAGS.length,
+        porque: "os acidentes foram os mesmos, porque a rede não mudou. O que mudou está " +
+          "nas pontas, com o número de sequência que ordena e denuncia a repetição, a " +
+          "confirmação que revela a falta e a retransmissão que a repara.",
+        olhe: "os contadores de perdidos e de duplicatas, que subiram neste envio também. " +
+          "A rede continuou errando do começo ao fim, e ainda assim a aplicação leu a " +
+          "mensagem inteira."
+      };
     }
 
     function renderControls5() {
@@ -609,8 +1037,11 @@ SD.demos["camadas-rede"] = (function () {
 
     function sendStage5() {
       if (state.busy) return;
+      var antes = tutor.retrato();
       state.busy = true;
       renderStage5();
+      tutor.aguardar("Enviando os " + FRAGS.length + " fragmentos. Esta faixa conta o que a " +
+        "aplicação recebeu assim que o último chegar.");
       var mode = state.mode;
       var evs = arrivals();
       var appOrder = [];       // UDP: ordem de chegada; TCP: ordem final
@@ -677,11 +1108,15 @@ SD.demos["camadas-rede"] = (function () {
       to(function () {
         var text = appOrder.map(function (f) { return FRAGS[f - 1]; }).join("");
         var intact = text === FULL_MSG;
+        var distintos = appOrder.filter(function (f, i) {
+          return appOrder.indexOf(f) === i;
+        }).length;
         var out = els.area.querySelector("[data-apptext]");
         out.textContent = "«" + (text || "(nada)") + "»" + (intact ? "" :
           " (fora de ordem, com lacuna ou duplicata)");
         out.setAttribute("data-intact", String(intact));
         els.area.querySelector(".demo-cr-slots").setAttribute("data-done", "1");
+        state.leituras[mode] = { texto: text, intacto: intact, distintos: distintos };
         if (mode === "udp") {
           state.sentUdp = true;
           log("📄 UDP entregou o que chegou, como chegou: <strong>«" + text + "»</strong>. " +
@@ -694,7 +1129,20 @@ SD.demos["camadas-rede"] = (function () {
             "continuou perdendo e duplicando; quem consertou foram <strong>as pontas</strong>.");
         }
         state.busy = false;
-        renderControls5(); /* só os controles: o resultado na área fica visível */
+        /* Só os controles e o placar: as caixinhas dos fragmentos e a linha do
+           que a aplicação leu ficam como estão, senão o resultado que o aluno
+           acabou de assistir sumiria da tela. */
+        var placar = els.area.querySelector(".demo-cr-placar");
+        if (placar) placar.outerHTML = renderPlacar5();
+        renderControls5();
+        tutor.passoFeito(mode);
+        var exp = explicarEnvio5(mode);
+        tutor.efeito({
+          acao: mode === "udp"
+            ? "Você enviou a mensagem com UDP."
+            : "Você enviou a MESMA mensagem com TCP.",
+          antes: antes, numeros: exp.numeros, porque: exp.porque, olhe: exp.olhe
+        });
         updateNav();
       }, (t += 700));
     }
@@ -705,21 +1153,88 @@ SD.demos["camadas-rede"] = (function () {
       {
         title: "Etapa 1: Empacotar (encapsulamento)",
         instructions: "O navegador em 10.1.0.5 quer pedir uma página ao servidor 10.5.0.80. " +
-          "Monte o pacote clicando as camadas NA ORDEM: cada uma embrulha a de cima.",
+          "Monte o pacote clicando as camadas de cima para baixo, porque cada uma embrulha " +
+          "a que veio antes.",
         goalText: "Meta: fechar o quadro completo (4 camadas na ordem certa).",
+        aguardando: "Clique numa camada e esta faixa conta o que ela embrulhou e por quê.",
+        conceito: "encapsulamento",
+        passos: [
+          { id: "primeira", texto: 'Clique em "Mensagem da aplicação", a primeira da lista' },
+          { id: "fechar", texto: "Siga para baixo até fechar o quadro Ethernet" }
+        ],
+        previsao: {
+          pergunta: "quando este pacote for transmitido, qual das quatro camadas entra " +
+            "primeiro no fio?",
+          opcoes: [
+            {
+              rotulo: "a mensagem da aplicação",
+              veredito: "A mensagem da aplicação é a primeira a ser montada e a última a " +
+                "aparecer, porque viaja no meio de todos os envelopes."
+            },
+            {
+              rotulo: "o cabeçalho TCP",
+              veredito: "O cabeçalho TCP é o segundo envelope de dentro para fora, e no fio " +
+                "ele vem depois do quadro Ethernet e do cabeçalho IP."
+            },
+            {
+              rotulo: "o quadro Ethernet",
+              correta: true,
+              veredito: "O último envelope fechado é o primeiro a sair. Quem recebe começa " +
+                "lendo o cabeçalho Ethernet e vai abrindo um envelope de cada vez, de fora " +
+                "para dentro."
+            }
+          ]
+        },
         setup: function () {
           if (state.wrapped.length !== LAYERS.length) state.wrapped = [];
         },
         render: renderStage1,
+        marcar: function () {
+          if (state.wrapped.length >= 1) tutor.passoFeito("primeira");
+          if (state.wrapped.length === LAYERS.length) tutor.passoFeito("fechar");
+        },
         goalMet: function () { return state.wrapped.length === LAYERS.length; }
       },
       {
         title: "Etapa 2: Entrega local (mesma Ethernet)",
-        instructions: "Antes de cruzar o mundo: um destino na MESMA rede local. Sem roteamento, " +
-          "mas o cliente só conhece o IP do destino, não o MAC. Envie duas vezes e compare.",
+        instructions: "Antes de cruzar o mundo, um destino na MESMA rede local. Não há " +
+          "roteamento a fazer, mas o cliente conhece só o IP do destino, e o quadro precisa " +
+          "de um endereço MAC.",
         goalText: "Meta: enviar 2 vezes (a segunda sem precisar de ARP).",
+        aguardando: "Envie o arquivo e esta faixa conta quantos quadros o envio gastou.",
+        conceito: "arp-e-cache-arp",
+        passos: [
+          { id: "envio1", texto: 'Clique em "✉️ Enviar arquivo para 10.1.0.7" e acompanhe o ARP' },
+          { id: "envio2", texto: "Envie de novo e compare os dois envios no placar" }
+        ],
+        previsao: {
+          pergunta: "o mesmo arquivo vai para o mesmo destino duas vezes. O segundo envio " +
+            "coloca no fio:",
+          opcoes: [
+            {
+              rotulo: "os mesmos quadros do primeiro",
+              veredito: "O ARP não se repete. O par (IP, MAC) descoberto no primeiro envio " +
+                "ficou guardado no cache."
+            },
+            {
+              rotulo: "um quadro a menos",
+              veredito: "Saem dois a menos, porque o ARP custa dois quadros, a pergunta em " +
+                "difusão e a resposta de quem se reconhece."
+            },
+            {
+              rotulo: "só o quadro de dados",
+              correta: true,
+              veredito: "O cache ARP responde no lugar da rede, e os dois quadros de ARP " +
+                "desaparecem. De 3 quadros no fio para 1."
+            }
+          ]
+        },
         setup: function () { state.busy = false; },
         render: renderStage2,
+        marcar: function () {
+          if (state.sends >= 1) tutor.passoFeito("envio1");
+          if (state.sends >= 2) tutor.passoFeito("envio2");
+        },
         goalMet: function () { return state.sends >= 2; }
       },
       {
@@ -727,6 +1242,35 @@ SD.demos["camadas-rede"] = (function () {
         instructions: "Agora o pacote cruza a inter-rede. Em cada roteador, leia a tabela e " +
           "escolha o enlace de saída. Ninguém conhece o caminho inteiro, só o próximo salto.",
         goalText: "Meta: entregar os 3 pacotes (o último só sai pela rota padrão).",
+        aguardando: "Escolha um enlace e esta faixa conta o que a tabela mandou fazer.",
+        conceito: "proximo-salto-e-rota-padrao",
+        passos: [
+          { id: "pacote1", texto: "Encaminhe o pacote 1 até a rede 10.5, um enlace por vez" },
+          { id: "pacote2", texto: "Faça o mesmo com o pacote 2, que parte de C" },
+          { id: "pacote3", texto: "Encaminhe o pacote 3, cujo destino não está em tabela nenhuma" }
+        ],
+        previsao: {
+          pergunta: "o pacote 1 vai para a rede 10.5 e está em A, que tem saída pelo enlace " +
+            "1 (para B) e pelo enlace 3 (para D). Por onde ele sai?",
+          opcoes: [
+            {
+              rotulo: "pelo enlace 1",
+              correta: true,
+              veredito: "A tabela de A tem uma linha para a rede 10.5, e ela diz enlace 1. A " +
+                "decisão inteira cabe nessa linha."
+            },
+            {
+              rotulo: "pelo enlace 3, que parece mais perto",
+              veredito: "O desenho engana. Quem decide é a linha da tabela, e a de A manda " +
+                "pelo enlace 1, para B."
+            },
+            {
+              rotulo: "não dá para saber sem conhecer o caminho inteiro",
+              veredito: "Dá para saber, e é a lição da etapa. A tabela de A não conhece o " +
+                "caminho inteiro e mesmo assim decide, porque ela precisa só do próximo salto."
+            }
+          ]
+        },
         setup: function () {
           if (state.roundIdx === 0 && state.packetAt === null) {
             state.packetAt = ROUNDS[0].start;
@@ -736,6 +1280,9 @@ SD.demos["camadas-rede"] = (function () {
           metric("hops", 0);
         },
         render: renderStage3,
+        marcar: function () {
+          for (var i = 1; i <= state.delivered3; i++) tutor.passoFeito("pacote" + i);
+        },
         goalMet: function () { return state.delivered3 >= ROUNDS.length; }
       },
       {
@@ -743,17 +1290,86 @@ SD.demos["camadas-rede"] = (function () {
         instructions: "A rota preferida para o servidor passa pelo enlace 2 (B-C). Derrube-o, " +
           "teste uma entrega no meio do caos, troque tabelas até convergir e entregue de novo.",
         goalText: "Meta: derrubar o enlace 2, reconvergir as tabelas e entregar por rota alternativa.",
+        aguardando: "Mexa em um controle e esta faixa conta o que aconteceu com as tabelas.",
+        conceito: "vetor-de-distancia-e-convergencia",
+        passos: [
+          { id: "derrubar", texto: 'Clique em "💥 Derrubar enlace 2 (B-C)"' },
+          { id: "testar-caos", texto: 'Clique em "✉️ Testar entrega" ANTES de trocar tabelas' },
+          { id: "trocar", texto: 'Clique em "🔁 Trocar tabelas" até a linha dizer estáveis' },
+          { id: "testar-ok", texto: "Teste a entrega de novo e compare o caminho" }
+        ],
+        previsao: {
+          pergunta: "depois da queda do enlace 2, quantas rodadas de troca até a demo " +
+            "declarar as tabelas estáveis?",
+          opcoes: [
+            {
+              rotulo: "1",
+              veredito: "A primeira rodada já conserta as rotas de A e de B, e ninguém sabe " +
+                "disso ainda. Falta a rodada que não muda nada."
+            },
+            {
+              rotulo: "2",
+              correta: true,
+              veredito: "A primeira conserta as rotas de A e de B. A segunda não muda nada, " +
+                "e é por não mudar nada que a convergência pode ser declarada."
+            },
+            {
+              rotulo: "5 ou mais",
+              veredito: "Nesta rede de cinco roteadores bastam 2. A convergência lenta do " +
+                "vetor de distância aparece quando a notícia precisa atravessar muitos vizinhos."
+            }
+          ]
+        },
         setup: function () { if (!state.vectors) initVectors(); },
         render: renderStage4,
+        marcar: function () {
+          if (state.linkDown) tutor.passoFeito("derrubar");
+          if (state.testouNoCaos) tutor.passoFeito("testar-caos");
+          if (state.linkDown && state.converged) tutor.passoFeito("trocar");
+          if (state.deliveredAfterConv) tutor.passoFeito("testar-ok");
+        },
         goalMet: function () { return state.linkDown && state.converged && state.deliveredAfterConv; }
       },
       {
         title: "Etapa 5: Melhor esforço × TCP",
-        instructions: "Uma mensagem de 4 fragmentos enfrenta a rede real: perda, desordem e " +
-          "duplicata. Envie com UDP e depois com TCP: os MESMOS acidentes, finais diferentes.",
+        instructions: "Uma mensagem de 4 fragmentos enfrenta a rede real, com perda, desordem " +
+          "e duplicata. Envie com UDP e depois com TCP. Os acidentes são os mesmos, e os " +
+          "finais são diferentes.",
         goalText: "Meta: enviar com UDP e com TCP (e receber a mensagem íntegra no TCP).",
+        aguardando: "Envie a mensagem e esta faixa conta o que a aplicação recebeu.",
+        conceito: "entrega-confiavel-sobre-melhor-esforco",
+        passos: [
+          { id: "udp", texto: 'Com "UDP" marcado, clique em "📨 Enviar mensagem"' },
+          { id: "tcp", texto: 'Marque "TCP" e envie a MESMA mensagem de novo' }
+        ],
+        previsao: {
+          pergunta: "a mensagem tem 4 fragmentos, um se perde numa fila cheia e outro chega " +
+            "duas vezes. No UDP, o que a aplicação vai receber?",
+          opcoes: [
+            {
+              rotulo: "os 4, em ordem",
+              veredito: "Isso é o que o TCP entrega. O UDP repassa o que chegar, do jeito " +
+                "que chegar."
+            },
+            {
+              rotulo: "3, e um deles duas vezes",
+              correta: true,
+              veredito: "O UDP não numera, não confirma e não retransmite. O que se perdeu " +
+                "não volta, e o que chegou em dobro sobe em dobro para a aplicação."
+            },
+            {
+              rotulo: "3, em ordem e sem repetição",
+              veredito: "Ordenar e descartar repetição é trabalho de quem numera os pedaços, " +
+                "e o UDP não faz isso."
+            }
+          ]
+        },
         setup: function () { state.busy = false; },
         render: renderStage5,
+        marcar: function () {
+          if (state.sentUdp) tutor.passoFeito("udp");
+          if (state.sentTcp) tutor.passoFeito("tcp");
+        },
         goalMet: function () { return state.sentUdp && state.sentTcp && state.tcpIntact; }
       }
     ];
@@ -779,6 +1395,15 @@ SD.demos["camadas-rede"] = (function () {
       log("▶ " + st.title);
       st.setup();
       st.render();
+      tutor.abrirEtapa({
+        passos: st.passos,
+        previsao: st.previsao,
+        conceito: st.conceito,
+        aguardando: st.aguardando
+      });
+      /* Voltar para uma etapa já cumprida não pode devolver os passos em
+         branco: o que o aluno fez continua feito, e a lista precisa dizer isso. */
+      st.marcar();
       updateNav();
     }
 

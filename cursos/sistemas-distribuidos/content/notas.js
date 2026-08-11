@@ -501,3 +501,178 @@ SD.notas["camadas-fisicas-latencia"] = {
     { rotulo: "Objetos Distribuídos: o custo de cada invocação remota", topico: "05" }
   ]
 };
+
+/* ---------- Notas da demo "A Viagem do Pacote" (Tópico 3) ----------
+   Camada 3 da tutoria, uma por etapa. Plano em
+   docs/demos/2026-08-08-demo-camadas-rede-tutoria-plano.md */
+
+SD.notas["encapsulamento"] = {
+  termo: "Encapsulamento, e por que a montagem é o inverso da transmissão",
+  html:
+    "<p>Cada camada do software de rede oferece um serviço à camada de cima e usa o " +
+    "serviço da camada de baixo. O encapsulamento é o mecanismo que faz isso funcionar. " +
+    "No remetente, cada camada envolve o que recebeu de cima com o seu próprio cabeçalho, " +
+    "e no destino o processo se inverte, camada por camada, até restar o que a aplicação " +
+    "enviou.</p>" +
+    "<p>Repare no que não acontece pelo caminho. Os dados da aplicação não são " +
+    "reescritos, traduzidos nem reduzidos. O que cresce é o envelope, e por isso o pacote " +
+    "que trafega no enlace carrega três cabeçalhos além dos dados.</p>" +
+    "<p>Cada cabeçalho responde a uma pergunta diferente, e as três perguntas não se " +
+    "misturam.</p>" +
+    "<ul>" +
+    "<li>O <strong>cabeçalho TCP</strong> endereça um processo, pela porta. É ele que " +
+    "distingue o servidor web na porta 80 de qualquer outro programa da mesma " +
+    "máquina.</li>" +
+    "<li>O <strong>cabeçalho IP</strong> endereça um computador em qualquer lugar da " +
+    "inter-rede, e viaja inteiro da origem ao destino final.</li>" +
+    "<li>O <strong>quadro Ethernet</strong> endereça a placa do próximo salto, e nada " +
+    "além disso. Ele é descartado e refeito em cada roteador do caminho.</li>" +
+    "</ul>" +
+    "<p>A demo monta o pacote de dentro para fora, começando pela mensagem da aplicação. " +
+    "A transmissão faz o contrário. O último envelope fechado é o primeiro a entrar no " +
+    "fio, porque o cabeçalho de cada camada vem à frente daquilo que ela embrulhou. Quem " +
+    "recebe lê nessa mesma ordem e abre um envelope de cada vez, de fora para dentro, o " +
+    "que explica por que um switch decide o destino de um quadro sem nunca olhar o " +
+    "endereço IP.</p>" +
+    "<p>Empilhar camadas simplifica o projeto e cobra por isso. Transmitir através de N " +
+    "camadas envolve N transferências de controle e N cópias dos dados, e é por essa " +
+    "razão que a taxa de transferência vista pela aplicação fica bem abaixo da taxa " +
+    "anunciada pela rede.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: protocolo, camadas e encapsulamento", topico: "03" },
+    { rotulo: "Modelos de Sistema: camadas de software e middleware", topico: "02" }
+  ]
+};
+
+SD.notas["arp-e-cache-arp"] = {
+  termo: "ARP, e o cache que poupa a difusão",
+  html:
+    "<p>Dentro de uma rede local não há roteamento nenhum a fazer. As estações " +
+    "compartilham o mesmo segmento e o quadro alcança todas elas, o que torna a entrega " +
+    "local um problema bem diferente do da inter-rede.</p>" +
+    "<p>Sobra um problema de tradução. O programa conhece o destino pelo endereço IP, e o " +
+    "quadro Ethernet precisa de um endereço físico, que é o MAC da placa. Nada no " +
+    "endereço IP permite calcular o MAC correspondente, porque os dois vêm de mundos " +
+    "independentes. Um é atribuído pela administração da rede, o outro vem gravado de " +
+    "fábrica.</p>" +
+    "<p>Quem resolve é o protocolo de resolução de endereços (ARP). Ele pergunta em " +
+    "difusão na rede local quem tem determinado IP e guarda a resposta de quem se " +
+    "reconhece. São dois quadros no fio, a pergunta que todas as estações recebem e a " +
+    "resposta que só o dono do endereço envia.</p>" +
+    "<p>Perguntar em difusão sai caro, porque toda estação do segmento é interrompida " +
+    "para examinar um quadro que quase sempre não é dela. Fazer isso a cada envio " +
+    "inviabilizaria a rede local, e o cache é o que impede que aconteça. O par (IP, MAC) " +
+    "fica guardado, e o envio seguinte para o mesmo destino sai direto, com um quadro " +
+    "só.</p>" +
+    "<p>A entrada do cache tem prazo de validade, tipicamente de alguns minutos. Ela " +
+    "expira porque a associação entre IP e MAC muda quando uma placa é trocada ou quando " +
+    "o endereço é reatribuído a outra máquina. É o mesmo compromisso de qualquer cache, " +
+    "com desempenho comprado ao preço de uma informação que pode ter envelhecido.</p>" +
+    "<p>Vale reparar de onde veio a economia do segundo envio. A rede não ficou mais " +
+    "rápida. O que desapareceu foi trabalho repetido.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: IP, ARP e o endereço da placa", topico: "03" },
+    { rotulo: "Modelos de Sistema: cache e servidores proxy", topico: "02" }
+  ]
+};
+
+SD.notas["proximo-salto-e-rota-padrao"] = {
+  termo: "Próximo salto e rota padrão",
+  html:
+    "<p>Em qualquer rede maior que um segmento local, entregar um pacote é tarefa " +
+    "coletiva dos roteadores, que o passam adiante em saltos sucessivos. A pergunta desta " +
+    "etapa é como cada roteador decide para onde mandar, e a resposta é bem mais modesta " +
+    "do que a intuição sugere.</p>" +
+    "<p>Nenhum roteador conhece o caminho inteiro. A tabela dele associa cada destino a " +
+    "um enlace de saída, e a decisão consome uma linha só, a do destino daquele pacote. O " +
+    "que acontece depois é problema do próximo roteador, que tem a sua própria tabela e " +
+    "decide sozinho, com o mesmo critério.</p>" +
+    "<p>Essa modéstia é a virtude do arranjo. Como ninguém depende de um mapa completo, " +
+    "um encaminhamento errado costuma custar um caminho mais longo, e não o pacote, desde " +
+    "que o roteador em que ele foi parar também saiba alcançar o destino. É por isso que " +
+    "a rede tolera tabelas parcialmente desatualizadas.</p>" +
+    "<p>A decisão do próximo salto precisa ser rápida, porque roda na chegada de cada " +
+    "pacote. Manter o conhecimento da topologia é a outra metade do algoritmo de " +
+    "roteamento, e trabalha em segundo plano, no ritmo das mudanças da rede.</p>" +
+    "<p>Sobra o caso do destino que a tabela não conhece, que é a regra e não a exceção. " +
+    "Nenhum roteador tem uma linha para cada rede do mundo, por maior que seja a tabela " +
+    "dele. Para tudo o que ele não reconhece existe a <strong>rota padrão</strong>, uma " +
+    "saída única por onde o pacote segue rumo a quem sabe mais. O roteador de uma casa " +
+    "trabalha quase inteiramente assim, com uma linha para a rede local e a rota padrão " +
+    "apontando para o provedor.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: roteamento e rota padrão", topico: "03" },
+    { rotulo: "Serviços de Nomes: decidir com conhecimento parcial", topico: "09" }
+  ]
+};
+
+SD.notas["vetor-de-distancia-e-convergencia"] = {
+  termo: "Vetor de distância, e o intervalo em que a rede erra",
+  html:
+    "<p>O algoritmo de vetor de distância, de Bellman e Ford, é a base do protocolo de " +
+    "informação de roteamento (RIP). Cada roteador guarda uma tabela que associa cada " +
+    "destino a um enlace de saída e a um custo em saltos, e periodicamente troca essa " +
+    "tabela com os vizinhos, adotando as rotas melhores que descobrir.</p>" +
+    "<p>Repare no que cada roteador faz com o que recebe. Ele soma 1 ao custo anunciado " +
+    "pelo vizinho, compara com o que já tinha e fica com o menor. Ninguém calcula o " +
+    "caminho inteiro, e a rota boa emerge dessa conversa repetida.</p>" +
+    "<p>Quando um enlace cai, o roteador que o perdeu marca com custo infinito as rotas " +
+    "que passavam por ali, e a notícia se propaga de vizinho em vizinho. Aqui aparece o " +
+    "que esta etapa existe para mostrar. Entre a falha e a chegada da notícia, os outros " +
+    "roteadores continuam encaminhando por uma rota que já morreu, e os pacotes que " +
+    "seguirem por ela são descartados. A rede não erra por defeito de projeto, ela erra " +
+    "porque a informação leva tempo para viajar.</p>" +
+    "<p>A convergência é o fim desse intervalo, e ela tem um sinal preciso. Enquanto " +
+    "alguma rota mudar numa rodada de troca, a rede ainda está se acertando. Quando uma " +
+    "rodada inteira passa sem que nada mude, as tabelas concordam. A rodada que não traz " +
+    "novidade é justamente a que autoriza declarar convergência, e por isso ela nunca é " +
+    "desperdício.</p>" +
+    "<p>Propagar de vizinho em vizinho é simples de implementar e lento de convergir, " +
+    "porque a notícia atravessa a rede um salto por rodada. Foi essa lentidão que motivou " +
+    "os algoritmos de <strong>estado de enlace</strong>, como o OSPF, em que cada nó " +
+    "mantém um mapa da rede inteira e calcula as rotas ótimas com o algoritmo de " +
+    "Dijkstra. Entre cinco roteadores a diferença é irrelevante, e entre milhares ela " +
+    "decide.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: vetor de distância e estado de enlace", topico: "03" },
+    { rotulo: "Caracterização: falha parcial e informação que chega atrasada", topico: "01" }
+  ]
+};
+
+SD.notas["entrega-confiavel-sobre-melhor-esforco"] = {
+  termo: "Confiabilidade construída nas pontas",
+  html:
+    "<p>O IP entrega no <strong>melhor esforço</strong> (best effort), que é uma promessa " +
+    "mais fraca do que o nome sugere. Ele tenta entregar, e só. Um datagrama pode ser " +
+    "perdido, duplicado, retardado ou entregue fora de ordem, e nada no protocolo avisa " +
+    "quando isso acontece.</p>" +
+    "<p>Os três acidentes desta etapa têm causas corriqueiras. A perda quase sempre vem " +
+    "de uma fila cheia num roteador congestionado. A desordem vem de pacotes que tomaram " +
+    "rotas diferentes e chegaram em ritmos diferentes. A duplicata costuma vir de uma " +
+    "retransmissão disparada cedo demais, quando a confirmação estava apenas atrasada.</p>" +
+    "<p>Cabe então a pergunta de projeto. Por que não consertar isso no meio do caminho, " +
+    "roteador por roteador? Porque a verificação nas pontas continua necessária de " +
+    "qualquer forma. Um salto pode entregar o dado intacto e a memória do destino " +
+    "corrompê-lo logo depois, de modo que o remendo intermediário não dispensa a " +
+    "conferência final e ainda cobra caro em cada salto. Esse raciocínio é o princípio " +
+    "fim-a-fim.</p>" +
+    "<p>Daí a soma de verificação do IP cobrir apenas o cabeçalho, e não os dados. " +
+    "Validar o conteúdo é trabalho do TCP e do UDP.</p>" +
+    "<p>O <strong>UDP</strong> acrescenta muito pouco ao melhor esforço. Ele entrega à " +
+    "aplicação o que chegou, na ordem em que chegou, com as repetições que houver. Em " +
+    "troca, custa pouco e não faz ninguém esperar, o que serve bem a voz, a vídeo e a " +
+    "consulta curta como a do DNS.</p>" +
+    "<p>O <strong>TCP</strong> acrescenta três mecanismos, e os três operam só nas " +
+    "pontas. O número de sequência ordena os segmentos e denuncia a repetição, a " +
+    "confirmação avisa o remetente do que chegou, e a retransmissão repõe o que a " +
+    "confirmação não cobriu. A rede continuou perdendo e duplicando durante o envio " +
+    "inteiro, e quem consertou foram as duas pontas.</p>" +
+    "<p>Nada disso sai de graça. O pedaço perdido só é reposto depois que o prazo da " +
+    "confirmação vence, e o que chegou depois dele espera no buffer para ser entregue em " +
+    "ordem. O TCP compra integridade com tempo, e é essa a escolha que a aplicação faz ao " +
+    "preferir um dos dois protocolos.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: IP de melhor esforço, UDP e TCP", topico: "03" },
+    { rotulo: "Modelos de Sistema: o princípio fim-a-fim", topico: "02" }
+  ]
+};

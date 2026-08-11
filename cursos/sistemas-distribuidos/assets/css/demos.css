@@ -626,15 +626,18 @@
 
 /* ---------- Conceito sob demanda (camada 3) ----------
    Recolhido, divide a linha com a meta; aberto, toma a largura toda
-   (a classe vem do JS, que é quem sabe do estado do botão). */
-.demo-ma-goalrow {
+   (a classe vem do JS, que é quem sabe do estado do botão). Cada demo
+   com tutoria traz a sua linha de meta, e o arranjo é o mesmo. */
+.demo-ma-goalrow,
+.demo-cr-goalrow {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-3);
 }
 
-.demo-ma-goalrow .demo-cf-goal { flex: 1 1 auto; }
+.demo-ma-goalrow .demo-cf-goal,
+.demo-cr-goalrow .demo-cf-goal { flex: 1 1 auto; }
 
 .demo-tutor-conceito { flex: 0 0 auto; }
 .demo-tutor-conceito.is-aberta { flex-basis: 100%; }
@@ -1030,6 +1033,21 @@
 }
 
 .demo-cr-table th { background-color: var(--color-bg-sunken); }
+
+/* ---- Placar de comparação (etapas 2 e 5) ----
+   Guarda o que cada envio gastou, ou leu, para que comparar seja
+   observação e não memória. A linha ainda por preencher fica atenuada,
+   e é ela que anuncia que há uma segunda medida a fazer. */
+.demo-cr-placar { margin-top: var(--space-3); }
+
+.demo-cr-placar td:first-child { font-weight: 600; }
+
+.demo-cr-placar tbody tr.is-pendente {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.demo-cr-placar code { font-size: var(--font-size-xs); }
 
 /* ---- Etapa 5: recepção ---- */
 
