@@ -59,8 +59,7 @@
       <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
       <p>
         A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>, o que
-        inclui as instâncias, a chave e a configuração. Reserve o bloco inteiro de duas
-        aulas. Se a sessão
+        inclui as instâncias, a chave e a configuração. Se a sessão
         acabar no meio, refazer os passos 2 e 3 leva cerca de dez minutos, porque tudo aqui
         é feito por script.
       </p>
@@ -96,7 +95,7 @@
         do sistema.</li>
       <li>Nada para instalar, nem no seu computador nem nas máquinas remotas.</li>
       <li>A prática 01 <strong>não é pré-requisito</strong>. Se você a fez, os passos 1 a 4
-        são o mesmo caminho e você vai andar depressa neles.</li>
+        são o mesmo caminho e você vai conseguir repeti-los aqui rapidamente.</li>
     </ul>
 
     <div class="os-switch" role="group" aria-label="Escolha do sistema operacional">
@@ -128,9 +127,7 @@
   <section class="lab-step" id="aws-em-5-minutos">
     <h2><span class="step-num is-accent">AWS</span><span>O mínimo de AWS para esta prática</span></h2>
     <p>
-      Você ainda não chegou a estes módulos no curso da AWS. Aqui vai só o suficiente para
-      entender o que está fazendo; o aprofundamento vem nos módulos 3, 5 e 6 do Cloud
-      Foundations.
+      O aprofundamento destes termos acontece nos módulos 3, 5 e 6 do Cloud Foundations.
     </p>
 
     <div class="tabela-rolavel">
@@ -198,7 +195,7 @@
       </table>
     </div>
 
-    <h3>Os dois serviços que cada nó vai subir</h3>
+    <h3>Os dois serviços que serão executados nos nós</h3>
     <p>
       O script instala <strong>dois</strong> programas em cada uma das três máquinas, e os
       dois sobem em todas elas:
@@ -305,6 +302,7 @@
   .fig-pratica-02-infra .fundo{fill:var(--diag-fundo)}
   .fig-pratica-02-infra .grupo{fill:none;stroke-width:2}
   .fig-pratica-02-infra .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-02-infra .subrede-privada{fill:#00A4A6;fill-opacity:.06;stroke:#00A4A6;stroke-width:2}
   .fig-pratica-02-infra .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
   .fig-pratica-02-infra .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
   .fig-pratica-02-infra .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
@@ -439,8 +437,9 @@
     <p>
       Repare também que a seta que vem do seu computador termina na borda do
       <strong>grupo de segurança</strong>, e não numa máquina específica. As regras de entrada
-      valem para os três nós ao mesmo tempo, e é por isso que o grupo aparece atravessando as
-      duas zonas de disponibilidade em vez de morar dentro de uma delas.
+      valem para os três nós ao mesmo tempo, e é por isso que a borda do grupo de segurança
+      aparece atravessando as duas zonas de disponibilidade em vez de morar dentro de uma
+      delas.
     </p>
   </section>
 
@@ -595,8 +594,8 @@ chmod 400 labsuser.pem</pre>
     <p>
       Repita o <strong>Launch instances</strong> com os mesmos campos, mudando duas coisas:
       <strong>Subnet</strong> para a sub-rede de <code>us-east-1b</code> e
-      <strong>Number of instances</strong> de volta para <strong>1</strong>. O carregador é o
-      mesmo, então cole o mesmo texto outra vez.
+      <strong>Number of instances</strong> de volta para <strong>1</strong>. O
+      <strong>User data</strong> é o mesmo, então cole o mesmo texto outra vez.
     </p>
 
     <div class="callout">
@@ -1585,7 +1584,8 @@ curl -s localhost:8080/saude; echo</pre>
 
     <h3>4.3 O atalho que você vai usar daqui em diante</h3>
     <p>
-      Os próximos passos não chamam mais o <code>curl</code> na mão. O user data instalou
+      Os próximos passos não chamam mais o <code>curl</code> digitando-o pelo terminal. O
+      user data instalou
       <code>/usr/local/bin/sd</code>, um atalho com quatro subcomandos.
     </p>
     <ul>
@@ -1596,7 +1596,7 @@ curl -s localhost:8080/saude; echo</pre>
     </ul>
     <p>
       Digitar <code>sd</code> sozinho imprime o uso, e isso também serve de conferência
-      barata de que o provisionamento terminou.
+      rápida de que o provisionamento terminou.
     </p>
 
     <div class="cmd">
@@ -1611,7 +1611,7 @@ curl -s localhost:8080/saude; echo</pre>
     <p>
       Agora pergunte aos <strong>outros dois nós</strong> se eles estão de pé. O nó B atende
       o experimento 1 inteiro e metade dos outros dois, e é a única máquina em que você não
-      vai entrar. Vale conferir agora, enquanto sair caro é barato.
+      vai entrar. Vale conferir agora, enquanto estamos no início do experimento.
     </p>
 
     <div class="cmd">
@@ -1633,7 +1633,8 @@ curl -s localhost:8080/saude; echo</pre>
 
     <p>
       Se algum dos dois não responder, resolva antes de seguir. Ir para o passo 5 com uma
-      réplica muda faz o sintoma aparecer lá na frente, disfarçado de erro de configuração
+      réplica não saudável faz o sintoma aparecer lá na frente, disfarçado de erro de
+      configuração
       de rede. A tabela de socorro no fim da página tem a linha para o caso de o user data
       não ter rodado, e é para isso que a ficha guarda o IP público do nó B.
     </p>
@@ -1913,6 +1914,7 @@ arranjo: 3 camadas (dado em 172.31.80.29)
   .fig-pratica-02-cenario .fundo{fill:var(--diag-fundo)}
   .fig-pratica-02-cenario .grupo{fill:none;stroke-width:2}
   .fig-pratica-02-cenario .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-02-cenario .subrede-privada{fill:#00A4A6;fill-opacity:.06;stroke:#00A4A6;stroke-width:2}
   .fig-pratica-02-cenario .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
   .fig-pratica-02-cenario .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
   .fig-pratica-02-cenario .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
@@ -2677,7 +2679,7 @@ encerrar o laboratorio.</p>
 
     <p>
       O tópico apresenta três famílias de modelos, que são o físico, o de arquitetura e os
-      fundamentais. Você passou pelas três em cem minutos, com as mesmas três máquinas.
+      fundamentais. Você passou pelas três durante a prática, com as mesmas três máquinas.
     </p>
 
     <div class="tabela-rolavel">
@@ -2720,9 +2722,9 @@ encerrar o laboratorio.</p>
             <td><strong>Modelo de falhas</strong></td>
             <td>Você provocou uma falha por omissão (processo parado), uma de temporização
               (resposta fora do limite que o cliente declarou para si) e uma arbitrária
-              (resposta errada com sucesso). As
-              três foram mascaradas de formas diferentes, e a última não foi mascarada de
-              forma nenhuma.</td>
+              (resposta errada com sucesso). A replicação mascarou as duas primeiras, cobrando
+              preços muito diferentes por cada uma. A terceira chegou inteira até o cliente,
+              porque ninguém no caminho tinha como saber que aquele número estava errado.</td>
           </tr>
           <tr>
             <td><strong>Mascaramento</strong></td>
@@ -2756,6 +2758,16 @@ encerrar o laboratorio.</p>
        ============================================================ -->
   <section class="lab-step" id="passo-9">
     <h2><span class="step-num">9</span><span>Encerrar e limpar</span><span class="step-time">5 min</span></h2>
+
+    <div class="callout">
+      <p class="callout-title">Antes de apagar, veja se ainda sobra tempo</p>
+      <p>
+        Caso ainda tenha tempo e queira explorar um pouco mais o cenário da prática, visite a
+        seção <a href="#extensoes">Se sobrar tempo</a>. Nela, você tem a oportunidade de
+        aprofundar os conceitos do tópico 2. Depois de apagar as instâncias, refazer esses
+        experimentos exigiria começar a prática de novo.
+      </p>
+    </div>
 
     <ol>
       <li>Em <strong>EC2 &gt; Instances</strong>, selecione as três instâncias e escolha

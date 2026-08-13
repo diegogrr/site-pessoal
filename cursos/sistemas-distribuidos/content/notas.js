@@ -225,9 +225,10 @@ SD.notas["problema-n-mais-1"] = {
     "mora junto</strong>. No arranjo de duas camadas, as mesmas 30 consultas custaram " +
     "meio milissegundo somadas, porque cada uma é uma leitura em um arquivo no disco " +
     "local. Ninguém revisa código por causa de meio milissegundo.</p>" +
-    "<p>Quando o banco muda de máquina, o mesmo código passa a pagar conexão, " +
-    "requisição, resposta e espera 30 vezes, e a conta salta para dezenas de " +
-    "milissegundos. O código não piorou. O que mudou foi o arranjo em volta dele.</p>" +
+    "<p>Quando o banco está em outra máquina, o mesmo código paga 30 vezes o custo de " +
+    "conexão, requisição, resposta e espera pela rede. Como resultado, o tempo total " +
+    "salta para dezenas de milissegundos. O código não piorou. O que mudou foi o arranjo " +
+    "em volta dele.</p>" +
     "<p>É por isso que o resumo do <code>sd tempo</code> imprime a linha " +
     "<code>idas e voltas</code>, que é a métrica capaz de prever o problema antes de " +
     "ele acontecer. O custo de um pedido é o número de rodadas multiplicado pelo preço " +
