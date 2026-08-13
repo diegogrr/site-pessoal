@@ -395,8 +395,8 @@ SD.content["11"] = {
         "a virtualização (Tópico 6) e os contêineres/Kubernetes são o " +
         "empacotamento; a segurança e o TLS (Tópico 7) protegem o canal; os " +
         "sistemas de arquivos e o GFS (Tópico 8) guardam os dados; os serviços " +
-        "de nomes (Tópico 9) localizam as réplicas; e a replicação com quóruns e " +
-        "o teorema CAP (Tópico 10) definem a consistência. O trabalho do " +
+        "de nomes (Tópico 9) localizam as réplicas; e a replicação com quóruns " +
+        "(Tópico 10) define a consistência. O trabalho do " +
         "desenvolvedor muda de <em>comprar e operar servidores</em> para " +
         "<strong>compor serviços gerenciados e pagar pelo uso</strong>: sem " +
         "esquecer de administrar as trocas: lock-in, segurança, consistência e " +

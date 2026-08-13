@@ -1128,8 +1128,8 @@ SD.content["02"] = {
         "<p>O que separa um sistema de blockchain de outro é quem pode validar, e decidir " +
         "isso exige <strong>consenso distribuído</strong>, que é o problema de fazer nós " +
         "independentes chegarem à mesma decisão mesmo quando parte deles falha ou mente. " +
-        "O Tópico 10 trata dele por inteiro, e aqui basta saber que ele existe e que sai " +
-        "caro. Há três organizações possíveis.</p>" +
+        "O Tópico 10 mostra o preço que ele cobra na replicação, e aqui basta saber que " +
+        "ele existe e que sai caro. Há três organizações possíveis.</p>" +
         '<div class="tabela-rolagem">' +
         '<table class="tabela-conteudo" id="tab-blockchain">' +
         "<tr><th>Organização</th><th>Quem valida</th><th>Onde ela aperta</th></tr>" +
