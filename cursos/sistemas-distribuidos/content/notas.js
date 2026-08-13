@@ -676,3 +676,93 @@ SD.notas["entrega-confiavel-sobre-melhor-esforco"] = {
     { rotulo: "Modelos de Sistema: o princípio fim-a-fim", topico: "02" }
   ]
 };
+
+SD.notas["prefixo-ipv6-56-e-64"] = {
+  termo: "Por que a VPC ganha /56 e a sub-rede leva /64",
+  html:
+    "<p>Um endereço IPv6 tem 128 bits, escritos em oito grupos de quatro dígitos " +
+    "hexadecimais. O número depois da barra diz quantos bits do começo estão fixos e " +
+    "pertencem ao prefixo da rede. O que sobra é o espaço em que a rede numera o que " +
+    "tem dentro.</p>" +
+    "<p>A Amazon entrega sempre um <strong>/56</strong> por nuvem privada virtual (VPC), o " +
+    "que fixa os 56 primeiros bits e deixa 72 livres. Uma sub-rede leva um " +
+    "<strong>/64</strong>, que fixa oito bits a mais. Esses oito bits de diferença são o " +
+    "que a VPC tem para numerar sub-redes, e oito bits dão 256 delas.</p>" +
+    "<p>Os oito bits ficam num lugar cômodo de ler. Como cada grupo hexadecimal vale 16 " +
+    "bits, o quarto grupo do endereço se parte ao meio, com a primeira metade dentro do " +
+    "prefixo da VPC e a segunda à disposição de quem recorta. É por isso que o /56 sempre " +
+    "termina em <code>00</code> antes dos dois-pontos duplos, e é por isso que as " +
+    "sub-redes desta prática se distinguem por trocar esse par para <code>00</code>, " +
+    "<code>01</code> e <code>02</code>.</p>" +
+    "<p>O /64 da sub-rede não é escolha de quem projeta a rede. Ele é o tamanho que os " +
+    "mecanismos de autoconfiguração do IPv6 assumem, e usar um prefixo mais longo quebra " +
+    "a descoberta automática de endereço. Vale registrar a extravagância do número. Cada " +
+    "sub-rede /64 comporta cerca de 18 quintilhões de endereços, mais do que o IPv4 " +
+    "inteiro elevado ao quadrado, para hospedar meia dúzia de máquinas.</p>" +
+    "<p>Esse desperdício deliberado é a diferença de mentalidade entre os dois " +
+    "protocolos. O IPv4 gastou trinta anos economizando endereço, com máscaras apertadas " +
+    "e tradução no meio do caminho. O IPv6 tem endereço em quantidade que dispensa a " +
+    "economia, e troca a contabilidade fina por uma regra simples que qualquer rede " +
+    "segue igual.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: CIDR, esgotamento e IPv6", topico: "03" }
+  ]
+};
+
+SD.notas["gateway-somente-de-saida"] = {
+  termo: "Gateway somente de saída",
+  html:
+    "<p>Uma máquina numa sub-rede privada precisa alcançar a internet para instalar " +
+    "pacotes e chamar serviços, e não deve poder ser alcançada de fora. No IPv4 quem " +
+    "resolve isso é o NAT, que compartilha um endereço público entre muitas máquinas " +
+    "internas e reescreve o endereço de origem de tudo que sai. O efeito colateral de " +
+    "não aceitar conexão vinda de fora é consequência do mecanismo, não objetivo dele.</p>" +
+    "<p>No IPv6 a escassez que motivou o NAT não existe, e cada máquina já nasce com um " +
+    "endereço único no mundo. O NAT perderia o propósito principal e sobraria com o " +
+    "efeito colateral, então a AWS oferece um dispositivo que faz só o efeito colateral. " +
+    "É o <strong>gateway somente de saída</strong>.</p>" +
+    "<p>Ele é um filtro com estado na borda da VPC. Quando uma máquina de dentro abre uma " +
+    "conexão, ele anota o fluxo e deixa a resposta voltar. Quando um pacote chega de fora " +
+    "sem que exista fluxo anotado, ele descarta. O endereço de origem atravessa " +
+    "intacto nos dois sentidos.</p>" +
+    "<p>Daí vêm as três economias que o roteiro faz você notar. Ele não precisa de " +
+    "endereço reservado, porque não vai reescrever origem nenhuma. Não precisa morar " +
+    "numa sub-rede, porque não é um nó com endereço. E fica pronto na hora, porque não " +
+    "há nada a provisionar.</p>" +
+    "<p>Vale separar duas coisas que o resultado parecido embaralha. O NAT é um " +
+    "<em>tradutor</em> que acabou virando barreira, e o gateway somente de saída é uma " +
+    "<em>barreira</em> que nunca precisou traduzir. Quem confunde os dois costuma " +
+    "concluir que o IPv6 precisa de NAT, e a conclusão certa é a oposta.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: NAT, IPv6 e as respostas ao esgotamento", topico: "03" }
+  ]
+};
+
+SD.notas["pilha-dupla-e-escolha-de-endereco"] = {
+  termo: "Pilha dupla, e quem escolhe o protocolo",
+  html:
+    "<p>Uma máquina de <strong>pilha dupla</strong> tem endereço IPv4 e endereço IPv6 ao " +
+    "mesmo tempo, e fala os dois protocolos. Foi assim que a migração se planejou desde o " +
+    "começo, porque desligar o IPv4 num dia marcado nunca foi possível.</p>" +
+    "<p>Isso cria uma decisão que não existia antes. Ao pedir uma página a um nome, o " +
+    "programa recebe do serviço de nomes duas respostas, uma com o endereço IPv4 e outra " +
+    "com o IPv6, cada uma guardada num tipo de registro próprio, e precisa escolher por " +
+    "qual delas sair.</p>" +
+    "<p>A escolha não é sua, e nem sempre é a mesma. A regra usual do sistema operacional " +
+    "prefere o IPv6 quando ele existe, e muitos clientes acrescentam a isso uma corrida " +
+    "entre os dois, em que sai vencedor o primeiro que completar a conexão. É um bom " +
+    "comportamento para o uso comum, porque a conexão simplesmente funciona, e é " +
+    "péssimo para um experimento sobre caminhos.</p>" +
+    "<p>O problema aparece assim. Você apaga a rota IPv6 de saída, repete o comando " +
+    "esperando que ele falhe, e ele responde normalmente, porque o cliente percebeu a " +
+    "falha e trocou de protocolo sozinho. Você concluiria que a rota não fazia " +
+    "diferença.</p>" +
+    "<p>É por isso que todo comando desta prática traz <code>-4</code> ou <code>-6</code> " +
+    "escrito à mão. As duas opções desligam a escolha automática e obrigam o cliente a " +
+    "usar a família que você mandou, mesmo que ela não funcione. Num experimento, a falha " +
+    "é a informação, e um cliente prestativo demais a esconde.</p>",
+  leia: [
+    { rotulo: "Redes de Computadores: pilha dupla e migração para o IPv6", topico: "03" },
+    { rotulo: "Serviços de Nomes: os tipos de registro que guardam endereço", topico: "09" }
+  ]
+};

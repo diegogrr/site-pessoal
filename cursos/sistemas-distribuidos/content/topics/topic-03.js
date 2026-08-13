@@ -976,6 +976,18 @@ SD.content["03"] = {
     }
   ],
 
+  lab: {
+    href: "labs/pratica-03/index.html",
+    title: "Quem consegue iniciar a conversa",
+    summary:
+      "Construa uma rede de pilha dupla na AWS, com sub-redes pública e privadas, NAT " +
+      "gateway e gateway somente de saída. Depois descubra por que uma máquina com " +
+      "endereço IPv6 único no mundo e filtro aberto continua inalcançável, e o que muda " +
+      "quando você apaga e recria uma linha da tabela de rotas com tudo ligado.",
+    duration: "100 min",
+    environment: "AWS Academy Sandbox"
+  },
+
   quiz: [
     {
       question:

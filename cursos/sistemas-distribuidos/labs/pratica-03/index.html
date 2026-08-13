@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Prática 03 da disciplina Sistemas Distribuídos (IFSP Campus Salto): construir uma rede de pilha dupla no AWS Academy Sandbox, com sub-redes pública e privadas, NAT gateway e gateway somente de saída, para descobrir quem consegue iniciar a conversa e o que uma linha de tabela de rotas decide.">
+  <title>Prática 03: Quem consegue iniciar a conversa</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lab.css">
+</head>
+<body>
+
+<div class="lab-topbar">
+  <a class="voltar" href="../../index.html#/topico/03">‹ Tópico 3</a>
+  <span class="titulo">Prática 03 · Redes e Interligação em Rede</span>
+  <span class="espaco"></span>
+  <span class="contador" id="lab-contador">0 de 10 passos</span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="lab-wrap">
+
+  <!-- ============================================================
+       Abertura
+       ============================================================ -->
+  <header class="lab-hero">
+    <p class="eyebrow">Prática 03 · Tópico 3 · AWS Academy Sandbox</p>
+    <h1>Quem consegue iniciar a conversa</h1>
+    <p class="lab-lead">
+      Você vai construir uma rede inteira à mão, com endereços dos dois protocolos, e depois
+      pôr três máquinas dentro dela. Uma delas vai ter um endereço IPv6 único no mundo, com o
+      filtro de entrada aberto, e mesmo assim ninguém de fora vai conseguir falar com ela. Uma
+      linha de tabela de rotas explica o porquê, e apagar essa linha, recriá-la apontando para
+      outro lugar e devolvê-la ao lugar de origem é o que você vai fazer no segundo
+      experimento.
+    </p>
+
+    <div class="lab-chips">
+      <span class="chip">◷ 100 min</span>
+      <span class="chip">▲ dificuldade 3 de 5</span>
+      <span class="chip">☁ AWS Academy Sandbox</span>
+      <span class="chip">▤ 3 instâncias t3.micro</span>
+      <span class="chip">$ menos de US$ 0,10</span>
+      <span class="chip">👤 individual</span>
+    </div>
+
+    <p><strong>O que você vai construir e medir:</strong></p>
+    <ul>
+      <li>uma nuvem privada virtual de pilha dupla, com um bloco IPv4 escolhido por você e um
+        bloco IPv6 entregue pela Amazon, recortado em três sub-redes;</li>
+      <li>a diferença entre <strong>não ter endereço</strong> e <strong>ter endereço e não
+        aceitar conexão</strong>, que produzem exatamente a mesma falha na tela;</li>
+      <li>o que uma tabela de rotas decide, apagando e recriando linhas dela com as máquinas
+        ligadas e vendo o que morre e o que sobrevive a cada movimento;</li>
+      <li>o preço de cada caminho de saída, com o NAT gateway de um lado e o gateway somente
+        de saída do outro.</li>
+    </ul>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
+      <p>
+        A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>, o que
+        inclui a rede que você vai construir, as instâncias e a chave. Reserve o bloco inteiro
+        de duas aulas. Se a sessão acabar no meio, existe um script de recuperação que refaz a
+        rede toda em um comando, e ele está na seção <a href="#se-der-errado">Se der
+        errado</a>.
+      </p>
+    </div>
+
+    <div class="lab-sumario">
+      <p class="titulo">Nesta prática</p>
+      <ol>
+        <li><a href="#passo-1">Abrir o laboratório, preparar a chave e olhar o seu próprio IPv6</a></li>
+        <li><a href="#passo-2">Conhecer as redes que já existem e dar IPv6 à VPC padrão</a></li>
+        <li><a href="#passo-3">Criar a VPC e recortar as três sub-redes</a></li>
+        <li><a href="#passo-4">Pendurar os três dispositivos de borda</a></li>
+        <li><a href="#passo-5">Escrever as duas tabelas de rotas</a></li>
+        <li><a href="#passo-6">Subir os três nós</a></li>
+        <li><a href="#passo-7">Experimento 1: quem consegue iniciar a conversa</a></li>
+        <li><a href="#passo-8">Experimento 2: a tabela de rotas como objeto vivo</a></li>
+        <li><a href="#passo-9">Experimento 3: o preço do caminho</a></li>
+        <li><a href="#passo-10">Anotar os resultados, encerrar e limpar</a></li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       Pré-requisitos
+       ============================================================ -->
+  <section class="lab-step" id="antes">
+    <h2><span class="step-num is-accent">✓</span><span>Antes de começar</span></h2>
+    <ul>
+      <li>Acesso ao curso <strong>AWS Academy Cloud Foundations</strong>, no laboratório
+        <strong>Sandbox</strong>.</li>
+      <li>Um terminal com cliente de <em>secure shell</em> (<strong>SSH</strong>). No Windows
+        o <strong>PowerShell</strong> já traz um instalado, e no macOS ou Linux serve o
+        terminal do sistema. Você vai abrir <strong>três janelas</strong> dele.</li>
+      <li>Nada para instalar, nem no seu computador nem nas máquinas remotas.</li>
+      <li>As práticas 01 e 02 <strong>não são pré-requisito</strong>. Se você as fez, o passo
+        1 é o mesmo caminho e você vai andar depressa nele.</li>
+      <li><strong>Não é preciso ter IPv6 em casa.</strong> O passo 1 verifica se você tem, por
+        curiosidade, e a prática inteira funciona sem. Tudo que precisa de IPv6 acontece
+        dentro da nuvem, entre as máquinas que você mesmo vai criar.</li>
+    </ul>
+
+    <div class="os-switch" role="group" aria-label="Escolha do sistema operacional">
+      <button type="button" data-os-btn="win" aria-pressed="true">Windows / PowerShell</button>
+      <button type="button" data-os-btn="unix" aria-pressed="false">macOS / Linux</button>
+    </div>
+    <p>Os comandos que mudam de um sistema para o outro seguem esta escolha na página inteira.</p>
+
+    <p>
+      Alguns termos aparecem sublinhados e com um <strong>ⓘ</strong>. Clicar abre, ali mesmo,
+      uma nota explicando o termo. Essas notas são leitura opcional, e os tempos anunciados em
+      cada passo valem para quem não abre nenhuma.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       O parêntese de AWS
+       ============================================================ -->
+  <section class="lab-step" id="aws-em-5-minutos">
+    <h2><span class="step-num is-accent">AWS</span><span>O mínimo de AWS para esta prática</span></h2>
+    <p>
+      Esta é a primeira prática em que a <strong>rede é o objeto de estudo</strong>, e não o
+      chão por onde as coisas passam. Por isso ela contraria uma regra das anteriores, em que
+      o tempo de aula nunca era gasto digitando. Aqui você vai digitar cerca de vinte e cinco
+      comandos, todos entregues prontos em blocos de copiar, porque o assistente gráfico de
+      criação de VPC monta a tabela de rotas sozinho e sem nomeá-la, que é justamente o objeto
+      do segundo experimento. O software das máquinas continua vindo pronto, como sempre.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th>Termo</th><th>O que significa na prática</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Nuvem privada virtual (VPC)</strong></td>
+            <td>Uma rede virtual isolada dentro da região. Ela tem um bloco de endereços
+              próprio, e nada entra nem sai dela sem um dispositivo de borda que você tenha
+              pendurado ali. Nas práticas 01 e 02 você usou a VPC que a conta já trazia. Aqui
+              você cria a sua.</td>
+          </tr>
+          <tr>
+            <td><strong>Sub-rede</strong></td>
+            <td>Um pedaço do bloco da VPC, sempre dentro de <strong>uma</strong> zona de
+              disponibilidade. É onde as instâncias nascem, e é ela que se associa a uma
+              tabela de rotas.</td>
+          </tr>
+          <tr>
+            <td><strong>Tabela de rotas</strong></td>
+            <td>A lista de destinos e de próximos saltos que vale para as sub-redes associadas
+              a ela. Toda tabela nasce com uma linha <code>local</code>, que liga todas as
+              sub-redes da VPC umas às outras e que você não pode apagar. As outras linhas são
+              suas.</td>
+          </tr>
+          <tr>
+            <td><strong>Sub-rede pública e sub-rede privada</strong></td>
+            <td>Não existe atributo que marque uma sub-rede como pública. Ela é pública quando
+              a tabela de rotas associada a ela manda o destino <code>0.0.0.0/0</code> para um
+              gateway de internet, e privada quando não manda. A diferença toda mora em uma
+              linha de tabela, e o experimento 2 vive de mexer nessa linha.</td>
+          </tr>
+          <tr>
+            <td><strong>Gateway de internet (IGW)</strong></td>
+            <td>A porta de duas mãos da VPC. Ele atende IPv4 e IPv6, deixa sair a conexão
+              iniciada de dentro e deixa entrar a iniciada de fora, e não traduz endereço
+              nenhum.</td>
+          </tr>
+          <tr>
+            <td><strong>NAT gateway</strong></td>
+            <td>Uma porta de mão única para <strong>IPv4</strong>. Ele deixa sair a conexão
+              iniciada de dentro e reescreve o endereço de origem dela, guardando numa tabela
+              a quem devolver a resposta. De fora ninguém consegue começar uma conversa,
+              porque não há a quem entregar. Ele mora dentro de uma sub-rede pública e precisa
+              de um endereço IP elástico.</td>
+          </tr>
+          <tr>
+            <td><strong>Gateway somente de saída</strong></td>
+            <td>O equivalente do NAT gateway para <strong>IPv6</strong>, e o equivalente só no
+              resultado. Ele deixa sair a conexão iniciada de dentro, recusa a iniciada de
+              fora e <strong>não traduz endereço nenhum</strong>. Não tem endereço próprio,
+              não custa nada e fica pronto na hora.</td>
+          </tr>
+          <tr>
+            <td><strong>Endereço IP elástico</strong></td>
+            <td>Um endereço IPv4 público reservado para a sua conta, que você pendura onde
+              quiser. O NAT gateway exige um, e é dele que sai o endereço de origem que o
+              mundo vai ver.</td>
+          </tr>
+          <tr>
+            <td><strong>Grupo de segurança</strong></td>
+            <td>Um filtro de pacotes com estado, preso à interface da instância. Ele bloqueia
+              tudo por padrão. Guarde uma coisa, porque ela decide o experimento 1. A regra de
+              <em>saída</em> que todo grupo novo já traz libera
+              <code>0.0.0.0/0</code>, e <strong>isso não cobre o IPv6</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>Elastic Compute Cloud (EC2) e instância</strong></td>
+            <td>O EC2 é o serviço que aluga máquinas virtuais, e cada máquina ligada por ele
+              se chama <em>instância</em>. Vamos usar três, todas do tipo
+              <code>t3.micro</code>, e o que vai distingui-las é a sub-rede em que
+              nascem.</td>
+          </tr>
+          <tr>
+            <td><strong>CloudShell</strong></td>
+            <td>Um terminal Linux dentro do próprio console, já autenticado na sua conta. É de
+              lá que você vai construir a rede. O ícone fica na barra de cima do console, ao
+              lado do sino de notificações.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 A pergunta que organiza a prática inteira</p>
+      <p>
+        O Tópico 3 apresenta três respostas ao esgotamento do IPv4, que são o CIDR, o NAT e o
+        IPv6. As três continuam convivendo, e as duas primeiras aliviaram tanto a pressão que
+        a terceira demorou décadas para andar. Hoje você vai ver as três de perto no mesmo
+        lugar. O CIDR aparece quando você recortar um bloco /56 em pedaços /64. O NAT aparece
+        no caminho de saída IPv4. E o IPv6 aparece com endereço sobrando para todo mundo, o
+        que muda a pergunta de <em>quem tem endereço</em> para <em>quem tem
+        permissão de caminho</em>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Ficha do ambiente
+       ============================================================ -->
+  <section class="lab-step" id="ficha">
+    <h2><span class="step-num is-accent">✎</span><span>Ficha do ambiente</span></h2>
+    <p>
+      Preencha os seis campos abaixo assim que tiver os endereços (passo 6). Todos os
+      comandos desta página passam a mostrar os seus valores reais, e o botão
+      <em>copiar</em> já leva o comando pronto. Os dados ficam só no seu navegador.
+    </p>
+    <p>
+      As <strong>saídas de exemplo</strong> não acompanham. Elas guardam os endereços e os
+      tempos de outra execução, então servem para você reconhecer o formato da resposta, nunca
+      para conferir dígito a dígito. Ver um endereço diferente do seu logo abaixo de um
+      comando já preenchido é o esperado.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Esta página ainda está esperando o piloto</p>
+      <p>
+        As saídas de exemplo e as faixas de referência desta prática serão colhidas numa
+        execução real e ainda não estão aqui. Onde elas faltam, o lugar delas está marcado com
+        <strong>a colher no piloto</strong> e uma descrição do que esperar. O restante do
+        roteiro está completo, e os comandos são os definitivos.
+      </p>
+    </div>
+
+    <div class="ficha">
+      <label>IPv4 público do nó P
+        <input type="text" data-ficha="IP_PUB_P" placeholder="ex.: 54.226.7.9" autocomplete="off"></label>
+      <label>IPv6 do nó P
+        <input type="text" data-ficha="IPV6_P" placeholder="ex.: 2600:1f18:57c5:7100::a1" autocomplete="off"></label>
+      <label>IPv4 privado do nó A
+        <input type="text" data-ficha="IP_PRIV_A" placeholder="ex.: 10.10.2.15" autocomplete="off"></label>
+      <label>IPv6 do nó A
+        <input type="text" data-ficha="IPV6_A" placeholder="ex.: 2600:1f18:57c5:7101::b2" autocomplete="off"></label>
+      <label>IPv4 público do nó E
+        <input type="text" data-ficha="IP_PUB_E" placeholder="ex.: 3.94.120.55" autocomplete="off"></label>
+      <label>IPv6 do nó E
+        <input type="text" data-ficha="IPV6_E" placeholder="ex.: 2600:1f18:2b4a:9800::c3" autocomplete="off"></label>
+    </div>
+    <p class="saida">A cada nova sessão do Sandbox os endereços mudam. Volte aqui e atualize.</p>
+  </section>
+
+  <!-- ============================================================
+       Diagrama de arquitetura de nuvem
+       ============================================================ -->
+  <section class="lab-step" id="diagrama">
+    <h2><span class="step-num is-accent">▦</span><span>Diagrama de arquitetura de nuvem</span></h2>
+
+    <p>
+      Os passos 2 a 6 criam duas redes e três máquinas. Vale ver antes o desenho do que vai
+      existir no fim, porque é mais fácil reconhecer cada peça na tela do console depois de
+      tê-la visto no lugar. Olhe para as <strong>setas dos três dispositivos de borda</strong>,
+      que é onde mora o argumento da prática. O gateway de internet tem duas, uma entrando e
+      outra saindo. Os outros dois têm uma só, e ela aponta para fora.
+    </p>
+
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg id="diagrama-pratica-03-infra" class="fig-pratica-03-infra" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 740" role="img" aria-labelledby="pratica-03-infra-titulo pratica-03-infra-desc">
+<title id="pratica-03-infra-titulo">A rede da Prática 03 na AWS</title>
+<desc id="pratica-03-infra-desc">Duas VPCs na região us-east-1. À esquerda, a sd-vpc que o aluno cria, com o bloco 10.10.0.0/16 e um /56 de IPv6 da Amazon, dividida em três sub-redes. A sd-publica-a, na zona us-east-1a, hospeda o nó P, que é o bastião. A sd-privada-a, na mesma zona, hospeda o nó A, que não tem endereço IPv4 público. A sd-privada-b, na zona us-east-1b, nasce sem nenhum nó e compartilha a tabela de rotas da outra sub-rede privada. Na borda da sd-vpc estão os três dispositivos de saída. O gateway de internet tem uma seta entrando e outra saindo. O NAT gateway tem só uma seta, que sai da sub-rede privada e segue para o gateway de internet, e ele traduz o endereço. O gateway somente de saída também tem só uma seta, que sai, e não traduz nada. À direita, a VPC padrão da conta, que ganhou um bloco IPv6 no passo 2 e hospeda o nó E, o observador de fora, com o gateway de internet que ela já trazia pronto.</desc>
+<style>
+  .fig-pratica-03-infra{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-nuvem:#242F3E}
+  @media (prefers-color-scheme:dark){
+    .fig-pratica-03-infra{--diag-nuvem:#96a4b8}
+    .fig-pratica-03-infra .so-claro{display:none} .fig-pratica-03-infra .so-escuro{display:inline}
+  }
+  [data-theme="light"] .fig-pratica-03-infra{--diag-nuvem:#242F3E}
+  [data-theme="light"] .fig-pratica-03-infra .so-claro{display:inline}
+  [data-theme="light"] .fig-pratica-03-infra .so-escuro{display:none}
+  [data-theme="dark"] .fig-pratica-03-infra{--diag-nuvem:#96a4b8}
+  [data-theme="dark"] .fig-pratica-03-infra .so-claro{display:none}
+  [data-theme="dark"] .fig-pratica-03-infra .so-escuro{display:inline}
+  .fig-pratica-03-infra .so-escuro{display:none}
+  .fig-pratica-03-infra text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-03-infra .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-03-infra .grupo{fill:none;stroke-width:2}
+  .fig-pratica-03-infra .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-03-infra .subrede-privada{fill:#00A4A6;fill-opacity:.06;stroke:#00A4A6;stroke-width:2}
+  .fig-pratica-03-infra .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
+  .fig-pratica-03-infra .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
+  .fig-pratica-03-infra .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-03-infra .faixa{fill:none;stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-03-infra .apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.5;stroke-dasharray:4 3}
+  .fig-pratica-03-infra .seta{fill:none;stroke:var(--diag-linha);stroke-width:2;stroke-linejoin:round}
+  .fig-pratica-03-infra .seta-apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:5 4;stroke-linejoin:round}
+  .fig-pratica-03-infra .seta-api{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:11 4 2 4;stroke-linejoin:round}
+  .fig-pratica-03-infra .rotulo{font-size:13px}
+  .fig-pratica-03-infra .rotulo-grupo{font-size:14px;font-weight:600}
+  .fig-pratica-03-infra .rotulo-instancia{font-size:17px;font-weight:600}
+  .fig-pratica-03-infra .rotulo-tipo{font-size:12px;opacity:.75}
+  .fig-pratica-03-infra .rotulo-faixa{font-size:11px}
+  .fig-pratica-03-infra .rotulo-apoio{font-size:11.5px}
+  .fig-pratica-03-infra .rotulo-endereco{font-size:10.5px;fill:var(--diag-apagado)}
+  .fig-pratica-03-infra .rotulo-seta{font-size:12px;paint-order:stroke;stroke:var(--diag-fundo);
+       stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-03-infra .rotulo-sg{font-size:13px;font-weight:600;fill:#DD3522}
+  .fig-pratica-03-infra .legenda{font-size:11.5px;fill:var(--diag-apagado)}
+</style>
+<defs><marker id="pratica-03-infra-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-03-infra-ponta-fina" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker><symbol id="pratica-03-infra-ic-AWS-Cloud_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#242F3E" x="0" y="0" width="40" height="40"></rect>
+        <path d="M28.993,27.9952689 L11.487,27.9762689 C9.121,27.9742689 7.154,26.1292689 7.012,23.7752689 C7.004,23.6522689 7,23.5262689 7,23.3972689 C7,20.2992689 9.091,19.2872689 10.337,18.9592689 C10.577,18.8962689 10.735,18.6662689 10.707,18.4192689 C10.676,18.1492689 10.659,17.8752689 10.659,17.5962689 C10.659,15.1322689 12.308,12.4822689 14.415,11.5632689 C15.359,11.1502689 16.232,10.9862689 17.023,10.9862689 C19.276,10.9862689 20.867,12.3152689 21.561,13.0332689 C22.329,13.8262689 22.927,14.8382689 23.34,16.0422689 C23.4,16.2192689 23.555,16.3472689 23.74,16.3742689 C23.918,16.4012689 24.109,16.3232689 24.219,16.1712689 C24.807,15.3502689 25.766,14.9822689 26.659,15.2392689 C27.782,15.5602689 28.516,16.7272689 28.62,18.3072689 C28.578,18.5762689 28.759,18.8292689 29.027,18.8772689 C30.222,19.0892689 33,19.9572689 33,23.4402689 C33,27.5892689 29.114,27.9822689 28.993,27.9952689 M29.594,17.9742689 C29.379,16.0672689 28.4,14.6962689 26.934,14.2782689 C25.899,13.9822689 24.811,14.2452689 23.989,14.9502689 C23.553,13.9362689 22.979,13.0602689 22.28,12.3382689 C20.023,10.0052689 16.933,9.37226889 14.014,10.6462689 C11.531,11.7302689 9.659,14.7182689 9.659,17.5962689 C9.659,17.7702689 9.665,17.9432689 9.676,18.1142689 C8.319,18.5732689 6,19.8752689 6,23.3972689 C6,23.5492689 6.004,23.6962689 6.014,23.8382689 C6.188,26.7162689 8.593,28.9732689 11.486,28.9762689 L29.034,28.9932689 C29.084,28.9892689 34,28.5192689 34,23.4402689 C34,19.5022689 31.003,18.3142689 29.594,17.9742689" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Private-subnet_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#00A4A6" x="0" y="0" width="40" height="40"></rect>
+        <path d="M19.536,22.049 C20.642,22.049 21.542,22.948 21.542,24.054 C21.542,25.16 20.642,26.06 19.536,26.06 C18.43,26.06 17.53,25.16 17.53,24.054 C17.53,22.948 18.43,22.049 19.536,22.049 L19.536,22.049 Z M19.012,27.007 L19.012,30.501 L20.012,30.501 L20.012,27.012 C21.442,26.782 22.542,25.549 22.542,24.054 C22.542,22.397 21.193,21.049 19.536,21.049 C17.879,21.049 16.53,22.397 16.53,24.054 C16.53,25.532 17.604,26.757 19.012,27.007 L19.012,27.007 Z M10,33.014 L29.012,33.014 L29.012,18 L10,18 L10,33.014 Z M14.046,12.484 C14.046,9.46 16.506,7 19.529,7 C22.553,7 25.012,9.46 25.012,12.484 L25.012,17 L14.046,17 L14.046,12.484 Z M29.512,17 L26.012,17 L26.012,12.484 C26.012,8.908 23.103,6 19.529,6 C15.954,6 13.046,8.908 13.046,12.484 L13.046,17 L9.5,17 C9.223,17 9,17.224 9,17.5 L9,33.514 C9,33.79 9.223,34.014 9.5,34.014 L29.512,34.014 C29.788,34.014 30.012,33.79 30.012,33.514 L30.012,17.5 C30.012,17.224 29.788,17 29.512,17 L29.512,17 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Public-subnet_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#7AA116" x="0" y="0" width="40" height="40"></rect>
+        <path d="M19.536,22.049 C20.642,22.049 21.542,22.948 21.542,24.054 C21.542,25.16 20.642,26.06 19.536,26.06 C18.43,26.06 17.53,25.16 17.53,24.054 C17.53,22.948 18.43,22.049 19.536,22.049 L19.536,22.049 Z M19.012,27.007 L19.012,30.501 L20.012,30.501 L20.012,27.012 C21.442,26.782 22.542,25.549 22.542,24.054 C22.542,22.397 21.193,21.049 19.536,21.049 C17.879,21.049 16.53,22.397 16.53,24.054 C16.53,25.532 17.604,26.757 19.012,27.007 L19.012,27.007 Z M10,33.014 L29.012,33.014 L29.012,18 L10,18 L10,33.014 Z M14.046,12.484 C14.046,9.46 16.506,7 19.529,7 C22.553,7 25.012,9.46 25.012,12.484 L25.012,17 L14.046,17 L14.046,12.484 Z M29.512,17 L26.012,17 L26.012,12.484 C26.012,8.908 23.103,6 19.529,6 C15.954,6 13.046,8.908 13.046,12.484 L13.046,17 L9.5,17 C9.223,17 9,17.224 9,17.5 L9,33.514 C9,33.79 9.223,34.014 9.5,34.014 L29.512,34.014 C29.788,34.014 30.012,33.79 30.012,33.514 L30.012,17.5 C30.012,17.224 29.788,17 29.512,17 L29.512,17 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Region_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#00A4A6" x="0" y="0" width="40" height="40"></rect>
+        <path d="M14,20.026 L14,11.026 L29.293,11.026 L25.146,15.172 C24.951,15.368 24.951,15.684 25.146,15.88 L29.293,20.026 L14,20.026 Z M26.207,15.526 L30.854,10.88 C30.996,10.736 31.039,10.522 30.962,10.335 C30.885,10.148 30.702,10.026 30.5,10.026 L14,10.026 L14,8.97 C14.596,8.76 15.026,8.198 15.026,7.531 C15.026,6.687 14.34,6 13.495,6 C12.65,6 11.963,6.687 11.963,7.531 C11.963,8.201 12.398,8.766 13,8.973 L13,33.026 L10,33.026 L10,34.026 L17,34.026 L17,33.026 L14,33.026 L14,21.026 L30.5,21.026 C30.702,21.026 30.885,20.904 30.962,20.717 C31.039,20.53 30.996,20.316 30.854,20.172 L26.207,15.526 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Amazon-EC2_Instance_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M9,39 L39,39 L39,9 L9,9 L9,39 Z M46,13 L46,11 L41,11 L41,8 C41,7.448 40.552,7 40,7 L37,7 L37,2 L35,2 L35,7 L31,7 L31,2 L29,2 L29,7 L25,7 L25,2 L23,2 L23,7 L19,7 L19,2 L17,2 L17,7 L13,7 L13,2 L11,2 L11,7 L8,7 C7.447,7 7,7.448 7,8 L7,11 L2,11 L2,13 L7,13 L7,17 L2,17 L2,19 L7,19 L7,23 L2,23 L2,25 L7,25 L7,29 L2,29 L2,31 L7,31 L7,35 L2,35 L2,37 L7,37 L7,40 C7,40.553 7.447,41 8,41 L11,41 L11,46 L13,46 L13,41 L17,41 L17,46 L19,46 L19,41 L23,41 L23,46 L25,46 L25,41 L29,41 L29,46 L31,46 L31,41 L35,41 L35,46 L37,46 L37,41 L40,41 C40.552,41 41,40.553 41,40 L41,37 L46,37 L46,35 L41,35 L41,31 L46,31 L46,29 L41,29 L41,25 L46,25 L46,23 L41,23 L41,19 L46,19 L46,17 L41,17 L41,13 L46,13 Z" fill="#ED7100"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M33.4312,35.1778 L31.9332,35.1778 L31.9332,17.5018 C31.9332,17.1088 31.7022,16.7518 31.3442,16.5908 L31.2522,16.5488 C29.2432,15.6418 27.1642,14.7028 24.1762,14.7028 C21.0532,14.7028 18.7612,15.7118 16.4952,16.8368 C16.1552,17.0058 15.9402,17.3528 15.9402,17.7328 L15.9402,35.1778 L14.4772,35.1778 L14.4772,16.3118 C16.9112,14.3328 20.4202,13.2048 24.1862,13.2048 C27.6872,13.2048 31.0252,14.2018 33.4312,15.9528 L33.4312,35.1778 Z M24.1862,11.2048 C19.7612,11.2048 15.6172,12.6238 12.8152,15.0998 C12.6002,15.2888 12.4772,15.5618 12.4772,15.8488 L12.4772,36.1778 C12.4772,36.7308 12.9242,37.1778 13.4772,37.1778 L16.9402,37.1778 C17.4932,37.1778 17.9402,36.7308 17.9402,36.1778 L17.9402,18.3558 C19.8592,17.4288 21.7192,16.7028 24.1762,16.7028 C26.5112,16.7028 28.2092,17.3778 29.9332,18.1488 L29.9332,36.1778 C29.9332,36.7308 30.3802,37.1778 30.9332,37.1778 L34.4312,37.1778 C34.9842,37.1778 35.4312,36.7308 35.4312,36.1778 L35.4312,15.4578 C35.4312,15.1538 35.2922,14.8658 35.0532,14.6748 C32.2792,12.4698 28.3182,11.2048 24.1862,11.2048 L24.1862,11.2048 Z M23.9542,43.9088 C12.9522,43.9088 3.9992,34.9568 3.9992,23.9538 C3.9992,12.9508 12.9522,3.9998 23.9542,3.9998 C34.9572,3.9998 43.9092,12.9508 43.9092,23.9538 C43.9092,34.9568 34.9572,43.9088 23.9542,43.9088 L23.9542,43.9088 Z M23.9542,1.9998 C11.8482,1.9998 1.9992,11.8488 1.9992,23.9538 C1.9992,36.0608 11.8482,45.9088 23.9542,45.9088 C36.0602,45.9088 45.9092,36.0608 45.9092,23.9538 C45.9092,11.8488 36.0602,1.9998 23.9542,1.9998 L23.9542,1.9998 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Amazon-VPC_NAT-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M13.6255,35.9209 L13.6255,33.0829 L15.3995,34.5019 L13.6255,35.9209 Z M13.2505,30.2209 C12.9495,29.9799 12.5365,29.9329 12.1915,30.1009 C11.8465,30.2679 11.6255,30.6169 11.6255,31.0019 L11.6255,38.0019 C11.6255,38.3869 11.8465,38.7359 12.1915,38.9029 C12.3305,38.9699 12.4785,39.0019 12.6255,39.0019 C12.8485,39.0019 13.0695,38.9279 13.2505,38.7829 L17.6255,35.2829 C17.8625,35.0929 18.0005,34.8059 18.0005,34.5019 C18.0005,34.1979 17.8625,33.9109 17.6255,33.7209 L13.2505,30.2209 Z M37.2515,26.8369 L37.2515,22.9149 L39.2125,24.8759 L37.2515,26.8369 Z M41.3335,24.1689 L36.9585,19.7939 C36.6725,19.5079 36.2445,19.4219 35.8685,19.5769 C35.4945,19.7319 35.2515,20.0969 35.2515,20.5009 L35.2515,23.8759 L27.6255,23.8759 L27.6255,14.3759 C27.6255,13.8229 27.1785,13.3759 26.6255,13.3759 L18.9315,13.3759 L18.9315,15.3759 L25.6255,15.3759 L25.6255,23.8759 L18.7505,23.8759 L18.7505,25.8759 L25.6255,25.8759 L25.6255,34.3769 L18.9315,34.3769 L18.9315,36.3769 L26.6255,36.3769 C27.1785,36.3769 27.6255,35.9299 27.6255,35.3769 L27.6255,25.8759 L35.2515,25.8759 L35.2515,29.2519 C35.2515,29.6559 35.4955,30.0219 35.8685,30.1759 C35.9925,30.2279 36.1225,30.2519 36.2515,30.2519 C36.5115,30.2519 36.7675,30.1499 36.9585,29.9589 L41.3335,25.5829 C41.7245,25.1919 41.7245,24.5599 41.3335,24.1689 L41.3335,24.1689 Z M13.6255,26.2959 L13.6255,23.4569 L15.3995,24.8759 L13.6255,26.2959 Z M13.2505,20.5949 C12.9495,20.3539 12.5365,20.3079 12.1915,20.4749 C11.8465,20.6419 11.6255,20.9909 11.6255,21.3759 L11.6255,28.3769 C11.6255,28.7619 11.8465,29.1109 12.1915,29.2779 C12.3305,29.3449 12.4785,29.3769 12.6255,29.3769 C12.8485,29.3769 13.0695,29.3029 13.2505,29.1579 L17.6255,25.6569 C17.8625,25.4669 18.0005,25.1799 18.0005,24.8759 C18.0005,24.5719 17.8625,24.2849 17.6255,24.0949 L13.2505,20.5949 Z M13.6255,15.7949 L13.6255,12.9569 L15.3995,14.3759 L13.6255,15.7949 Z M13.2505,10.0949 C12.9495,9.8539 12.5365,9.8069 12.1915,9.9749 C11.8465,10.1419 11.6255,10.4909 11.6255,10.8759 L11.6255,17.8759 C11.6255,18.2609 11.8465,18.6099 12.1915,18.7769 C12.3305,18.8439 12.4785,18.8759 12.6255,18.8759 C12.8485,18.8759 13.0695,18.8019 13.2505,18.6569 L17.6255,15.1569 C17.8625,14.9669 18.0005,14.6799 18.0005,14.3759 C18.0005,14.0719 17.8625,13.7849 17.6255,13.5949 L13.2505,10.0949 Z M24.0005,44.0029 C12.9725,44.0029 3.9995,35.0299 3.9995,24.0009 C3.9995,12.9729 12.9725,3.9999 24.0005,3.9999 C35.0295,3.9999 44.0025,12.9729 44.0025,24.0009 C44.0025,35.0299 35.0295,44.0029 24.0005,44.0029 L24.0005,44.0029 Z M24.0005,1.9999 C11.8685,1.9999 1.9995,11.8689 1.9995,24.0009 C1.9995,36.1329 11.8685,46.0029 24.0005,46.0029 C36.1325,46.0029 46.0025,36.1329 46.0025,24.0009 C46.0025,11.8689 36.1325,1.9999 24.0005,1.9999 L24.0005,1.9999 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Client_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Client_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Internet_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_Internet_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_User_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Res_User_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#242F3E"></path>
+    </g></symbol><symbol id="pratica-03-infra-ic-Virtual-private-cloud-VPC_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#8C4FFF" x="0" y="0" width="40" height="40"></rect>
+        <path d="M30.9707,21.0293596 L28.0267,19.7663596 L28.0267,30.2553596 C30.5717,29.9033596 30.9587,27.2873596 30.9747,27.1683596 L30.9707,21.0293596 Z M27.0267,30.2693596 L27.0267,19.7593596 L23.9917,21.0323596 L23.9917,27.2333596 C24.0047,27.2873596 24.4367,30.0003596 27.0267,30.2693596 L27.0267,30.2693596 Z M27.3327,18.5473596 C27.4567,18.4943596 27.5987,18.4953596 27.7237,18.5483596 L31.6677,20.2403596 C31.8517,20.3193596 31.9707,20.4993596 31.9707,20.6993596 L31.9707,27.2333596 C31.7877,28.6803596 30.6137,31.2963596 27.4437,31.2963596 C24.3687,31.2963596 23.1897,28.6843596 22.9957,27.3023596 L22.9917,20.6993596 C22.9917,20.4983596 23.1127,20.3163596 23.2977,20.2383596 L27.3327,18.5473596 Z M32.9827022,19.1843596 L27.5217,16.7783596 L21.9917,19.1053596 L21.9917,26.2333596 C21.9907,26.2753596 21.9377,29.1013596 23.6487,30.8563596 C24.5657,31.7973596 25.8427,32.2753596 27.4437,32.2753596 C29.0457,32.2753596 30.3307,31.7963596 31.2627,30.8533596 C32.9977,29.0953596 32.9827022,26.2683596 32.9827022,26.2403596 L32.9827022,19.1843596 Z M31.9797,31.5503596 C30.8527,32.6943596 29.3257,33.2753596 27.4437,33.2753596 C25.5597,33.2753596 24.0397,32.6943596 22.9267,31.5483596 C20.9217,29.4853596 20.9877,26.3513596 20.9917,26.2193596 L20.9917,18.7733596 C20.9917,18.5723596 21.1117,18.3903596 21.2967,18.3123596 L27.3317,15.7723596 C27.4587,15.7203596 27.6027,15.7193596 27.7277,15.7763596 L33.6837,18.4013596 C33.8657,18.4813596 33.9827,18.6603596 33.9827,18.8583596 L33.9827,26.2333596 C33.9847,26.3583596 34.0097,29.4883596 31.9797,31.5503596 L31.9797,31.5503596 Z M10.9917,24.2363596 L18.9917,24.2363596 L18.9917,25.2363596 L10.9917,25.2363596 C8.1807,25.2363596 6.1807,23.2203596 6.0127,20.2203596 C6.0007,20.1093596 5.9997,19.9753596 5.9997,19.8413596 C5.9997,17.3323596 7.3177,15.6183596 9.8167,14.8623596 C9.7977,14.6353596 9.7847,14.3963596 9.7847,14.2153596 C9.7847,11.2993596 11.3617,8.77035958 13.8017,7.77035958 C17.0997,6.42235958 20.8437,6.87635958 22.9077,8.87435958 C23.6527,9.59835958 24.2317,10.4163596 24.6677,11.3593596 C25.2767,10.9093596 26.0677,10.6983596 27.0167,10.7453596 C28.7967,10.8353596 30.1657,12.4583596 30.4497,14.7523596 C31.9477,14.8763596 32.9347,15.6353596 33.4597,17.0603596 L32.5227,17.4063596 C32.0947,16.2493596 31.3147,15.7333596 29.9917,15.7333596 C29.7267,15.7333596 29.5077,15.5273596 29.4917,15.2633596 C29.3537,12.9253596 28.0857,11.8003596 26.9657,11.7443596 C26.0207,11.6913596 25.3207,11.9633596 24.8867,12.5353596 C24.7757,12.6803596 24.6017,12.7523596 24.4137,12.7283596 C24.2337,12.7003596 24.0817,12.5773596 24.0187,12.4053596 C23.6147,11.3023596 23.0237,10.3823596 22.2117,9.59135958 C20.4237,7.86135958 17.1217,7.49235958 14.1807,8.69635958 C12.1177,9.54135958 10.7847,11.7073596 10.7847,14.2153596 C10.7847,14.4883596 10.8197,14.9113596 10.8507,15.1743596 C10.8807,15.4253596 10.7197,15.6583596 10.4747,15.7183596 C8.1687,16.2903596 6.9997,17.6773596 6.9997,19.8413596 C6.9997,19.9423596 6.9987,20.0423596 7.0087,20.1433596 C7.1497,22.6383596 8.7117,24.2363596 10.9917,24.2363596 L10.9917,24.2363596 Z" fill="#FFFFFF"></path>
+    </g></symbol></defs>
+<rect x="0" y="0" width="1400" height="740" class="fundo"/>
+<rect x="250" y="30" width="1120" height="690" class="grupo" stroke="var(--diag-nuvem)"/>
+<use href="#pratica-03-infra-ic-AWS-Cloud_32" x="250" y="30" width="34" height="34"/>
+<text x="296" y="53" class="rotulo-grupo" text-anchor="start" fill="var(--diag-nuvem)">Nuvem AWS</text>
+<rect x="270" y="75" width="1080" height="625" class="grupo" stroke="#00A4A6" stroke-dasharray="8 6"/>
+<use href="#pratica-03-infra-ic-Region_32" x="270" y="75" width="34" height="34"/>
+<text x="316" y="98" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">Região us-east-1</text>
+<rect x="290" y="110" width="740" height="560" class="grupo" stroke="#8C4FFF"/>
+<use href="#pratica-03-infra-ic-Virtual-private-cloud-VPC_32" x="290" y="110" width="34" height="34"/>
+<text x="336" y="133" class="rotulo-grupo" text-anchor="start" fill="#8C4FFF">VPC sd-vpc      10.10.0.0/16 e o /56 que a Amazon entregou</text>
+<rect x="1060" y="110" width="270" height="560" class="grupo" stroke="#8C4FFF"/>
+<use href="#pratica-03-infra-ic-Virtual-private-cloud-VPC_32" x="1060" y="110" width="34" height="34"/>
+<text x="1106" y="133" class="rotulo-grupo" text-anchor="start" fill="#8C4FFF">VPC padrão</text>
+<rect x="360" y="150" width="390" height="480" class="zona"/>
+<text x="555.0" y="176" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona us-east-1a</text>
+<rect x="775" y="150" width="235" height="480" class="zona"/>
+<text x="892.5" y="176" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona us-east-1b</text>
+<rect x="1080" y="150" width="230" height="480" class="zona"/>
+<text x="1195.0" y="176" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona us-east-1a</text>
+<rect x="400" y="190" width="330" height="200" class="subrede"/>
+<use href="#pratica-03-infra-ic-Public-subnet_32" x="400" y="190" width="32" height="32"/>
+<text x="444" y="212" class="rotulo-grupo" text-anchor="start" fill="#7AA116">sd-publica-a</text>
+<text x="444" y="230" class="rotulo-endereco" text-anchor="start">10.10.1.0/24</text>
+<text x="444" y="246" class="rotulo-endereco" text-anchor="start">o /64 de final 00</text>
+<rect x="400" y="415" width="330" height="200" class="subrede-privada"/>
+<use href="#pratica-03-infra-ic-Private-subnet_32" x="400" y="415" width="32" height="32"/>
+<text x="444" y="437" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">sd-privada-a</text>
+<text x="444" y="455" class="rotulo-endereco" text-anchor="start">10.10.2.0/24</text>
+<text x="444" y="471" class="rotulo-endereco" text-anchor="start">o /64 de final 01</text>
+<rect x="795" y="415" width="195" height="200" class="subrede-privada"/>
+<use href="#pratica-03-infra-ic-Private-subnet_32" x="795" y="415" width="32" height="32"/>
+<text x="839" y="437" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">sd-privada-b</text>
+<text x="839" y="455" class="rotulo-endereco" text-anchor="start">10.10.3.0/24</text>
+<text x="839" y="471" class="rotulo-endereco" text-anchor="start">o /64 de final 02</text>
+<rect x="1100" y="190" width="190" height="200" class="subrede"/>
+<use href="#pratica-03-infra-ic-Public-subnet_32" x="1100" y="190" width="32" height="32"/>
+<text x="1144" y="212" class="rotulo-grupo" text-anchor="start" fill="#7AA116">Sub-rede pública</text>
+<text x="1144" y="230" class="rotulo-endereco" text-anchor="start">172.31.0.0/20</text>
+<text x="1144" y="246" class="rotulo-endereco" text-anchor="start">um /64 do /56</text>
+<rect x="550" y="215" width="170" height="150" class="instancia"/>
+<use href="#pratica-03-infra-ic-Res_Amazon-EC2_Instance_48" x="611.0" y="229" width="48" height="48"/>
+<text x="635.0" y="303" class="rotulo-instancia" text-anchor="middle">nó P</text>
+<text x="635.0" y="321" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="550" y="336" width="170" height="29" class="faixa"/>
+<text x="635.0" y="355" class="rotulo-faixa" text-anchor="middle">serviço :8080</text>
+<text x="635.0" y="383" class="rotulo-endereco" text-anchor="middle">IPv4 público, IPv4 privado e IPv6</text>
+<rect x="550" y="440" width="170" height="150" class="instancia"/>
+<use href="#pratica-03-infra-ic-Res_Amazon-EC2_Instance_48" x="611.0" y="454" width="48" height="48"/>
+<text x="635.0" y="528" class="rotulo-instancia" text-anchor="middle">nó A</text>
+<text x="635.0" y="546" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="550" y="561" width="170" height="29" class="faixa"/>
+<text x="635.0" y="580" class="rotulo-faixa" text-anchor="middle">serviço :8080</text>
+<text x="635.0" y="608" class="rotulo-endereco" text-anchor="middle">IPv4 privado e IPv6, SEM IPv4 público</text>
+<rect x="1110" y="215" width="170" height="150" class="instancia"/>
+<use href="#pratica-03-infra-ic-Res_Amazon-EC2_Instance_48" x="1171.0" y="229" width="48" height="48"/>
+<text x="1195.0" y="303" class="rotulo-instancia" text-anchor="middle">nó E</text>
+<text x="1195.0" y="321" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="1110" y="336" width="170" height="29" class="faixa"/>
+<text x="1195.0" y="355" class="rotulo-faixa" text-anchor="middle">serviço :8080</text>
+<text x="1195.0" y="383" class="rotulo-endereco" text-anchor="middle">IPv4 público e IPv6</text>
+<text x="892" y="510" class="rotulo" text-anchor="middle">nenhum nó aqui</text>
+<text x="892" y="530" class="rotulo-endereco" text-anchor="middle">e a mesma rt-privada</text>
+<use href="#pratica-03-infra-ic-Res_User_48_Light" x="60" y="40" width="48" height="48" class="so-claro"/>
+<use href="#pratica-03-infra-ic-Res_User_48_Dark" x="60" y="40" width="48" height="48" class="so-escuro"/>
+<text x="84" y="106" class="rotulo" text-anchor="middle">Aluno</text>
+<use href="#pratica-03-infra-ic-Res_Client_48_Light" x="60" y="150" width="48" height="48" class="so-claro"/>
+<use href="#pratica-03-infra-ic-Res_Client_48_Dark" x="60" y="150" width="48" height="48" class="so-escuro"/>
+<text x="84" y="216" class="rotulo" text-anchor="middle">Notebook do aluno</text>
+<path d="M 84 232 L 84 312" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<use href="#pratica-03-infra-ic-Res_Internet_48_Light" x="60" y="320" width="48" height="48" class="so-claro"/>
+<use href="#pratica-03-infra-ic-Res_Internet_48_Dark" x="60" y="320" width="48" height="48" class="so-escuro"/>
+<text x="84" y="386" class="rotulo" text-anchor="middle">Internet</text>
+<use href="#pratica-03-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" x="268" y="228" width="44" height="44"/>
+<text x="280" y="196" class="rotulo-seta" text-anchor="end">gateway de internet</text>
+<text x="280" y="212" class="rotulo-seta" text-anchor="end">IPv4 e IPv6, entra e sai</text>
+<path d="M 114 336 L 170 336 L 170 238 L 268 238" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<path d="M 268 262 L 196 262 L 196 352 L 108 352" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<path d="M 312 250 L 350 250 L 350 330 L 550 330" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<text x="450" y="322" class="rotulo-seta" text-anchor="middle">SSH 22 para o nó P</text>
+<use href="#pratica-03-infra-ic-Res_Amazon-VPC_NAT-Gateway_48" x="268" y="448" width="44" height="44"/>
+<text x="280" y="532" class="rotulo-seta" text-anchor="end">NAT gateway</text>
+<text x="280" y="548" class="rotulo-seta" text-anchor="end">só IPv4, e traduz o endereço</text>
+<path d="M 400 470 L 312 470" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<path d="M 290 448 L 290 272" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<use href="#pratica-03-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" x="268" y="558" width="44" height="44"/>
+<text x="280" y="642" class="rotulo-seta" text-anchor="end">gateway somente de saída</text>
+<text x="280" y="658" class="rotulo-seta" text-anchor="end">só IPv6, e não traduz nada</text>
+<path d="M 400 580 L 312 580" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<path d="M 268 580 L 150 580" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
+<text x="210" y="570" class="rotulo-seta" text-anchor="middle">para a internet</text>
+<use href="#pratica-03-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" x="1173" y="648" width="44" height="44"/>
+<text x="1195" y="640" class="rotulo-seta" text-anchor="middle">gateway de internet</text>
+</svg>
+      </div>
+      <figcaption>
+        A rede depois dos passos 2 a 6. Dois compromissos do desenho ficam declarados aqui. O
+        NAT gateway aparece na borda, junto dos outros dois, para a comparação caber num
+        olhar, mas ele mora mesmo é dentro da <code>sd-publica-a</code>. E o ícone do gateway
+        somente de saída é o do gateway de internet, porque a AWS não publica um ícone próprio
+        para ele.
+      </figcaption>
+    </figure>
+
+    <p>
+      Repare em duas ausências. A <code>sd-privada-b</code> nasce <strong>vazia</strong>, e
+      não é esquecimento. Ela existe para você ver a mesma tabela de rotas servindo a duas
+      sub-redes, que é o argumento de que tabela e sub-rede são objetos diferentes. E o nó A
+      não tem endereço IPv4 público, embora tenha um endereço IPv6 tão único no mundo quanto o
+      dos outros dois. Essa assimetria é o que o experimento 1 explora.
+    </p>
+
+    <p>
+      O nó E mora fora da <code>sd-vpc</code> de propósito. Dentro de uma VPC a rota
+      <code>local</code> liga todas as sub-redes umas às outras sem passar por gateway nenhum,
+      então <strong>nenhum nó de dentro consegue bancar o papel de internet</strong> para
+      testar o nó A. Por isso o observador de fora nasce na VPC padrão da conta, que já vem
+      com sub-redes e gateway prontos e à qual você só vai acrescentar um bloco IPv6.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       Passo 1
+       ============================================================ -->
+  <section class="lab-step" id="passo-1">
+    <h2><span class="step-num">1</span><span>Abrir o laboratório, preparar a chave e olhar o seu próprio IPv6</span><span class="step-time">6 min</span></h2>
+
+    <ol>
+      <li>No curso da AWS Academy, abra o laboratório <strong>Sandbox</strong> e clique em
+        <strong>Start Lab</strong>. Espere o círculo ao lado de <em>AWS</em> ficar verde.</li>
+      <li>Clique em <strong>AWS</strong> para abrir o console em outra aba. Confira no canto
+        superior direito que a região é <strong>N. Virginia (us-east-1)</strong>.</li>
+      <li>De volta à aba do laboratório, clique em <strong>Details</strong> e depois em
+        <strong>Show</strong>. Na janela que abre, clique em <strong>Download PEM</strong> e
+        salve o arquivo <code>labsuser.pem</code>. A extensão vem de <em>privacy-enhanced
+        mail</em> (PEM), um formato antigo de correio seguro que sobreviveu como jeito padrão
+        de guardar chaves em texto.</li>
+    </ol>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ A chave vale só para esta sessão</p>
+      <p>
+        Toda vez que você iniciar o laboratório de novo, baixe o <code>labsuser.pem</code>
+        outra vez e descarte o antigo. Tentar entrar com a chave da sessão passada dá
+        <code>Permission denied (publickey)</code>, e essa mensagem não explica nada.
+      </p>
+    </div>
+
+    <p>Agora ajuste a permissão do arquivo. O cliente SSH se recusa a usar uma chave privada
+      que outras contas do computador possam ler.</p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">PowerShell, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd $env:USERPROFILE\Downloads
+icacls .\labsuser.pem /inheritance:r /grant:r "$($env:USERNAME):R"</pre>
+      </div>
+      <p class="saida">processed file: .\labsuser.pem
+Successfully processed 1 files; Failed processing 0 files</p>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">terminal, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd ~/Downloads
+chmod 400 labsuser.pem</pre>
+      </div>
+    </div>
+
+    <h3>1.1 O seu computador tem IPv6?</h3>
+    <p>
+      Vale saber, e a resposta muda o que você pode tentar no fim da prática. O comando abaixo
+      pede uma página a um endereço que só responde por IPv6. Se a sua operadora entrega IPv6
+      até a sua casa, ele responde <code>200</code>. Se não entrega, ele falha, e essa falha é
+      o caso comum no Brasil residencial. <strong>Nenhum passo depende disso.</strong>
+    </p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">PowerShell, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>curl.exe -6 -s -m 6 -o NUL -w "resposta %{http_code}`n" https://ipv6.google.com</pre>
+      </div>
+    </div>
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">terminal, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>curl -6 -s -m 6 -o /dev/null -w "resposta %{http_code}\n" https://ipv6.google.com</pre>
+      </div>
+    </div>
+    <p class="saida">Com IPv6 em casa:  resposta 200
+Sem IPv6 em casa:  curl: (7) Couldn't connect to server   ou   resposta 000</p>
+
+    <h3>1.2 Abrir a CloudShell</h3>
+    <p>
+      É de dentro dela que a rede vai nascer. No console, clique no ícone de terminal na barra
+      de cima, à direita da caixa de busca. A primeira abertura leva perto de meio minuto.
+      Confirme que ela está autenticada e na região certa.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-availability-zones --query 'AvailabilityZones[].ZoneName' --output text</pre>
+    </div>
+    <p class="saida">us-east-1a	us-east-1b	us-east-1c	us-east-1d	us-east-1e	us-east-1f</p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c1">
+      <label for="p03-c1"><strong>Checkpoint 1.</strong> O laboratório está verde, o console
+        está em us-east-1, tenho o <code>labsuser.pem</code> desta sessão com a permissão
+        ajustada e a CloudShell responde.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 2
+       ============================================================ -->
+  <section class="lab-step" id="passo-2">
+    <h2><span class="step-num">2</span><span>Conhecer as redes que já existem e dar IPv6 à VPC padrão</span><span class="step-time">9 min</span></h2>
+
+    <p>
+      A conta do Sandbox não abre vazia. Ela já traz <strong>três VPCs</strong>, duas delas
+      criadas pelo próprio ambiente para hospedar o editor de código e um bastião. Ler as três
+      antes de escrever a primeira tabela de rotas sua custa cinco minutos e economiza a
+      confusão de olhar para uma tabela sem ter visto nenhuma outra.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-vpcs \
+  --query 'Vpcs[].{VPC:VpcId,CIDR:CidrBlock,Padrao:IsDefault,Nome:Tags[?Key==`Name`]|[0].Value}' \
+  --output table</pre>
+    </div>
+    <p class="saida">A colher no piloto. Espere uma tabela com três linhas. Uma tem
+Padrao igual a True e bloco 172.31.0.0/16, e as outras duas, com nome, usam
+o MESMO bloco 10.0.0.0/16 sem que isso seja problema, porque VPCs isoladas
+não se enxergam.</p>
+
+    <p>
+      Agora as tabelas de rotas de todas elas, uma de cada vez. O laço abaixo pede o
+      identificador de cada tabela e, para cada uma, imprime as linhas com o destino IPv4, o
+      destino IPv6 e o próximo salto.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>for RT in $(aws ec2 describe-route-tables --query 'RouteTables[].RouteTableId' --output text); do
+  echo "== tabela $RT"
+  aws ec2 describe-route-tables --route-table-ids $RT \
+    --query 'RouteTables[0].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,GatewayId]' \
+    --output text
+done</pre>
+    </div>
+    <p class="saida">A colher no piloto. Cada bloco traz uma linha por rota, com três
+colunas. Onde a coluna não se aplica, o texto é None.</p>
+
+    <p>
+      Três coisas para olhar, e todas as três voltam mais tarde. A primeira é que
+      <strong>toda tabela tem uma linha que ninguém escreveu</strong>, com o bloco da própria
+      VPC e o próximo salto <code>local</code>. É ela que liga as sub-redes de uma VPC umas às
+      outras, e ela não sai da tabela nem por decreto. A segunda é a linha
+      <code>0.0.0.0/0</code> apontando para um
+      <button type="button" class="nota-termo" data-nota="proximo-salto-e-rota-padrao">gateway
+      de internet</button>, que existe em duas das três redes. A terceira é uma ausência,
+      porque <strong>nenhuma das três tem linha de IPv6</strong>, e a coluna do meio vem
+      <code>None</code> em todas elas.
+    </p>
+
+    <h3>2.1 Dar um bloco IPv6 à VPC padrão</h3>
+    <p>
+      O nó E, o observador de fora, vai nascer na VPC padrão no passo 6, e precisa de um
+      endereço IPv6 para conversar com o nó A. A VPC padrão não tem bloco IPv6, então o
+      primeiro trabalho é pedir um à Amazon. O comando abaixo guarda o identificador da rede
+      numa variável e pede o bloco.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>VPC_PADRAO=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
+  --query 'Vpcs[0].VpcId' --output text)
+aws ec2 associate-vpc-cidr-block --vpc-id $VPC_PADRAO --amazon-provided-ipv6-cidr-block \
+  --query 'Ipv6CidrBlockAssociation.Ipv6CidrBlockState.State' --output text</pre>
+    </div>
+    <p class="saida">associating</p>
+
+    <p>
+      A associação leva poucos segundos. Leia o bloco que chegou, recorte um pedaço dele para
+      a sub-rede da zona <code>us-east-1a</code> e escreva a rota de saída IPv6 na tabela que
+      já existe.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>IPV6_PADRAO=$(aws ec2 describe-vpcs --vpc-ids $VPC_PADRAO \
+  --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
+SUB_PADRAO=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC_PADRAO \
+  Name=availability-zone,Values=us-east-1a --query 'Subnets[0].SubnetId' --output text)
+aws ec2 associate-subnet-cidr-block --subnet-id $SUB_PADRAO \
+  --ipv6-cidr-block ${IPV6_PADRAO%00::/56}00::/64 \
+  --query 'Ipv6CidrBlockAssociation.Ipv6CidrBlock' --output text</pre>
+    </div>
+    <p class="saida">A colher no piloto. Espere um prefixo /64 com o mesmo começo do /56 da
+VPC, na forma 2600:1f18:xxxx:xx00::/64.</p>
+
+    <p>
+      O recorte acima é a lição de <em>roteamento entre domínios sem classes</em> aparecendo
+      em forma de comando. A Amazon entrega sempre um
+      <button type="button" class="nota-termo" data-nota="prefixo-ipv6-56-e-64">bloco
+      /56</button> por VPC, e a sub-rede leva um /64. A diferença de oito bits é o que sobra
+      para você numerar sub-redes, e é exatamente por isso que o comando troca o último par
+      hexadecimal do prefixo em vez de inventar um endereço novo.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>RT_PADRAO=$(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_PADRAO \
+  --query 'RouteTables[0].RouteTableId' --output text)
+IGW_PADRAO=$(aws ec2 describe-internet-gateways \
+  --filters Name=attachment.vpc-id,Values=$VPC_PADRAO \
+  --query 'InternetGateways[0].InternetGatewayId' --output text)
+aws ec2 create-route --route-table-id $RT_PADRAO --destination-ipv6-cidr-block ::/0 \
+  --gateway-id $IGW_PADRAO</pre>
+    </div>
+    <p class="saida">{
+    "Return": true
+}</p>
+
+    <p>
+      A rede que era só IPv4 acabou de virar rede de <strong>pilha dupla</strong>, e custou
+      três comandos. Repare que o gateway de internet não mudou. O mesmo dispositivo que já
+      atendia o IPv4 passou a atender o IPv6, porque ele sempre soube atender os dois e
+      ninguém tinha escrito a linha que o mandava fazer isso.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c2">
+      <label for="p03-c2"><strong>Checkpoint 2.</strong> Li as tabelas de rotas das três redes
+        prontas, a VPC padrão tem um bloco /56, a sub-rede de us-east-1a tem um /64 e a tabela
+        dela tem a linha <code>::/0</code>.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 3
+       ============================================================ -->
+  <section class="lab-step" id="passo-3">
+    <h2><span class="step-num">3</span><span>Criar a VPC e recortar as três sub-redes</span><span class="step-time">11 min</span></h2>
+
+    <p>
+      Agora a rede da prática. Ela nasce com dois blocos, um escolhido por você e outro
+      entregue pela Amazon. O bloco IPv4 é <code>10.10.0.0/16</code>, e a escolha não é gosto
+      pessoal. As duas redes que o ambiente já trouxe usam <code>10.0.0.0/16</code> as duas, e
+      um terceiro <code>10.0.0.0/16</code> na tela deixaria a linha <code>local</code> da sua
+      tabela de rotas sem força de exemplo justamente no passo em que ela precisa tê-la.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>VPC=$(aws ec2 create-vpc --cidr-block 10.10.0.0/16 --amazon-provided-ipv6-cidr-block \
+  --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=sd-vpc}]' \
+  --query 'Vpc.VpcId' --output text)
+aws ec2 wait vpc-available --vpc-ids $VPC
+PREFIXO=$(aws ec2 describe-vpcs --vpc-ids $VPC \
+  --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
+RAIZ=${PREFIXO%00::/56}
+echo "VPC $VPC    prefixo $PREFIXO    raiz $RAIZ"</pre>
+    </div>
+    <p class="saida">A colher no piloto. Uma linha só, com o identificador da VPC na forma
+vpc- seguida de dezessete caracteres, o prefixo /56 e a raiz dele sem os
+dois últimos dígitos.</p>
+
+    <p>
+      A variável <code>RAIZ</code> é o prefixo sem o último par hexadecimal, e é dela que as
+      três sub-redes vão sair. Onde o IPv4 muda o terceiro octeto, de <code>10.10.1</code> para
+      <code>10.10.2</code> e <code>10.10.3</code>, o IPv6 muda o par final do quarto grupo, de
+      <code>00</code> para <code>01</code> e <code>02</code>. É a mesma ideia nos dois
+      protocolos, com quantidades muito diferentes de endereço dentro de cada pedaço.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>criar_subrede () {
+  aws ec2 create-subnet --vpc-id $VPC --availability-zone "$4" \
+    --cidr-block "$2" --ipv6-cidr-block "$3" \
+    --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=$1}]" \
+    --query 'Subnet.SubnetId' --output text
+}
+SUB_PUB=$(criar_subrede    sd-publica-a 10.10.1.0/24 ${RAIZ}00::/64 us-east-1a)
+SUB_PRIV_A=$(criar_subrede sd-privada-a 10.10.2.0/24 ${RAIZ}01::/64 us-east-1a)
+SUB_PRIV_B=$(criar_subrede sd-privada-b 10.10.3.0/24 ${RAIZ}02::/64 us-east-1b)
+aws ec2 modify-subnet-attribute --subnet-id $SUB_PUB --map-public-ip-on-launch
+echo "publica $SUB_PUB    privada A $SUB_PRIV_A    privada B $SUB_PRIV_B"</pre>
+    </div>
+    <p class="saida">A colher no piloto. Uma linha com os três identificadores, na forma
+subnet- seguida de dezessete caracteres.</p>
+
+    <p>
+      A última linha antes do <code>echo</code> liga a atribuição automática de endereço IPv4
+      público na sub-rede pública. Guarde esse detalhe, porque ele volta no experimento 2. O
+      que faz uma sub-rede ser pública é a tabela de rotas, e não esse atributo. O atributo só
+      decide se a instância que nascer ali <strong>ganha um endereço público</strong>, o que é
+      assunto diferente e igualmente necessário.
+    </p>
+
+    <p>
+      Confira o resultado no console, porque é mais fácil de ler do que qualquer saída de
+      terminal. Busque por <strong>VPC</strong>, escolha <strong>Your VPCs</strong>, marque a
+      <code>sd-vpc</code> e abra a aba <strong>Resource map</strong>. O mapa mostra a VPC, as
+      três sub-redes e as tabelas de rotas ligadas a elas. Por enquanto as três sub-redes
+      penduram na mesma tabela, que é a principal, criada junto com a VPC. Isso muda no passo
+      5.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c3">
+      <label for="p03-c3"><strong>Checkpoint 3.</strong> A <code>sd-vpc</code> existe com os
+        dois blocos, as três sub-redes aparecem no mapa de recursos e cada uma tem um /24 e um
+        /64 diferentes.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 4
+       ============================================================ -->
+  <section class="lab-step" id="passo-4">
+    <h2><span class="step-num">4</span><span>Pendurar os três dispositivos de borda</span><span class="step-time">8 min</span></h2>
+
+    <p>
+      A rede tem endereços e não tem porta nenhuma. Nada entra e nada sai. Os três
+      dispositivos a seguir resolvem isso de três maneiras diferentes, e a tabela compara as
+      três antes de você criá-las.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th>Dispositivo</th><th>Atende</th><th>Sentido</th><th>Traduz endereço?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Gateway de internet</td><td>IPv4 e IPv6</td><td>Entra e sai</td><td>Não</td></tr>
+          <tr><td>NAT gateway</td><td>Só IPv4</td><td>Só sai</td><td><strong>Sim</strong></td></tr>
+          <tr><td>Gateway somente de saída</td><td>Só IPv6</td><td>Só sai</td><td>Não</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      A ordem dos comandos tem um motivo. O <strong>NAT gateway leva perto de dois
+      minutos</strong> para ficar disponível, e é o único dos três que faz esperar, então ele
+      é criado cedo e a espera acontece enquanto você escreve as tabelas de rotas no passo 5.
+      Ele também é o único que custa dinheiro e o único que exige um endereço reservado.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>IGW=$(aws ec2 create-internet-gateway \
+  --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=sd-igw}]' \
+  --query 'InternetGateway.InternetGatewayId' --output text)
+aws ec2 attach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC
+
+EIP=$(aws ec2 allocate-address --domain vpc --query AllocationId --output text)
+NAT=$(aws ec2 create-nat-gateway --subnet-id $SUB_PUB --allocation-id $EIP \
+  --tag-specifications 'ResourceType=natgateway,Tags=[{Key=Name,Value=sd-nat}]' \
+  --query 'NatGateway.NatGatewayId' --output text)
+
+EIGW=$(aws ec2 create-egress-only-internet-gateway --vpc-id $VPC \
+  --query 'EgressOnlyInternetGateway.EgressOnlyInternetGatewayId' --output text)
+echo "IGW $IGW    NAT $NAT    EIGW $EIGW"</pre>
+    </div>
+    <p class="saida">A colher no piloto. Uma linha com os três identificadores, com os
+prefixos igw-, nat- e eigw-.</p>
+
+    <p>
+      Repare no que o terceiro comando <strong>não</strong> pediu. O
+      <button type="button" class="nota-termo" data-nota="gateway-somente-de-saida">gateway
+      somente de saída</button> nasceu sem endereço, sem sub-rede e sem espera, enquanto o NAT
+      gateway precisou de um endereço reservado, de uma sub-rede pública onde morar e de dois
+      minutos de paciência. Os dois vão entregar o mesmo resultado prático, que é deixar sair
+      e não deixar entrar, e a diferença de preço entre eles é a diferença entre traduzir
+      endereço e não precisar traduzir.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c4">
+      <label for="p03-c4"><strong>Checkpoint 4.</strong> Os três identificadores apareceram, o
+        gateway de internet está ligado à <code>sd-vpc</code> e o NAT gateway está sendo
+        criado.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 5
+       ============================================================ -->
+  <section class="lab-step" id="passo-5">
+    <h2><span class="step-num">5</span><span>Escrever as duas tabelas de rotas</span><span class="step-time">11 min</span></h2>
+
+    <p>
+      Este é o coração da prática. As duas tabelas vão ter a <strong>mesma forma</strong> e
+      diferir em duas linhas, e são essas duas linhas que decidem qual sub-rede é pública e
+      qual é privada. Comece pela pública, que é a mais simples, porque manda os dois destinos
+      de fora para o mesmo dispositivo.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>RT_PUB=$(aws ec2 create-route-table --vpc-id $VPC \
+  --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=rt-publica}]' \
+  --query 'RouteTable.RouteTableId' --output text)
+aws ec2 create-route --route-table-id $RT_PUB --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id $IGW --output text
+aws ec2 create-route --route-table-id $RT_PUB --destination-ipv6-cidr-block ::/0 \
+  --gateway-id $IGW --output text
+aws ec2 associate-route-table --route-table-id $RT_PUB --subnet-id $SUB_PUB \
+  --query AssociationId --output text</pre>
+    </div>
+    <p class="saida">A colher no piloto. Duas linhas com True, das duas rotas criadas, e
+depois um identificador de associação na forma rtbassoc-.</p>
+
+    <p>
+      Agora a privada. Ela também manda os dois destinos de fora para fora, e a diferença é
+      que <strong>cada protocolo vai por um dispositivo diferente</strong>. A rota IPv6 já
+      pode ser escrita, porque o gateway somente de saída nasceu pronto. A rota IPv4 espera o
+      NAT gateway, e o comando de espera está logo abaixo.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>RT_PRIV=$(aws ec2 create-route-table --vpc-id $VPC \
+  --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=rt-privada}]' \
+  --query 'RouteTable.RouteTableId' --output text)
+aws ec2 create-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 \
+  --egress-only-internet-gateway-id $EIGW --output text
+aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_A \
+  --query AssociationId --output text
+aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_B \
+  --query AssociationId --output text</pre>
+    </div>
+
+    <p>
+      Os dois últimos comandos são o argumento inteiro de que <strong>tabela e sub-rede são
+      objetos diferentes</strong>. Uma tabela de rotas serve quantas sub-redes você quiser, e
+      as duas privadas acabaram de pendurar na mesma. A <code>sd-privada-b</code> nem tem
+      máquina dentro, e mesmo assim já sabe por onde sairia se tivesse.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>echo "esperando o NAT gateway ficar disponivel, perto de dois minutos"
+aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT
+aws ec2 create-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 \
+  --nat-gateway-id $NAT --output text</pre>
+    </div>
+    <p class="saida">esperando o NAT gateway ficar disponivel, perto de dois minutos
+True</p>
+
+    <h3>5.1 Ler as duas tabelas lado a lado</h3>
+    <p>
+      Antes de seguir, olhe para o que você escreveu. O comando abaixo imprime as duas tabelas
+      com as mesmas colunas.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>for RT in $RT_PUB $RT_PRIV; do
+  echo "== $RT"
+  aws ec2 describe-route-tables --route-table-ids $RT --output text \
+    --query 'RouteTables[0].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,
+              GatewayId,NatGatewayId,EgressOnlyInternetGatewayId]'
+done</pre>
+    </div>
+
+    <p>
+      O resultado tem esta forma, com os identificadores encurtados para caber na linha. As
+      duas primeiras linhas de cada tabela são as rotas <code>local</code>, uma para cada
+      protocolo, e nenhuma das duas foi escrita por você.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">a forma do resultado</span>
+      </div>
+      <pre>rt-publica          associada a: sd-publica-a
+  10.10.0.0/16           local
+  2600:...::/56          local
+  0.0.0.0/0              igw-...
+  ::/0                   igw-...
+
+rt-privada          associada a: sd-privada-a e sd-privada-b
+  10.10.0.0/16           local
+  2600:...::/56          local
+  0.0.0.0/0              nat-...
+  ::/0                   eigw-...</pre>
+    </div>
+
+    <p>
+      Duas linhas de diferença, e é isso. Nenhuma das duas sub-redes tem atributo dizendo se é
+      pública ou privada, e nenhuma delas sabe o que é. Quem sabe é a tabela associada a ela.
+      Guarde essa frase, porque o experimento 2 vai testá-la de quatro maneiras.
+    </p>
+
+    <h3>5.2 Guardar os identificadores</h3>
+    <p>
+      As variáveis acima vivem na sessão da CloudShell, e a sessão morre depois de vinte
+      minutos parada. O comando abaixo escreve todas elas num arquivo do seu diretório
+      pessoal, que a CloudShell preserva entre sessões. Se a aba fechar, um
+      <code>source</code> devolve tudo.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>cat &gt; ~/sd-pratica03.env &lt;&lt;EOF
+VPC=$VPC
+VPC_PADRAO=$VPC_PADRAO
+SUB_PUB=$SUB_PUB
+SUB_PRIV_A=$SUB_PRIV_A
+SUB_PRIV_B=$SUB_PRIV_B
+SUB_PADRAO=$SUB_PADRAO
+IGW=$IGW
+NAT=$NAT
+EIGW=$EIGW
+RT_PUB=$RT_PUB
+RT_PRIV=$RT_PRIV
+EOF
+cat ~/sd-pratica03.env</pre>
+    </div>
+    <p class="saida">Onze linhas na forma NOME=valor. Para recuperá-las numa aba nova:
+source ~/sd-pratica03.env</p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c5">
+      <label for="p03-c5"><strong>Checkpoint 5.</strong> As duas tabelas existem, a privada
+        serve duas sub-redes, o NAT gateway está disponível e o arquivo
+        <code>~/sd-pratica03.env</code> tem os onze identificadores.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 6
+       ============================================================ -->
+  <section class="lab-step" id="passo-6">
+    <h2><span class="step-num">6</span><span>Subir os três nós</span><span class="step-time">13 min</span></h2>
+
+    <p>
+      A rede está pronta, e agora entram as máquinas. A ordem importa e é a mesma ordem
+      pedagógica. O nó A nasce numa sub-rede privada e o script de inicialização dele precisa
+      alcançar os repositórios do sistema para instalar as ferramentas de rede, o que só
+      funciona depois de o NAT gateway estar disponível e a rota escrita. Foi isso que o passo
+      5 acabou de garantir.
+    </p>
+
+    <h3>6.1 Os dois grupos de segurança, e a linha que quase estraga tudo</h3>
+    <p>
+      Um grupo de segurança novo já vem com uma regra de saída que libera tudo para
+      <code>0.0.0.0/0</code>. Essa regra <strong>não cobre o IPv6</strong>, e a omissão é o
+      caso comum, não a exceção. Sem uma regra <code>::/0</code> explícita, a tentativa do
+      experimento 1 falharia no filtro de saída da própria máquina que tentou, e você leria
+      como recusa de roteamento uma recusa de firewall, que é exatamente a confusão que esta
+      prática existe para desfazer. Os dois grupos abaixo nascem com as duas linhas de saída.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>abrir_portas () {
+  aws ec2 authorize-security-group-egress --group-id "$1" \
+    --ip-permissions 'IpProtocol=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' --output text
+  aws ec2 authorize-security-group-ingress --group-id "$1" --ip-permissions \
+    'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]' \
+    'IpProtocol=tcp,FromPort=8080,ToPort=8080,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]' \
+    'IpProtocol=icmp,FromPort=-1,ToPort=-1,IpRanges=[{CidrIp=0.0.0.0/0}]' \
+    'IpProtocol=icmpv6,FromPort=-1,ToPort=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' --output text
+}
+SG_NOS=$(aws ec2 create-security-group --group-name sd-nos \
+  --description "Pratica 03 nos da sd-vpc" --vpc-id $VPC --query GroupId --output text)
+SG_E=$(aws ec2 create-security-group --group-name sd-observador \
+  --description "Pratica 03 observador na VPC padrao" --vpc-id $VPC_PADRAO \
+  --query GroupId --output text)
+abrir_portas $SG_NOS
+abrir_portas $SG_E
+echo "SG_NOS=$SG_NOS" &gt;&gt; ~/sd-pratica03.env
+echo "SG_E=$SG_E" &gt;&gt; ~/sd-pratica03.env</pre>
+    </div>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Sim, o filtro de entrada fica aberto de propósito</p>
+      <p>
+        Os dois grupos aceitam SSH, HTTP na porta 8080 e o protocolo de mensagens de controle
+        da internet (ICMP), nas versões dos dois protocolos, vindos de qualquer lugar. É o
+        ICMP que responde ao <code>ping</code>, e sem ele o experimento 3 não teria como
+        medir. Num sistema de verdade essa abertura toda seria descuido. Aqui é o contrário disso.
+        Se o filtro bloqueasse, você não teria como distinguir a recusa do filtro da recusa do
+        roteamento, e sairia da prática achando que o gateway somente de saída é um firewall.
+        Com o filtro aberto, a <strong>única</strong> coisa que impede o nó E de entrar é o
+        caminho de volta, e o experimento 1 pede que você confira a regra antes de tirar a
+        conclusão.
+      </p>
+    </div>
+
+    <h3>6.2 Lançar as três instâncias</h3>
+    <p>
+      O primeiro comando descobre a imagem mais recente do Amazon Linux 2023. Os três nós
+      sobem com a mesma imagem, o mesmo tipo, a mesma chave e o <strong>mesmo script de
+      inicialização</strong>, e o que os diferencia é a sub-rede onde nascem e o endereço que
+      recebem. Baixe o script antes, porque é ele que o comando de lançamento envia.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -sfO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03/setup.sh
+wc -c setup.sh
+AMI=$(aws ec2 describe-images --owners amazon \
+  --filters 'Name=name,Values=al2023-ami-2023*-x86_64' 'Name=state,Values=available' \
+  --query 'sort_by(Images,&amp;CreationDate)[-1].ImageId' --output text)
+echo $AMI</pre>
+    </div>
+    <p class="saida">A colher no piloto. O tamanho do script em bytes e, depois, um
+identificador na forma ami- seguida de dezessete caracteres.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>subir_no () {
+  aws ec2 run-instances --image-id $AMI --instance-type t3.micro --key-name vockey \
+    --subnet-id "$2" --security-group-ids "$3" --ipv6-address-count 1 "$4" \
+    --iam-instance-profile Name=LabInstanceProfile \
+    --metadata-options 'InstanceMetadataTags=enabled' \
+    --user-data file://setup.sh \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$1}]" \
+    --query 'Instances[0].InstanceId' --output text
+}
+NO_P=$(subir_no sd-P $SUB_PUB    $SG_NOS --associate-public-ip-address)
+NO_E=$(subir_no sd-E $SUB_PADRAO $SG_E   --associate-public-ip-address)
+NO_A=$(subir_no sd-A $SUB_PRIV_A $SG_NOS --no-associate-public-ip-address)
+aws ec2 wait instance-running --instance-ids $NO_P $NO_E $NO_A
+echo "P $NO_P    E $NO_E    A $NO_A"</pre>
+    </div>
+
+    <p>
+      Os três sobem um atrás do outro e <strong>inicializam em paralelo</strong>, então a
+      espera é a de um só. A opção <code>--metadata-options</code> é a que faz o script
+      descobrir o próprio papel, porque ela expõe a etiqueta <code>Name</code> da instância no
+      serviço de metadados. A opção <code>--iam-instance-profile</code> custa uma linha e
+      compra uma saída de emergência, que está na seção <a href="#se-der-errado">Se der
+      errado</a>.
+    </p>
+
+    <h3>6.3 Colher os endereços</h3>
+    <p>
+      Espere cerca de um minuto depois de as instâncias ficarem em execução, porque o script
+      instala pacotes no primeiro boot. Depois colha os seis endereços de uma vez e leve-os
+      para a <a href="#ficha">ficha do ambiente</a>, no topo da página.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>echo "no    IPv4 privado    IPv4 publico    IPv6"
+aws ec2 describe-instances --filters 'Name=tag:Name,Values=sd-P,sd-A,sd-E' \
+  'Name=instance-state-name,Values=running' --output text \
+  --query 'Reservations[].Instances[].[Tags[?Key==`Name`]|[0].Value,
+            PrivateIpAddress,PublicIpAddress,Ipv6Address]'</pre>
+    </div>
+    <p class="saida">A colher no piloto. Uma tabela de três linhas. Confira que a linha do
+nó A tem a coluna IPv4publico vazia e a coluna IPv6 preenchida, o que é a
+assimetria que o experimento 1 vai explorar.</p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c6">
+      <label for="p03-c6"><strong>Checkpoint 6.</strong> Os três nós estão em execução, o nó A
+        não tem IPv4 público, os três têm IPv6 e a ficha do ambiente está preenchida com os
+        seis endereços.</label>
+    </div>
+
+    <details class="lab-detalhe">
+      <summary>Ver o script de inicialização antes de executá-lo (recomendado)</summary>
+      <p>
+        É este o arquivo que o <code>curl</code> baixou e que o
+        <code>run-instances</code> enviou. Ele não instala nada de fora dos repositórios do
+        sistema. Descobre a identidade do nó no serviço de metadados, muda o nome da máquina
+        para o prompt dizer onde você está, instala quatro ferramentas de rede, sobe um
+        serviço HTTP mínimo que diz quem respondeu e de que endereço veio o pedido, e instala
+        o atalho <code>sd-rede</code>. Ler o que você vai executar é um hábito, não um
+        exagero.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">enviado no campo "User data" pelo run-instances</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-baixar="setup-sh"
+            data-arquivo="setup.sh">baixar</button>
+          <button type="button" class="btn-copiar" data-copiar="setup-sh">copiar</button>
+        </div>
+        <pre id="setup-sh">#!/bin/bash
+# ============================================================
+# Pratica 03 (Topico 3) - Sistemas Distribuidos - IFSP Salto
+# Script de inicializacao dos tres nos (campo "User data" do EC2).
+# Roda uma unica vez, no primeiro boot da instancia.
+#
+# O MESMO texto sobe nos tres nos. O papel (P, A ou E) nao vem
+# escrito aqui: ele e lido da etiqueta Name da propria instancia,
+# pelo servico de metadados, porque os tres nascem com
+# InstanceMetadataTags=enabled. Assim nao existem tres versoes
+# deste arquivo para manter em acordo.
+#
+# Sem acentos de proposito: o user data executa antes do locale
+# estar definido. Testado em Amazon Linux 2023 (python3 da base).
+# ============================================================
+set -x
+exec &gt; /var/log/sd-setup.log 2&gt;&amp;1
+
+mkdir -p /opt/sd
+
+# ---- Identidade do no, lida do servico de metadados da instancia ----
+# 169.254.169.254 e um endereco de link local: responde apenas dentro
+# da propria instancia, e nao consome rota nenhuma da VPC. E por isso
+# que ele funciona no no A antes mesmo de existir saida para a internet.
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
+MD="http://169.254.169.254/latest/meta-data"
+AUTH="X-aws-ec2-metadata-token: $TOKEN"
+
+pergunta() {
+  # -f devolve vazio no lugar do corpo de erro: o no A nao tem IPv4
+  # publico, e sem isso a resposta 404 entraria no arquivo como se
+  # fosse um endereco.
+  curl -s -f -H "$AUTH" --max-time 3 "$MD/$1"
+}
+
+MAC=$(pergunta network/interfaces/macs/ | head -1 | tr -d '/')
+
+PAPEL=$(pergunta tags/instance/Name)
+case "$PAPEL" in
+  sd-?) PAPEL=${PAPEL#sd-} ;;
+  *)    PAPEL=$(pergunta instance-id) ;;
+esac
+
+{
+  echo "papel=$PAPEL"
+  echo "instancia=$(pergunta instance-id)"
+  echo "az=$(pergunta placement/availability-zone)"
+  echo "ipv4_privado=$(pergunta local-ipv4)"
+  echo "ipv4_publico=$(pergunta public-ipv4)"
+  echo "ipv6=$(pergunta network/interfaces/macs/$MAC/ipv6s | head -1)"
+  echo "subrede=$(pergunta network/interfaces/macs/$MAC/subnet-id)"
+  echo "vpc=$(pergunta network/interfaces/macs/$MAC/vpc-id)"
+} &gt; /opt/sd/identidade.txt
+
+# O prompt passa a dizer em qual no o aluno esta. Nesta pratica quase
+# todo comando roda num no e pergunta a outro, e tres janelas abertas
+# com o mesmo prompt sao a receita para medir a coisa errada.
+hostnamectl set-hostname "sd-$PAPEL"
+
+# ---- Ferramentas de rede que o Amazon Linux 2023 nao traz de base ----
+# traceroute mostra o caminho, tcpdump mostra o pacote, bind-utils traz
+# o dig e nmap-ncat traz o nc, que testa uma porta sem cliente proprio.
+dnf install -y traceroute tcpdump bind-utils nmap-ncat
+
+# ============================================================
+# servico.py - responde quem atendeu e de que endereco veio o pedido
+# ============================================================
+cat &gt; /opt/sd/servico.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Servico minimo da Pratica 03.
+
+Responde em texto puro quem atendeu e de que endereco o pedido chegou.
+E o alvo das tentativas do experimento 1 e o destino que a medida 4
+cronometra. Sem dependencias: apenas a biblioteca padrao do Python.
+
+O socket nasce em AF_INET6 e escuta em "::", que e o equivalente IPv6 do
+0.0.0.0. Com IPV6_V6ONLY em zero, o mesmo socket atende tambem quem
+chega por IPv4, que aparece do lado de ca como ::ffff:10.10.1.4. Uma
+linha, portanto, decide se o servico e de pilha dupla ou nao.
+"""
+import http.server
+import socket
+
+IDENTIDADE = {}
+try:
+    with open("/opt/sd/identidade.txt", "r") as arquivo:
+        for linha in arquivo:
+            if "=" in linha:
+                chave, valor = linha.strip().split("=", 1)
+                IDENTIDADE[chave] = valor
+except OSError:
+    pass
+
+
+def origem(endereco):
+    """Separa o endereco de quem chamou do protocolo por onde ele veio."""
+    if endereco.startswith("::ffff:") and "." in endereco:
+        return endereco[len("::ffff:"):], "IPv4"
+    return endereco, "IPv6"
+
+
+class Manipulador(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server_version = "sd-pratica03/1.0"
+
+    def do_GET(self):
+        endereco, familia = origem(self.client_address[0])
+        corpo = (
+            "quem respondeu : no %s (%s)\n"
+            "zona           : %s\n"
+            "quem perguntou : %s\n"
+            "protocolo      : %s\n"
+        ) % (IDENTIDADE.get("papel", "?"), IDENTIDADE.get("instancia", "?"),
+             IDENTIDADE.get("az", "?"), endereco, familia)
+        corpo = corpo.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(corpo)))
+        self.end_headers()
+        self.wfile.write(corpo)
+
+    def log_message(self, *args):
+        pass  # silencia o log padrao, que poluiria o terminal
+
+
+class ServidorDePilhaDupla(http.server.ThreadingHTTPServer):
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        http.server.ThreadingHTTPServer.server_bind(self)
+
+
+if __name__ == "__main__":
+    ServidorDePilhaDupla(("::", 8080), Manipulador).serve_forever()
+PY
+
+# ============================================================
+# rede.py - os enderecos deste no em tres linhas (atalho "sd-rede")
+# ============================================================
+cat &gt; /opt/sd/rede.py &lt;&lt;'PY'
+#!/usr/bin/env python3
+"""Imprime os enderecos deste no em tres linhas limpas.
+
+A primeira linha diz quem e o no, a segunda o que ele tem de IPv4 e a
+terceira o que ele tem de IPv6. Quem responde e o proprio kernel, pelo
+comando "ip addr": o servico de metadados entra so para o nome do no, a
+zona e o endereco publico, que sao coisas que a interface nao conhece.
+"""
+import subprocess
+
+
+def identidade():
+    dados = {}
+    try:
+        with open("/opt/sd/identidade.txt", "r") as arquivo:
+            for linha in arquivo:
+                if "=" in linha:
+                    chave, valor = linha.strip().split("=", 1)
+                    dados[chave] = valor
+    except OSError:
+        pass
+    return dados
+
+
+def enderecos(familia):
+    """Enderecos de alcance global da interface, um por elemento."""
+    try:
+        saida = subprocess.run(
+            ["ip", "-o", familia, "addr", "show", "scope", "global"],
+            capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    achados = []
+    for linha in saida.splitlines():
+        campos = linha.split()
+        if len(campos) &gt; 3:
+            achados.append(campos[3])
+    return achados
+
+
+def principal():
+    dados = identidade()
+    print("no    : %s   instancia %s   zona %s" % (
+        dados.get("papel", "?"), dados.get("instancia", "?"),
+        dados.get("az", "?")))
+    publico = dados.get("ipv4_publico", "")
+    print("IPv4  : %s   %s" % (
+        ", ".join(enderecos("-4")) or "nenhum",
+        ("publico " + publico) if publico else "SEM endereco publico"))
+    print("IPv6  : %s" % (", ".join(enderecos("-6")) or "nenhum"))
+
+
+if __name__ == "__main__":
+    principal()
+PY
+
+# ---- Atalho "sd-rede", para o aluno nao decorar caminho de arquivo ----
+printf '#!/bin/bash\nexec /usr/bin/python3 /opt/sd/rede.py "$@"\n' &gt; /usr/local/bin/sd-rede
+chmod +x /usr/local/bin/sd-rede /opt/sd/servico.py /opt/sd/rede.py
+
+# ---- Servico gerenciado pelo systemd (sobe no boot, reinicia se cair) ----
+cat &gt; /etc/systemd/system/sd-servico.service &lt;&lt;'UNIT'
+[Unit]
+Description=Servico da Pratica 03 (Sistemas Distribuidos)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/sd/servico.py
+Restart=always
+RestartSec=1
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now sd-servico
+
+echo "pratica 03: no $PAPEL pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre>
+      </div>
+      <p>
+        O botão <strong>baixar</strong> salva o arquivo no seu computador. Ele serve para o
+        caso de o <code>curl</code> da CloudShell falhar, e aí você envia o arquivo pelo menu
+        <strong>Actions</strong>, opção <em>Upload file</em>, da própria CloudShell.
+      </p>
+    </details>
+  </section>
+
+  <!-- ============================================================
+       Passo 7
+       ============================================================ -->
+  <section class="lab-step" id="passo-7">
+    <h2><span class="step-num">7</span><span>Experimento 1: quem consegue iniciar a conversa</span><span class="step-time">13 min</span></h2>
+
+    <div class="callout">
+      <p class="callout-title">💡 Quem digita e quem responde</p>
+      <p>
+        Daqui em diante quase todo comando roda em um nó e pergunta a outro. O rótulo cinza no
+        alto de cada bloco marca sempre <strong>quem digita</strong>, e nunca quem responde.
+        Quem responde vem dito no parágrafo que abre cada tentativa. Abra
+        <strong>três janelas</strong> de terminal e deixe as três ligadas até o fim da
+        prática.
+      </p>
+    </div>
+
+    <p>
+      A janela 1 entra no nó P pelo endereço IPv4 público dele. A janela 3 entra no nó E, do
+      mesmo jeito. A janela 2 é a diferente, porque o nó A não tem endereço público e não
+      existe por onde entrar diretamente. Ela salta por P com a opção <code>-J</code>, que
+      manda o cliente SSH abrir a conexão com A <em>através</em> de P sem copiar a sua chave
+      privada para dentro da nuvem.
+    </p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 1, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i $env:USERPROFILE\Downloads\labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 2, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i $env:USERPROFILE\Downloads\labsuser.pem -J ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span> ec2-user@<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 3, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i $env:USERPROFILE\Downloads\labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_E">IP-PUBLICO-E</span></pre>
+      </div>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 1, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i ~/Downloads/labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 2, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i ~/Downloads/labsuser.pem -J ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span> ec2-user@<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 3, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i ~/Downloads/labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_E">IP-PUBLICO-E</span></pre>
+      </div>
+    </div>
+
+    <p>
+      O prompt de cada janela passa a dizer o nome do nó, porque o script mudou o nome da
+      máquina. Confirme os endereços de cada uma com o atalho abaixo, que vale nas três.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">nas três janelas</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd-rede</pre>
+    </div>
+    <p class="saida">A colher no piloto. Três linhas. A do nó A traz, na segunda, o aviso
+SEM endereco publico, e as três trazem um endereço IPv6 global na terceira.</p>
+
+    <h3>7.1 Do nó E para o nó A, pelo IPv4</h3>
+    <p>
+      Quem pergunta é o nó E, e quem deveria responder é o serviço do nó A. O problema aparece
+      antes do comando. Não existe endereço IPv4 a que se dirigir, porque o nó A não tem um
+      público, então o melhor que dá para tentar é o privado dele.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó E</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -4 -s -m 5 http://<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span>:8080/ ; echo "saiu com $?"</pre>
+    </div>
+    <p class="saida">A colher no piloto. Espere cinco segundos de silêncio e depois
+saiu com 28, que é o código do tempo esgotado.</p>
+
+    <p>
+      O endereço <code>10.10.2.x</code> é privado e não vale fora da VPC que o contém. A
+      tabela de rotas da VPC padrão não conhece esse bloco, manda o pacote para a rota padrão
+      e ele se perde. Nem o filtro de entrada do nó A chegou a ser consultado.
+    </p>
+
+    <h3>7.2 Do nó E para o nó A, pelo IPv6</h3>
+    <p>
+      Agora a tentativa que interessa. Quem pergunta continua sendo o nó E, quem deveria
+      responder continua sendo o serviço do nó A, e desta vez <strong>o endereço existe e é
+      único no mundo</strong>. Antes de tentar, confirme que o filtro de entrada do nó A não
+      vai atrapalhar a leitura do resultado.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>source ~/sd-pratica03.env
+aws ec2 describe-security-groups --group-ids $SG_NOS \
+  --query 'SecurityGroups[0].IpPermissions[].[IpProtocol,FromPort,Ipv6Ranges[0].CidrIpv6]' \
+  --output text</pre>
+    </div>
+    <p class="saida">A colher no piloto. Quatro linhas. As de tcp 22 e tcp 8080 e a de
+icmpv6 têm ::/0 na terceira coluna, o que quer dizer que o filtro deixa
+entrar qualquer IPv6.</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó E</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ping -6 -c 3 -W 2 <span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>
+curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/" ; echo "saiu com $?"</pre>
+    </div>
+    <p class="saida">A colher no piloto. Espere 3 packets transmitted, 0 received e
+100% packet loss no ping, e outra vez saiu com 28 no curl.</p>
+
+    <p>
+      Este é o resultado que a prática existe para explicar. O endereço existe, é único no
+      mundo, o filtro de entrada deixa passar, e a conexão não se completa assim mesmo. O
+      pacote de ida chega ao nó A. É a <strong>resposta</strong> que não volta, porque a
+      tabela de rotas da <code>sd-privada-a</code> manda tudo que é <code>::/0</code> para o
+      gateway somente de saída, e ele recusa conversa que não tenha começado de dentro.
+    </p>
+
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg id="diagrama-pratica-03-saidas" class="fig-pratica-03-saidas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 520" role="img" aria-labelledby="pratica-03-saidas-titulo pratica-03-saidas-desc">
+<title id="pratica-03-saidas-titulo">Os dois caminhos de saída do nó A</title>
+<desc id="pratica-03-saidas-desc">O nó A, dentro da sub-rede privada sd-privada-a, com dois caminhos de saída desenhados. O caminho de cima é o IPv4: sai do nó A com o endereço de origem 10.10.2.15, passa pelo NAT gateway, que reescreve a origem para o endereço público do próprio NAT, segue pelo gateway de internet e chega à internet com esse endereço trocado. O caminho de baixo é o IPv6: sai do nó A com o endereço de origem global, passa pelo gateway somente de saída e chega à internet com o mesmo endereço, sem tradução nenhuma. Uma terceira seta, tracejada, vem da internet em direção ao nó A e para antes de chegar, marcada com um xis, porque nenhum dos dois dispositivos deixa passar conexão iniciada de fora.</desc>
+<style>
+  .fig-pratica-03-saidas{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-nuvem:#242F3E}
+  @media (prefers-color-scheme:dark){
+    .fig-pratica-03-saidas{--diag-nuvem:#96a4b8}
+    .fig-pratica-03-saidas .so-claro{display:none} .fig-pratica-03-saidas .so-escuro{display:inline}
+  }
+  [data-theme="light"] .fig-pratica-03-saidas{--diag-nuvem:#242F3E}
+  [data-theme="light"] .fig-pratica-03-saidas .so-claro{display:inline}
+  [data-theme="light"] .fig-pratica-03-saidas .so-escuro{display:none}
+  [data-theme="dark"] .fig-pratica-03-saidas{--diag-nuvem:#96a4b8}
+  [data-theme="dark"] .fig-pratica-03-saidas .so-claro{display:none}
+  [data-theme="dark"] .fig-pratica-03-saidas .so-escuro{display:inline}
+  .fig-pratica-03-saidas .so-escuro{display:none}
+  .fig-pratica-03-saidas text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-03-saidas .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-03-saidas .grupo{fill:none;stroke-width:2}
+  .fig-pratica-03-saidas .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-03-saidas .subrede-privada{fill:#00A4A6;fill-opacity:.06;stroke:#00A4A6;stroke-width:2}
+  .fig-pratica-03-saidas .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
+  .fig-pratica-03-saidas .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
+  .fig-pratica-03-saidas .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-03-saidas .faixa{fill:none;stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-03-saidas .apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.5;stroke-dasharray:4 3}
+  .fig-pratica-03-saidas .seta{fill:none;stroke:var(--diag-linha);stroke-width:2;stroke-linejoin:round}
+  .fig-pratica-03-saidas .seta-apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:5 4;stroke-linejoin:round}
+  .fig-pratica-03-saidas .seta-api{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:11 4 2 4;stroke-linejoin:round}
+  .fig-pratica-03-saidas .rotulo{font-size:13px}
+  .fig-pratica-03-saidas .rotulo-grupo{font-size:14px;font-weight:600}
+  .fig-pratica-03-saidas .rotulo-instancia{font-size:17px;font-weight:600}
+  .fig-pratica-03-saidas .rotulo-tipo{font-size:12px;opacity:.75}
+  .fig-pratica-03-saidas .rotulo-faixa{font-size:11px}
+  .fig-pratica-03-saidas .rotulo-apoio{font-size:11.5px}
+  .fig-pratica-03-saidas .rotulo-endereco{font-size:10.5px;fill:var(--diag-apagado)}
+  .fig-pratica-03-saidas .rotulo-seta{font-size:12px;paint-order:stroke;stroke:var(--diag-fundo);
+       stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-03-saidas .rotulo-sg{font-size:13px;font-weight:600;fill:#DD3522}
+  .fig-pratica-03-saidas .legenda{font-size:11.5px;fill:var(--diag-apagado)}
+</style>
+<defs><marker id="pratica-03-saidas-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-03-saidas-ponta-fina" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker><symbol id="pratica-03-saidas-ic-Private-subnet_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#00A4A6" x="0" y="0" width="40" height="40"></rect>
+        <path d="M19.536,22.049 C20.642,22.049 21.542,22.948 21.542,24.054 C21.542,25.16 20.642,26.06 19.536,26.06 C18.43,26.06 17.53,25.16 17.53,24.054 C17.53,22.948 18.43,22.049 19.536,22.049 L19.536,22.049 Z M19.012,27.007 L19.012,30.501 L20.012,30.501 L20.012,27.012 C21.442,26.782 22.542,25.549 22.542,24.054 C22.542,22.397 21.193,21.049 19.536,21.049 C17.879,21.049 16.53,22.397 16.53,24.054 C16.53,25.532 17.604,26.757 19.012,27.007 L19.012,27.007 Z M10,33.014 L29.012,33.014 L29.012,18 L10,18 L10,33.014 Z M14.046,12.484 C14.046,9.46 16.506,7 19.529,7 C22.553,7 25.012,9.46 25.012,12.484 L25.012,17 L14.046,17 L14.046,12.484 Z M29.512,17 L26.012,17 L26.012,12.484 C26.012,8.908 23.103,6 19.529,6 C15.954,6 13.046,8.908 13.046,12.484 L13.046,17 L9.5,17 C9.223,17 9,17.224 9,17.5 L9,33.514 C9,33.79 9.223,34.014 9.5,34.014 L29.512,34.014 C29.788,34.014 30.012,33.79 30.012,33.514 L30.012,17.5 C30.012,17.224 29.788,17 29.512,17 L29.512,17 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-saidas-ic-Res_Amazon-EC2_Instance_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M9,39 L39,39 L39,9 L9,9 L9,39 Z M46,13 L46,11 L41,11 L41,8 C41,7.448 40.552,7 40,7 L37,7 L37,2 L35,2 L35,7 L31,7 L31,2 L29,2 L29,7 L25,7 L25,2 L23,2 L23,7 L19,7 L19,2 L17,2 L17,7 L13,7 L13,2 L11,2 L11,7 L8,7 C7.447,7 7,7.448 7,8 L7,11 L2,11 L2,13 L7,13 L7,17 L2,17 L2,19 L7,19 L7,23 L2,23 L2,25 L7,25 L7,29 L2,29 L2,31 L7,31 L7,35 L2,35 L2,37 L7,37 L7,40 C7,40.553 7.447,41 8,41 L11,41 L11,46 L13,46 L13,41 L17,41 L17,46 L19,46 L19,41 L23,41 L23,46 L25,46 L25,41 L29,41 L29,46 L31,46 L31,41 L35,41 L35,46 L37,46 L37,41 L40,41 C40.552,41 41,40.553 41,40 L41,37 L46,37 L46,35 L41,35 L41,31 L46,31 L46,29 L41,29 L41,25 L46,25 L46,23 L41,23 L41,19 L46,19 L46,17 L41,17 L41,13 L46,13 Z" fill="#ED7100"></path>
+    </g></symbol><symbol id="pratica-03-saidas-ic-Res_Amazon-VPC_Internet-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M33.4312,35.1778 L31.9332,35.1778 L31.9332,17.5018 C31.9332,17.1088 31.7022,16.7518 31.3442,16.5908 L31.2522,16.5488 C29.2432,15.6418 27.1642,14.7028 24.1762,14.7028 C21.0532,14.7028 18.7612,15.7118 16.4952,16.8368 C16.1552,17.0058 15.9402,17.3528 15.9402,17.7328 L15.9402,35.1778 L14.4772,35.1778 L14.4772,16.3118 C16.9112,14.3328 20.4202,13.2048 24.1862,13.2048 C27.6872,13.2048 31.0252,14.2018 33.4312,15.9528 L33.4312,35.1778 Z M24.1862,11.2048 C19.7612,11.2048 15.6172,12.6238 12.8152,15.0998 C12.6002,15.2888 12.4772,15.5618 12.4772,15.8488 L12.4772,36.1778 C12.4772,36.7308 12.9242,37.1778 13.4772,37.1778 L16.9402,37.1778 C17.4932,37.1778 17.9402,36.7308 17.9402,36.1778 L17.9402,18.3558 C19.8592,17.4288 21.7192,16.7028 24.1762,16.7028 C26.5112,16.7028 28.2092,17.3778 29.9332,18.1488 L29.9332,36.1778 C29.9332,36.7308 30.3802,37.1778 30.9332,37.1778 L34.4312,37.1778 C34.9842,37.1778 35.4312,36.7308 35.4312,36.1778 L35.4312,15.4578 C35.4312,15.1538 35.2922,14.8658 35.0532,14.6748 C32.2792,12.4698 28.3182,11.2048 24.1862,11.2048 L24.1862,11.2048 Z M23.9542,43.9088 C12.9522,43.9088 3.9992,34.9568 3.9992,23.9538 C3.9992,12.9508 12.9522,3.9998 23.9542,3.9998 C34.9572,3.9998 43.9092,12.9508 43.9092,23.9538 C43.9092,34.9568 34.9572,43.9088 23.9542,43.9088 L23.9542,43.9088 Z M23.9542,1.9998 C11.8482,1.9998 1.9992,11.8488 1.9992,23.9538 C1.9992,36.0608 11.8482,45.9088 23.9542,45.9088 C36.0602,45.9088 45.9092,36.0608 45.9092,23.9538 C45.9092,11.8488 36.0602,1.9998 23.9542,1.9998 L23.9542,1.9998 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-03-saidas-ic-Res_Amazon-VPC_NAT-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M13.6255,35.9209 L13.6255,33.0829 L15.3995,34.5019 L13.6255,35.9209 Z M13.2505,30.2209 C12.9495,29.9799 12.5365,29.9329 12.1915,30.1009 C11.8465,30.2679 11.6255,30.6169 11.6255,31.0019 L11.6255,38.0019 C11.6255,38.3869 11.8465,38.7359 12.1915,38.9029 C12.3305,38.9699 12.4785,39.0019 12.6255,39.0019 C12.8485,39.0019 13.0695,38.9279 13.2505,38.7829 L17.6255,35.2829 C17.8625,35.0929 18.0005,34.8059 18.0005,34.5019 C18.0005,34.1979 17.8625,33.9109 17.6255,33.7209 L13.2505,30.2209 Z M37.2515,26.8369 L37.2515,22.9149 L39.2125,24.8759 L37.2515,26.8369 Z M41.3335,24.1689 L36.9585,19.7939 C36.6725,19.5079 36.2445,19.4219 35.8685,19.5769 C35.4945,19.7319 35.2515,20.0969 35.2515,20.5009 L35.2515,23.8759 L27.6255,23.8759 L27.6255,14.3759 C27.6255,13.8229 27.1785,13.3759 26.6255,13.3759 L18.9315,13.3759 L18.9315,15.3759 L25.6255,15.3759 L25.6255,23.8759 L18.7505,23.8759 L18.7505,25.8759 L25.6255,25.8759 L25.6255,34.3769 L18.9315,34.3769 L18.9315,36.3769 L26.6255,36.3769 C27.1785,36.3769 27.6255,35.9299 27.6255,35.3769 L27.6255,25.8759 L35.2515,25.8759 L35.2515,29.2519 C35.2515,29.6559 35.4955,30.0219 35.8685,30.1759 C35.9925,30.2279 36.1225,30.2519 36.2515,30.2519 C36.5115,30.2519 36.7675,30.1499 36.9585,29.9589 L41.3335,25.5829 C41.7245,25.1919 41.7245,24.5599 41.3335,24.1689 L41.3335,24.1689 Z M13.6255,26.2959 L13.6255,23.4569 L15.3995,24.8759 L13.6255,26.2959 Z M13.2505,20.5949 C12.9495,20.3539 12.5365,20.3079 12.1915,20.4749 C11.8465,20.6419 11.6255,20.9909 11.6255,21.3759 L11.6255,28.3769 C11.6255,28.7619 11.8465,29.1109 12.1915,29.2779 C12.3305,29.3449 12.4785,29.3769 12.6255,29.3769 C12.8485,29.3769 13.0695,29.3029 13.2505,29.1579 L17.6255,25.6569 C17.8625,25.4669 18.0005,25.1799 18.0005,24.8759 C18.0005,24.5719 17.8625,24.2849 17.6255,24.0949 L13.2505,20.5949 Z M13.6255,15.7949 L13.6255,12.9569 L15.3995,14.3759 L13.6255,15.7949 Z M13.2505,10.0949 C12.9495,9.8539 12.5365,9.8069 12.1915,9.9749 C11.8465,10.1419 11.6255,10.4909 11.6255,10.8759 L11.6255,17.8759 C11.6255,18.2609 11.8465,18.6099 12.1915,18.7769 C12.3305,18.8439 12.4785,18.8759 12.6255,18.8759 C12.8485,18.8759 13.0695,18.8019 13.2505,18.6569 L17.6255,15.1569 C17.8625,14.9669 18.0005,14.6799 18.0005,14.3759 C18.0005,14.0719 17.8625,13.7849 17.6255,13.5949 L13.2505,10.0949 Z M24.0005,44.0029 C12.9725,44.0029 3.9995,35.0299 3.9995,24.0009 C3.9995,12.9729 12.9725,3.9999 24.0005,3.9999 C35.0295,3.9999 44.0025,12.9729 44.0025,24.0009 C44.0025,35.0299 35.0295,44.0029 24.0005,44.0029 L24.0005,44.0029 Z M24.0005,1.9999 C11.8685,1.9999 1.9995,11.8689 1.9995,24.0009 C1.9995,36.1329 11.8685,46.0029 24.0005,46.0029 C36.1325,46.0029 46.0025,36.1329 46.0025,24.0009 C46.0025,11.8689 36.1325,1.9999 24.0005,1.9999 L24.0005,1.9999 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-03-saidas-ic-Res_Internet_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-03-saidas-ic-Res_Internet_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-03-saidas-ic-Virtual-private-cloud-VPC_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#8C4FFF" x="0" y="0" width="40" height="40"></rect>
+        <path d="M30.9707,21.0293596 L28.0267,19.7663596 L28.0267,30.2553596 C30.5717,29.9033596 30.9587,27.2873596 30.9747,27.1683596 L30.9707,21.0293596 Z M27.0267,30.2693596 L27.0267,19.7593596 L23.9917,21.0323596 L23.9917,27.2333596 C24.0047,27.2873596 24.4367,30.0003596 27.0267,30.2693596 L27.0267,30.2693596 Z M27.3327,18.5473596 C27.4567,18.4943596 27.5987,18.4953596 27.7237,18.5483596 L31.6677,20.2403596 C31.8517,20.3193596 31.9707,20.4993596 31.9707,20.6993596 L31.9707,27.2333596 C31.7877,28.6803596 30.6137,31.2963596 27.4437,31.2963596 C24.3687,31.2963596 23.1897,28.6843596 22.9957,27.3023596 L22.9917,20.6993596 C22.9917,20.4983596 23.1127,20.3163596 23.2977,20.2383596 L27.3327,18.5473596 Z M32.9827022,19.1843596 L27.5217,16.7783596 L21.9917,19.1053596 L21.9917,26.2333596 C21.9907,26.2753596 21.9377,29.1013596 23.6487,30.8563596 C24.5657,31.7973596 25.8427,32.2753596 27.4437,32.2753596 C29.0457,32.2753596 30.3307,31.7963596 31.2627,30.8533596 C32.9977,29.0953596 32.9827022,26.2683596 32.9827022,26.2403596 L32.9827022,19.1843596 Z M31.9797,31.5503596 C30.8527,32.6943596 29.3257,33.2753596 27.4437,33.2753596 C25.5597,33.2753596 24.0397,32.6943596 22.9267,31.5483596 C20.9217,29.4853596 20.9877,26.3513596 20.9917,26.2193596 L20.9917,18.7733596 C20.9917,18.5723596 21.1117,18.3903596 21.2967,18.3123596 L27.3317,15.7723596 C27.4587,15.7203596 27.6027,15.7193596 27.7277,15.7763596 L33.6837,18.4013596 C33.8657,18.4813596 33.9827,18.6603596 33.9827,18.8583596 L33.9827,26.2333596 C33.9847,26.3583596 34.0097,29.4883596 31.9797,31.5503596 L31.9797,31.5503596 Z M10.9917,24.2363596 L18.9917,24.2363596 L18.9917,25.2363596 L10.9917,25.2363596 C8.1807,25.2363596 6.1807,23.2203596 6.0127,20.2203596 C6.0007,20.1093596 5.9997,19.9753596 5.9997,19.8413596 C5.9997,17.3323596 7.3177,15.6183596 9.8167,14.8623596 C9.7977,14.6353596 9.7847,14.3963596 9.7847,14.2153596 C9.7847,11.2993596 11.3617,8.77035958 13.8017,7.77035958 C17.0997,6.42235958 20.8437,6.87635958 22.9077,8.87435958 C23.6527,9.59835958 24.2317,10.4163596 24.6677,11.3593596 C25.2767,10.9093596 26.0677,10.6983596 27.0167,10.7453596 C28.7967,10.8353596 30.1657,12.4583596 30.4497,14.7523596 C31.9477,14.8763596 32.9347,15.6353596 33.4597,17.0603596 L32.5227,17.4063596 C32.0947,16.2493596 31.3147,15.7333596 29.9917,15.7333596 C29.7267,15.7333596 29.5077,15.5273596 29.4917,15.2633596 C29.3537,12.9253596 28.0857,11.8003596 26.9657,11.7443596 C26.0207,11.6913596 25.3207,11.9633596 24.8867,12.5353596 C24.7757,12.6803596 24.6017,12.7523596 24.4137,12.7283596 C24.2337,12.7003596 24.0817,12.5773596 24.0187,12.4053596 C23.6147,11.3023596 23.0237,10.3823596 22.2117,9.59135958 C20.4237,7.86135958 17.1217,7.49235958 14.1807,8.69635958 C12.1177,9.54135958 10.7847,11.7073596 10.7847,14.2153596 C10.7847,14.4883596 10.8197,14.9113596 10.8507,15.1743596 C10.8807,15.4253596 10.7197,15.6583596 10.4747,15.7183596 C8.1687,16.2903596 6.9997,17.6773596 6.9997,19.8413596 C6.9997,19.9423596 6.9987,20.0423596 7.0087,20.1433596 C7.1497,22.6383596 8.7117,24.2363596 10.9917,24.2363596 L10.9917,24.2363596 Z" fill="#FFFFFF"></path>
+    </g></symbol></defs>
+<rect x="0" y="0" width="1340" height="520" class="fundo"/>
+<rect x="40" y="30" width="660" height="440" class="grupo" stroke="#8C4FFF"/>
+<use href="#pratica-03-saidas-ic-Virtual-private-cloud-VPC_32" x="40" y="30" width="34" height="34"/>
+<text x="86" y="53" class="rotulo-grupo" text-anchor="start" fill="#8C4FFF">VPC sd-vpc</text>
+<rect x="70" y="100" width="380" height="250" class="subrede-privada"/>
+<use href="#pratica-03-saidas-ic-Private-subnet_32" x="70" y="100" width="32" height="32"/>
+<text x="114" y="122" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">sd-privada-a</text>
+<rect x="110" y="160" width="170" height="150" class="instancia"/>
+<use href="#pratica-03-saidas-ic-Res_Amazon-EC2_Instance_48" x="171.0" y="174" width="48" height="48"/>
+<text x="195.0" y="248" class="rotulo-instancia" text-anchor="middle">nó A</text>
+<text x="195.0" y="266" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="110" y="281" width="170" height="29" class="faixa"/>
+<text x="195.0" y="300" class="rotulo-faixa" text-anchor="middle">serviço :8080</text>
+<text x="195.0" y="332" class="rotulo-endereco" text-anchor="middle">10.10.2.15   e   2600:...:a</text>
+<use href="#pratica-03-saidas-ic-Res_Internet_48_Light" x="1156" y="226" width="48" height="48" class="so-claro"/>
+<use href="#pratica-03-saidas-ic-Res_Internet_48_Dark" x="1156" y="226" width="48" height="48" class="so-escuro"/>
+<text x="1180" y="292" class="rotulo" text-anchor="middle">Internet</text>
+<use href="#pratica-03-saidas-ic-Res_Amazon-VPC_NAT-Gateway_48" x="538" y="128" width="44" height="44"/>
+<text x="560" y="116" class="rotulo-seta" text-anchor="middle">NAT gateway</text>
+<text x="560" y="190" class="rotulo-seta" text-anchor="middle">mora na sd-publica-a</text>
+<text x="560" y="206" class="rotulo-seta" text-anchor="middle">e reescreve a origem</text>
+<use href="#pratica-03-saidas-ic-Res_Amazon-VPC_Internet-Gateway_48" x="678" y="128" width="44" height="44"/>
+<text x="700" y="116" class="rotulo-seta" text-anchor="middle">gateway de internet</text>
+<path d="M 280 220 L 500 220 L 500 150 L 538 150" class="seta" marker-end="url(#pratica-03-saidas-ponta)"/>
+<text x="365" y="208" class="rotulo-seta" text-anchor="middle">origem 10.10.2.15</text>
+<path d="M 582 150 L 678 150" class="seta" marker-end="url(#pratica-03-saidas-ponta)"/>
+<path d="M 722 150 L 900 150 L 900 238 L 1156 238" class="seta" marker-end="url(#pratica-03-saidas-ponta)"/>
+<text x="1030" y="228" class="rotulo-seta" text-anchor="middle">origem 54.226.7.9, que é do NAT</text>
+<use href="#pratica-03-saidas-ic-Res_Amazon-VPC_Internet-Gateway_48" x="678" y="378" width="44" height="44"/>
+<text x="700" y="350" class="rotulo-seta" text-anchor="middle">gateway somente de saída</text>
+<text x="700" y="366" class="rotulo-seta" text-anchor="middle">e a origem atravessa intacta</text>
+<path d="M 280 270 L 500 270 L 500 400 L 678 400" class="seta" marker-end="url(#pratica-03-saidas-ponta)"/>
+<text x="365" y="288" class="rotulo-seta" text-anchor="middle">origem 2600:...:a</text>
+<path d="M 722 400 L 900 400 L 900 262 L 1156 262" class="seta" marker-end="url(#pratica-03-saidas-ponta)"/>
+<text x="1030" y="282" class="rotulo-seta" text-anchor="middle">origem 2600:...:a, a mesma</text>
+<path d="M 1180 302 L 1180 490 L 700 490 L 700 444" class="seta-apoio" marker-end="url(#pratica-03-saidas-ponta-fina)"/>
+<text x="1000" y="480" class="rotulo-seta" text-anchor="middle">conexão iniciada de fora</text>
+<text x="714" y="476" class="rotulo-sg" text-anchor="start">✕ recusado</text>
+</svg>
+      </div>
+      <figcaption>
+        Os dois caminhos de saída do nó A e a tentativa de entrada que nenhum dos dois aceita.
+        O ícone do gateway somente de saída é o do gateway de internet, porque a AWS não
+        publica um ícone próprio para ele.
+      </figcaption>
+    </figure>
+
+    <h3>7.3 Do nó A para fora, pelos dois protocolos</h3>
+    <p>
+      Falta a direção contrária. Quem pergunta agora é o nó A, e quem responde é o ponto final
+      do serviço de armazenamento da própria região, que atende nos dois protocolos e é o
+      mesmo endereço que você usou na prática 01. As duas chamadas devem funcionar.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>for FAMILIA in -6 -4; do
+  echo -n "$FAMILIA  "
+  curl $FAMILIA -s -m 8 -o /dev/null \
+    -w "codigo %{http_code}   origem %{remote_ip}\n" \
+    https://s3.dualstack.us-east-1.amazonaws.com
+done</pre>
+    </div>
+    <p class="saida">A colher no piloto. Duas linhas com codigo 307 ou 403, uma com um
+endereço IPv6 na coluna origem e outra com um IPv4. O código não é 200
+porque a chamada não traz credencial, e não é isso que está sendo medido.</p>
+
+    <p>
+      Repare que a chamada precisou de <code>-6</code> e de <code>-4</code> escritos à mão.
+      Sem eles, o <code>curl</code>
+      <button type="button" class="nota-termo" data-nota="pilha-dupla-e-escolha-de-endereco">escolhe
+      sozinho</button> por qual protocolo sair, e a escolha dele varia com o que o servidor de
+      nomes responde e com o que a máquina tem configurado. Num experimento sobre caminhos, a
+      única forma de saber por onde o pacote saiu é mandar.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 A conclusão do experimento 1, com as suas palavras</p>
+      <p>
+        Escreva, antes de seguir, a diferença entre o que aconteceu em 7.1 e o que aconteceu
+        em 7.2. As duas tentativas falharam do mesmo jeito na tela, com silêncio e tempo
+        esgotado, e falharam por motivos completamente diferentes. Em 7.1 <strong>não havia
+        endereço</strong>. Em 7.2 <strong>havia endereço e faltava caminho de volta</strong>.
+        No IPv4 essas duas situações quase sempre andam juntas, porque endereço público é
+        recurso escasso, e é por isso que elas são fáceis de confundir. Só no IPv6, em que
+        endereço sobra, dá para ver a segunda isolada da primeira.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c7">
+      <label for="p03-c7"><strong>Checkpoint 7.</strong> As três janelas estão abertas, as
+        duas tentativas de fora falharam, as duas saídas do nó A funcionaram e eu escrevi a
+        diferença entre os dois tipos de falha.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 8
+       ============================================================ -->
+  <section class="lab-step" id="passo-8">
+    <h2><span class="step-num">8</span><span>Experimento 2: a tabela de rotas como objeto vivo</span><span class="step-time">14 min</span></h2>
+
+    <p>
+      Quatro movimentos na <code>rt-privada</code>, com uma verificação depois de cada um. As
+      máquinas ficam ligadas o tempo todo e nenhuma delas é reiniciada. Tudo que vai mudar são
+      linhas de uma tabela, e o efeito é imediato.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:8%">Nº</th><th style="width:36%">O que você faz</th><th>O que morre</th><th>O que sobrevive</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Apaga a rota <code>::/0</code></td><td>A saída IPv6 do nó A</td>
+            <td>A saída IPv4 e o alcance de P para A</td></tr>
+          <tr><td>2</td><td>Recria <code>::/0</code> apontando para o gateway de internet</td>
+            <td>Nada</td><td>Tudo, e o nó A passa a aceitar conexão vinda do nó E</td></tr>
+          <tr><td>3</td><td>Tenta tornar o nó A público pelo IPv4</td>
+            <td>A tentativa, e é esse o ponto</td><td>Nada, porque você desfaz em seguida</td></tr>
+          <tr><td>4</td><td>Devolve <code>::/0</code> ao gateway somente de saída</td>
+            <td>O alcance a partir do nó E</td><td>O resto</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>8.1 Movimento 1: apagar a rota de saída IPv6</h3>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>source ~/sd-pratica03.env
+aws ec2 delete-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0</pre>
+    </div>
+
+    <p>
+      Sem saída nenhuma. Quem pergunta é o nó A, e a primeira chamada não tem mais por onde
+      sair. A segunda tem, porque o IPv4 continua com a rota dele.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ALVO=https://s3.dualstack.us-east-1.amazonaws.com
+curl -6 -s -m 6 -o /dev/null -w "IPv6 codigo %{http_code}\n" $ALVO
+curl -4 -s -m 6 -o /dev/null -w "IPv4 codigo %{http_code}\n" $ALVO</pre>
+    </div>
+    <p class="saida">A colher no piloto. A linha do IPv6 traz codigo 000, que é o curl
+dizendo que não chegou a receber resposta. A do IPv4 traz o mesmo código
+do passo 7.</p>
+
+    <p>
+      Confirme também que o nó P continua alcançando o nó A por IPv6. Quem pergunta é o nó P.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 1, no nó P</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/"</pre>
+    </div>
+    <p class="saida">A colher no piloto. As quatro linhas do serviço, com o nó A dizendo
+que respondeu e que o pedido veio por IPv6.</p>
+
+    <p>
+      Duas lições em um movimento só. A primeira é que <strong>IPv4 e IPv6 são dois planos de
+      roteamento independentes dentro da mesma tabela</strong>, e apagar a linha de um não
+      encosta no outro. A segunda é que a rota <code>local</code> não está nas suas mãos, e é
+      por isso que o nó P continua chegando ao nó A mesmo sem nenhuma rota de saída IPv6 na
+      tabela dele.
+    </p>
+
+    <h3>8.2 Movimento 2: recriar a rota apontando para o gateway de internet</h3>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 create-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 \
+  --gateway-id $IGW --output text</pre>
+    </div>
+
+    <p>
+      Agora repita, sem mudar uma vírgula, a tentativa que falhou em 7.2. Quem pergunta é o nó
+      E e quem responde é o serviço do nó A.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó E</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/"</pre>
+    </div>
+    <p class="saida">A colher no piloto. As quatro linhas do serviço do nó A, com o
+endereço IPv6 do nó E na linha de quem perguntou.</p>
+
+    <p>
+      Este é o momento central da prática, e vale parar nele. <strong>A sub-rede não
+      mudou</strong>, a máquina não foi reiniciada, o endereço IPv6 do nó A é o mesmo desde o
+      passo 6 e o filtro de entrada também não mudou. Uma linha de tabela mudou, e com ela a
+      <code>sd-privada-a</code> deixou de ser privada. Foi só isso, e foi só isso o tempo
+      todo.
+    </p>
+
+    <h3>8.3 Movimento 3: tentar fazer o mesmo pelo IPv4</h3>
+    <p>
+      Se uma linha de tabela tornou o nó A alcançável por IPv6, a pergunta natural é qual
+      linha o tornaria alcançável por IPv4. Tente. O comando abaixo troca o próximo salto do
+      <code>0.0.0.0/0</code>, que era o NAT gateway, pelo gateway de internet, que é
+      exatamente o que a <code>rt-publica</code> faz.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 replace-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id $IGW</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó E</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -4 -s -m 5 http://<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span>:8080/ ; echo "saiu com $?"</pre>
+    </div>
+    <p class="saida">A colher no piloto. Outra vez cinco segundos de silêncio e
+saiu com 28.</p>
+
+    <p>
+      Confira agora o estrago do outro lado. Quem pergunta é o nó A, que acabou de perder a
+      saída IPv4 que tinha.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ALVO=https://s3.dualstack.us-east-1.amazonaws.com
+curl -4 -s -m 6 -o /dev/null -w "IPv4 codigo %{http_code}\n" $ALVO</pre>
+    </div>
+    <p class="saida">A colher no piloto. codigo 000, porque agora a rota IPv4 aponta para
+um gateway que só atende quem tem endereço público, e o nó A não tem.</p>
+
+    <p>
+      Este é o movimento que amarra a prática ao Tópico 3. <strong>Não existe linha de tabela
+      que torne o nó A alcançável por IPv4</strong>, e não existe porque o problema não é de
+      caminho. Falta ao nó A um endereço público, que é recurso escasso, atribuído à parte e
+      contado. No IPv6 o endereço já estava lá desde o nascimento da instância e o que faltava
+      era permissão de caminho, que uma linha resolveu. Desfaça o movimento antes de seguir.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 replace-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 \
+  --nat-gateway-id $NAT</pre>
+    </div>
+
+    <h3>8.4 Movimento 4: devolver a rota ao gateway somente de saída</h3>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 replace-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 \
+  --egress-only-internet-gateway-id $EIGW</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó E</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/" ; echo "saiu com $?"</pre>
+    </div>
+    <p class="saida">A colher no piloto. De volta ao silêncio e ao saiu com 28.</p>
+
+    <p>
+      A rede voltou ao estado do passo 6, que é o estado em que o experimento 3 precisa dela.
+      Quatro movimentos depois, a <code>sd-privada-a</code> foi privada, foi pública e voltou a
+      ser privada, sem que nada além de linhas de tabela mudasse.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c8">
+      <label for="p03-c8"><strong>Checkpoint 8.</strong> Fiz os quatro movimentos, vi o nó A
+        ficar alcançável no movimento 2 e voltar a não ser no 4, e a
+        <code>rt-privada</code> está de volta com <code>0.0.0.0/0</code> no NAT gateway e
+        <code>::/0</code> no gateway somente de saída.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 9
+       ============================================================ -->
+  <section class="lab-step" id="passo-9">
+    <h2><span class="step-num">9</span><span>Experimento 3: o preço do caminho</span><span class="step-time">12 min</span></h2>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Anote sempre a segunda execução</p>
+      <p>
+        A primeira chamada a qualquer destino sai mais lenta que as seguintes, às vezes o
+        triplo, porque ela paga a resolução de nome, a descoberta de caminho e o que mais
+        estiver frio no meio. <strong>Rode cada comando duas vezes e anote a segunda.</strong>
+      </p>
+    </div>
+
+    <p>
+      As quatro medidas formam <strong>dois pares</strong>, e cada par se compara consigo
+      mesmo. As medidas 1 e 4 usam o mesmo instrumento contra máquinas suas, uma dentro da VPC
+      e outra fora dela. As medidas 2 e 3 vão para o mesmo serviço, na mesma região, pelos
+      dois protocolos, que é a única forma de a diferença ser atribuível ao caminho. Comparar
+      uma medida do primeiro par com uma do segundo não diz nada, porque o instrumento é
+      outro.
+    </p>
+
+    <h3>9.1 Medidas 1 e 4: dentro da VPC e fora dela</h3>
+    <p>
+      Quem pergunta nas duas é o nó A. Na primeira ele fala com o nó P, que mora na sub-rede
+      vizinha da mesma VPC, e o pacote não passa por gateway nenhum, porque a rota
+      <code>local</code> dá conta. Na segunda ele fala com o nó E, que mora em outra VPC, e o
+      pacote sai da rede, atravessa a internet da região e entra em outra rede.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ping -6 -c 5 <span class="var" data-var="IPV6_P">IPV6-DO-NO-P</span> | tail -2
+ping -6 -c 5 <span class="var" data-var="IPV6_E">IPV6-DO-NO-E</span> | tail -2</pre>
+    </div>
+    <p class="saida">A colher no piloto. Duas linhas por comando, a última com
+rtt min/avg/max/mdev em milissegundos. Anote o avg.</p>
+
+    <h3>9.2 Medidas 2 e 3: o mesmo destino pelos dois caminhos de saída</h3>
+    <p>
+      Quem pergunta continua sendo o nó A, e quem responde é o ponto final do armazenamento na
+      região. O que muda entre as duas linhas é uma letra, e essa letra troca o dispositivo de
+      borda por onde o pacote sai. O campo medido é o tempo até a conexão se completar, que
+      isola a ida e a volta pela rede.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>for FAMILIA in -6 -4; do
+  echo -n "$FAMILIA  "
+  curl $FAMILIA -s -m 8 -o /dev/null \
+    -w "nome %{time_namelookup}s   conexao %{time_connect}s   total %{time_total}s\n" \
+    https://s3.dualstack.us-east-1.amazonaws.com
+done</pre>
+    </div>
+    <p class="saida">A colher no piloto. Duas linhas com três tempos cada. O custo da rede
+é a conexão menos o nome, e é esse número que vai para a tabela.</p>
+
+    <p>
+      O campo <code>time_connect</code> conta desde o começo da chamada até o aperto de mão do
+      TCP terminar, então ele carrega junto a resolução do nome, que aparece separada em
+      <code>time_namelookup</code>. A diferença entre os dois é o que a rede cobrou. A nota
+      sobre os
+      <button type="button" class="nota-termo" data-nota="curl-tempos">tempos do
+      curl</button> explica os outros campos que o comando poderia imprimir.
+    </p>
+
+    <h3>9.3 A forma do caminho, que o tempo não mostra</h3>
+    <p>
+      O tempo diz quanto custou e não diz por onde foi. Quem pergunta é o nó A, e o comando
+      abaixo lista os saltos até o destino pelos dois protocolos.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>traceroute -6 -n -m 8 -w 1 s3.dualstack.us-east-1.amazonaws.com
+traceroute -4 -n -m 8 -w 1 s3.dualstack.us-east-1.amazonaws.com</pre>
+    </div>
+    <p class="saida">A colher no piloto. Poucos saltos em cada um, muitos deles marcados
+com asteriscos, porque a rede da Amazon não responde a esse tipo de sonda
+em todo salto.</p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Não procure o NAT gateway na lista</p>
+      <p>
+        Ele não aparece, e a ausência dele não é defeito do comando. Um NAT gateway não é um
+        roteador comum do ponto de vista do campo que o <code>traceroute</code> manipula, e
+        por isso não se anuncia como salto. O que você consegue ver é o efeito dele, e esse
+        efeito está na extensão <em>Quem eu sou visto de fora</em>, no fim da página.
+      </p>
+    </div>
+
+    <p>
+      A conclusão do experimento 3 é sobre a <strong>forma</strong> do caminho, e não sobre
+      ganho de desempenho. A diferença entre a medida 2 e a medida 3 é pequena, na casa de
+      frações de milissegundo, e seria irresponsável escolher um protocolo por causa dela. O
+      que a comparação mostra é que os dois caminhos existem, que passam por dispositivos
+      diferentes e que um deles faz um trabalho a mais, que é traduzir o endereço de cada
+      pacote.
+      A
+      <button type="button" class="nota-termo" data-nota="camadas-fisicas-latencia">latência
+      entre camadas físicas</button> da prática 02 é a mesma grandeza medida aqui, agora com o
+      caminho explícito.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c9">
+      <label for="p03-c9"><strong>Checkpoint 9.</strong> Tenho os quatro tempos anotados, os
+        dois <code>traceroute</code> rodaram e entendi por que o NAT gateway não aparece na
+        lista de saltos.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Fechamento conceitual
+       ============================================================ -->
+  <section class="lab-step" id="fechamento">
+    <h2><span class="step-num is-accent">§</span><span>O que isso tem a ver com o Tópico 3</span></h2>
+
+    <p>
+      O tópico apresenta a interligação em rede como o problema de fazer redes diferentes
+      parecerem uma só, e apresenta o esgotamento do IPv4 com as três respostas que
+      convivem até hoje. Você passou pelas duas coisas em cem minutos, com três máquinas e
+      duas redes.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:32%">Conceito do tópico</th><th>Onde ele apareceu</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Tabela de roteamento e próximo salto</strong></td>
+            <td>Você leu as tabelas das três redes prontas no passo 2 e escreveu duas no passo
+              5. Toda linha tem um destino e um próximo salto, e a única que ninguém escreve é
+              a <code>local</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Roteamento entre domínios sem classes (CIDR)</strong></td>
+            <td>O bloco /56 da VPC virou três /64 no passo 3, trocando o par hexadecimal
+              final. O mesmo raciocínio recortou o /16 em três /24. A máscara é que diz onde
+              termina a rede e começa o host, e ela cai em qualquer ponto do endereço.</td>
+          </tr>
+          <tr>
+            <td><strong>Tradução de endereços de rede (NAT)</strong></td>
+            <td>O caminho IPv4 de saída do nó A passou pelo NAT gateway durante a prática
+              inteira. Ele funciona muito bem para quem só quer sair, e expor um servidor
+              atrás dele exigiria configuração à parte, que é a limitação que o tópico
+              anuncia.</td>
+          </tr>
+          <tr>
+            <td><strong>IPv6</strong></td>
+            <td>Cada nó ganhou um endereço único no mundo sem que ninguém precisasse
+              economizar. Isso mudou a pergunta. Com endereço sobrando, o que decide o alcance
+              deixa de ser <em>quem conseguiu um endereço</em> e passa a ser <em>quem tem
+              permissão de caminho</em>.</td>
+          </tr>
+          <tr>
+            <td><strong>Sub-rede pública e sub-rede privada</strong></td>
+            <td>Nenhuma das três sub-redes tem atributo que diga o que ela é. No movimento 2
+              do experimento 2 a <code>sd-privada-a</code> virou pública com uma linha, e no
+              movimento 4 voltou a ser privada com outra.</td>
+          </tr>
+          <tr>
+            <td><strong>Escassez de endereço contra permissão de caminho</strong></td>
+            <td>O movimento 3 tentou tornar o nó A alcançável por IPv4 e não conseguiu, porque
+              o que faltava não era rota. Trocar o próximo salto ainda por cima derrubou a
+              saída IPv4 que ele tinha, o que é a diferença entre os dois protocolos numa
+              tela só.</td>
+          </tr>
+          <tr>
+            <td><strong>Encapsulamento e saltos</strong></td>
+            <td>O <button type="button" class="nota-termo" data-nota="encapsulamento">traceroute</button>
+              do passo 9 mostrou o caminho salto a salto, e mostrou também que nem todo
+              equipamento no meio se deixa ver. O NAT gateway é um deles.</td>
+          </tr>
+          <tr>
+            <td><strong>Filtro e roteamento são coisas diferentes</strong></td>
+            <td>Os grupos de segurança ficaram abertos para os dois protocolos o tempo todo, e
+              você conferiu isso antes de concluir qualquer coisa no passo 7. Toda falha que
+              você viu foi de caminho, nenhuma foi de filtro.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">💡 A frase para levar</p>
+      <p>
+        Alcançar uma máquina exige duas coisas independentes, que são <strong>ter
+        endereço</strong> e <strong>ter caminho de ida e de volta</strong>. No IPv4 as duas
+        andam juntas com tanta frequência que a distinção some, porque endereço público é
+        escasso e quem tem um quase sempre também tem caminho. O IPv6 separa as duas de novo,
+        e é por isso que ele é o lugar certo para aprender a diferença. O nó A passou a
+        prática inteira com um endereço que o mundo inteiro poderia digitar, e passou quase
+        toda ela inalcançável.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 10
+       ============================================================ -->
+  <section class="lab-step" id="passo-10">
+    <h2><span class="step-num">10</span><span>Anotar os resultados, encerrar e limpar</span><span class="step-time">7 min</span></h2>
+
+    <h3>10.1 Anotar</h3>
+    <p>
+      Cada linha diz de onde tirar o dado. <strong>Não existe resposta certa aqui, porque o
+      valor é o seu.</strong> A coluna de referência é só uma checagem de sanidade. Ficar
+      dentro da faixa não vale ponto, e ficar fora não é erro, é motivo para repetir a medição
+      e desconfiar do que aconteceu naquele instante.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Para que servem estes números</p>
+      <p>
+        O questionário desta prática, no Moodle, pergunta sobre eles. Ele não pede o valor
+        exato. Pede a <strong>comparação</strong> entre dois deles, ou o que aconteceu num
+        movimento. Use o botão <em>copiar meus resultados</em> antes de encerrar o
+        laboratório, porque a sessão apaga as máquinas.
+      </p>
+    </div>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:44%">Medição</th><th style="width:28%">O seu valor</th><th>Referência</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Medida 1, do nó A ao nó P por IPv6, dentro da VPC<br>
+              <span class="ref">passo 9.1 · o <code>avg</code> do primeiro ping</span></td>
+            <td><input type="text" data-res="m1_local" data-rotulo="medida 1, A para P dentro da VPC (ms)" placeholder="ms"></td>
+            <td class="ref">a medir no piloto</td>
+          </tr>
+          <tr>
+            <td>Medida 4, do nó A ao nó E por IPv6, entre VPCs<br>
+              <span class="ref">passo 9.1 · o <code>avg</code> do segundo ping</span></td>
+            <td><input type="text" data-res="m4_entre_vpcs" data-rotulo="medida 4, A para E entre VPCs (ms)" placeholder="ms"></td>
+            <td class="ref">a medir no piloto</td>
+          </tr>
+          <tr>
+            <td>Medida 2, saída IPv6 pelo gateway somente de saída<br>
+              <span class="ref">passo 9.2 · <code>conexao</code> menos <code>nome</code>, na linha do -6</span></td>
+            <td><input type="text" data-res="m2_ipv6" data-rotulo="medida 2, saida IPv6 (s)" placeholder="s"></td>
+            <td class="ref">a medir no piloto</td>
+          </tr>
+          <tr>
+            <td>Medida 3, saída IPv4 pelo NAT gateway<br>
+              <span class="ref">passo 9.2 · a mesma conta, na linha do -4</span></td>
+            <td><input type="text" data-res="m3_ipv4" data-rotulo="medida 3, saida IPv4 pelo NAT (s)" placeholder="s"></td>
+            <td class="ref">a medir no piloto</td>
+          </tr>
+          <tr>
+            <td>Quantas vezes a medida 4 é maior que a medida 1<br>
+              <span class="ref">conta sua · divida a medida 4 pela medida 1</span></td>
+            <td><input type="text" data-res="razao_saida" data-rotulo="razao entre a medida 4 e a medida 1" placeholder="vezes"></td>
+            <td class="ref">a medir no piloto</td>
+          </tr>
+          <tr>
+            <td>Quantos saltos o <code>traceroute -6</code> mostrou até responder<br>
+              <span class="ref">passo 9.3 · conte as linhas com endereço, ignorando as de asterisco</span></td>
+            <td><input type="text" data-res="saltos_ipv6" data-rotulo="saltos visiveis no traceroute IPv6" placeholder="saltos"></td>
+            <td class="ref">a medir no piloto</td>
+          </tr>
+          <tr>
+            <td>No movimento 2, o que mudou na máquina, no endereço ou no filtro<br>
+              <span class="ref">passo 8.2 · escreva a resposta em uma palavra</span></td>
+            <td><input type="text" data-res="mudou_no_mov2" data-rotulo="o que mudou na maquina no movimento 2" placeholder="uma palavra"></td>
+            <td class="ref">nada</td>
+          </tr>
+          <tr>
+            <td>No movimento 3, o que aconteceu com a saída IPv4 do nó A<br>
+              <span class="ref">passo 8.3 · o código que o <code>curl</code> devolveu</span></td>
+            <td><input type="text" data-res="mov3_saida_ipv4" data-rotulo="codigo do curl IPv4 no movimento 3" placeholder="codigo"></td>
+            <td class="ref">000, porque ele perdeu a saída</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      <button type="button" class="btn" id="copiar-resultados">⧉ Copiar meus resultados</button>
+      <button type="button" class="btn btn-secondary" id="limpar-lab">Apagar os dados desta prática</button>
+    </p>
+
+    <p class="saida">A tabela fica guardada neste navegador, mas some se voce limpar os dados do
+site ou trocar de computador. Cole os seus numeros em algum lugar seu antes de
+encerrar o laboratorio.</p>
+
+    <h3>10.2 Encerrar e limpar</h3>
+    <p>
+      Esta prática cria mais coisas que as anteriores, e algumas delas precisam sair na ordem
+      inversa da criação, porque uma segura a outra. O script de recuperação também sabe
+      apagar, e é o caminho mais curto.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">CloudShell</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>curl -sfO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03/recriar-rede.sh
+bash recriar-rede.sh --apagar</pre>
+    </div>
+    <p class="saida">A colher no piloto. O script encerra as instâncias, espera o NAT
+gateway sumir, solta o endereço elástico e apaga a VPC. Ele leva perto de
+quatro minutos, quase todo esse tempo esperando o NAT gateway.</p>
+
+    <p>
+      Depois disso, apague o <code>labsuser.pem</code> desta sessão, porque ele não vai servir
+      na próxima, e clique em <strong>End Lab</strong> na aba do laboratório.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Limpe mesmo sabendo que o ambiente limparia sozinho</p>
+      <p>
+        Aqui a sessão apagaria tudo de qualquer jeito. Mais adiante no curso você vai
+        trabalhar em um ambiente que <strong>não apaga nada</strong> e tem orçamento limitado,
+        onde um recurso esquecido consome crédito silenciosamente por dias. O NAT gateway
+        desta prática é justamente do tipo que cobra por hora ligada, e o hábito que protege
+        você lá é o que você constrói aqui.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c10">
+      <label for="p03-c10"><strong>Checkpoint 10.</strong> A tabela está preenchida, eu
+        guardei uma cópia dos meus números, a VPC e as instâncias foram apagadas e o
+        laboratório foi encerrado.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Questionário
+       ============================================================ -->
+  <div class="moodle-note">
+    <p>
+      <strong>Para concluir</strong>, responda ao questionário desta prática no Moodle da
+      disciplina. As perguntas usam o que você observou, e pedem a comparação entre duas
+      medidas ou o que aconteceu em cada movimento, não o valor exato. Tenha a tabela de
+      resultados à mão.
+    </p>
+  </div>
+
+  <!-- ============================================================
+       Se der errado
+       ============================================================ -->
+  <section class="lab-step" id="se-der-errado">
+    <h2><span class="step-num is-accent">!</span><span>Se der errado</span></h2>
+
+    <div class="callout">
+      <p class="callout-title">💡 O comando que refaz a rede inteira</p>
+      <p>
+        Se a sessão do Sandbox cair no meio da prática, ou se a rede ficar num estado que você
+        não consegue mais explicar, o script abaixo refaz tudo do passo 2 ao passo 6 em um
+        comando. Ele não substitui os passos, que são o conteúdo. Ele existe para você voltar
+        ao experimento em que estava.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">CloudShell</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>curl -sfO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03/recriar-rede.sh
+bash recriar-rede.sh --apagar
+bash recriar-rede.sh</pre>
+      </div>
+      <p>
+        A primeira linha limpa o que sobrou, porque o script se recusa a criar uma segunda
+        <code>sd-vpc</code>. No fim ele imprime os seis endereços da ficha e os guarda em
+        <code>~/sd-pratica03.env</code>.
+      </p>
+    </div>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th style="width:32%">Sintoma</th><th style="width:30%">Causa provável</th><th>O que fazer</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>UNPROTECTED PRIVATE KEY FILE</code></td>
+            <td>Permissões do <code>labsuser.pem</code></td>
+            <td>Rode o <code>icacls</code> (ou <code>chmod 400</code>) do passo 1.</td>
+          </tr>
+          <tr>
+            <td><code>Permission denied (publickey)</code></td>
+            <td>Chave de uma sessão anterior, ou usuário errado</td>
+            <td>Baixe o PEM de novo nesta sessão. O usuário é <code>ec2-user</code>.</td>
+          </tr>
+          <tr>
+            <td>O <code>ssh -J</code> da janela 2 não entra, e a janela 1 entra</td>
+            <td>O salto por P funciona e o segundo trecho não, quase sempre porque o endereço
+              do nó A na ficha é o público de outra máquina</td>
+            <td>Confira que o endereço da janela 2 é o <strong>privado</strong> do nó A, que
+              começa com <code>10.10.2.</code>. Se ainda falhar, entre no nó A pelo Session
+              Manager, na linha abaixo desta tabela.</td>
+          </tr>
+          <tr>
+            <td>Nenhum <code>ssh</code> entra, nem o da janela 1</td>
+            <td>Cliente SSH do Windows antigo, sem a opção <code>-J</code>, ou chave com
+              permissão errada</td>
+            <td>Em <strong>EC2 &gt; Instances</strong>, marque a instância e clique em
+              <strong>Connect</strong>, aba <strong>Session Manager</strong>. Os três nós
+              sobem com o perfil <code>LabInstanceProfile</code>, que é o que faz essa aba
+              funcionar. No nó A ela só passa a valer depois de existir rota de saída, o que
+              é coerente com o que a prática ensina.</td>
+          </tr>
+          <tr>
+            <td><code>sd-rede: command not found</code></td>
+            <td>O script de inicialização não terminou, ou não chegou a rodar</td>
+            <td>Espere mais um minuto e tente de novo. Se insistir, veja
+              <code>sudo tail -30 /var/log/sd-setup.log</code>. No nó A, a causa mais provável
+              é o <code>dnf</code> não ter alcançado os repositórios, o que acontece quando a
+              instância subiu antes de o NAT gateway ficar disponível.</td>
+          </tr>
+          <tr>
+            <td>O <code>curl</code> da CloudShell não baixa o <code>setup.sh</code></td>
+            <td>O endereço publicado está fora do ar</td>
+            <td>Salve o arquivo pelo botão <strong>baixar</strong> do passo 6 e envie-o à
+              CloudShell pelo menu <strong>Actions</strong>, opção <em>Upload file</em>.</td>
+          </tr>
+          <tr>
+            <td><code>InvalidParameterValue</code> ao criar a sub-rede, falando do bloco
+              IPv6</td>
+            <td>A variável <code>RAIZ</code> não foi montada, quase sempre porque a VPC ainda
+              não tinha recebido o /56 quando o <code>describe-vpcs</code> rodou</td>
+            <td>Repita o bloco do passo 3 que define <code>PREFIXO</code> e <code>RAIZ</code>,
+              e confira com <code>echo $RAIZ</code> que ele termina em dois-pontos e não em
+              <code>None</code>.</td>
+          </tr>
+          <tr>
+            <td>A saída IPv6 do nó A não funciona, e a rota <code>::/0</code> está no lugar</td>
+            <td>Falta a regra de saída <code>::/0</code> no grupo de segurança</td>
+            <td>Rode <code>aws ec2 describe-security-groups --group-ids $SG_NOS --query
+              'SecurityGroups[0].IpPermissionsEgress'</code> e confira que existem
+              <strong>duas</strong> entradas, uma com <code>IpRanges</code> e outra com
+              <code>Ipv6Ranges</code>. Se faltar a segunda, refaça o
+              <code>authorize-security-group-egress</code> do passo 6.</td>
+          </tr>
+          <tr>
+            <td>O nó E não alcança o nó A no movimento 2, e a rota está no gateway de
+              internet</td>
+            <td>Falta o bloco IPv6 na VPC padrão, ou a rota <code>::/0</code> dela</td>
+            <td>Refaça o passo 2.1. Confira com <code>sd-rede</code>, na janela 3, que o nó E
+              tem mesmo um endereço IPv6 na terceira linha.</td>
+          </tr>
+          <tr>
+            <td><code>RouteAlreadyExists</code></td>
+            <td>Você usou <code>create-route</code> onde a linha já existia</td>
+            <td>Troque por <code>replace-route</code>, que é o comando que muda o próximo
+              salto de uma linha já escrita. Os dois têm os mesmos parâmetros.</td>
+          </tr>
+          <tr>
+            <td><code>DependencyViolation</code> ao apagar a VPC</td>
+            <td>Sobrou algo dentro dela, quase sempre o NAT gateway ou uma interface de rede
+              de instância recém-encerrada</td>
+            <td>Rode <code>bash recriar-rede.sh --apagar</code>, que respeita a ordem e espera
+              o que precisa ser esperado.</td>
+          </tr>
+          <tr>
+            <td>A sessão do laboratório expirou no meio</td>
+            <td>É o comportamento normal do Sandbox</td>
+            <td>Inicie de novo, baixe o PEM outra vez e rode
+              <code>bash recriar-rede.sh</code>. Leva cerca de seis minutos, e os endereços da
+              ficha mudam.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Extensões
+       ============================================================ -->
+  <section class="lab-step" id="extensoes">
+    <h2><span class="step-num is-accent">+</span><span>Se sobrar tempo</span></h2>
+
+    <h3>Quem eu sou visto de fora</h3>
+    <p>
+      O serviço que roda nos três nós diz de que endereço o pedido chegou. Do nó A, chame o
+      serviço do nó E pelos dois protocolos e compare a linha <code>quem perguntou</code> com
+      o que o <code>sd-rede</code> do nó A mostra. Pelo IPv6 os dois endereços são o mesmo, e
+      pelo IPv4 o endereço visto pelo nó E é o do NAT gateway, que não pertence a nenhuma das
+      máquinas. É a tradução acontecendo na sua frente, e é a única forma de vê-la, já que o
+      <code>traceroute</code> não mostra o NAT gateway.
+    </p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd-rede
+curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_E">IPV6-DO-NO-E</span>]:8080/"
+curl -4 -s -m 5 http://<span class="var" data-var="IP_PUB_E">IP-PUBLICO-E</span>:8080/</pre>
+    </div>
+
+    <h3>Um nó na sub-rede que ficou vazia</h3>
+    <p>
+      Suba uma quarta instância na <code>sd-privada-b</code>, que está na outra zona de
+      disponibilidade e nunca recebeu configuração nenhuma além da associação à tabela. Ela
+      vai sair para a internet pelos mesmos dois dispositivos, sem que você escreva uma linha
+      de rota a mais. Depois repita o movimento 1 do experimento 2 e confira que os dois nós
+      privados perdem a saída IPv6 ao mesmo tempo. Uma tabela, duas sub-redes, duas zonas.
+    </p>
+
+    <h3>Se o seu computador tiver IPv6</h3>
+    <p>
+      Se o teste do passo 1.1 respondeu <code>200</code>, refaça o movimento 2 do experimento
+      2 e tente alcançar o nó A <strong>direto da sua casa</strong>, com
+      <code>curl -6 "http://[endereço-do-nó-A]:8080/"</code>. Você vai conversar com uma
+      máquina que não tem endereço IPv4 público nenhum, sem intermediário, sem
+      redirecionamento de porta e sem túnel. Desfaça o movimento depois, com o passo 8.4.
+    </p>
+
+    <h3>Com um colega, se houver oportunidade</h3>
+    <p>
+      Comparem os prefixos /56 que a Amazon entregou às VPCs de vocês. Os dois começam igual e
+      divergem em algum ponto, e o ponto onde divergem diz quanto do endereço a Amazon usa
+      para identificar a região e o cliente. Comparem também a medida 1, que é a rota
+      <code>local</code> dentro da VPC. Ela deve dar quase o mesmo número nas duas contas,
+      porque não é a sua rede que a define, é a distância física dentro do centro de dados.
+    </p>
+  </section>
+
+  <footer class="lab-foot">
+    <span>Sistemas Distribuídos · IFSP Campus Salto</span>
+    <span><a href="../../index.html#/topico/03">Voltar ao Tópico 3</a></span>
+  </footer>
+
+</div>
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/lab.js"></script>
+<script>SD.lab.init({ id: "pratica-03" });</script>
+</body>
+</html>
