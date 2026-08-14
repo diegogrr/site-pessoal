@@ -321,9 +321,9 @@ SD.content["02"] = {
         'font-size="14">a invocação empacotada atravessa a rede</text>' +
         "</svg>" +
         "<figcaption>O proxy tem a mesma interface do objeto, então o cliente chama o " +
-        "método como se o objeto fosse local. Quem faz o trabalho sujo são as duas peças " +
-        "em destaque, que empacotam a chamada de um lado e a desempacotam do outro. O " +
-        "tópico 5 volta a esse mecanismo em detalhe.</figcaption>" +
+        "método como se o objeto fosse local. Quem faz o trabalho de comunicação são as " +
+        "duas peças em destaque, que empacotam a chamada de um lado e a desempacotam do " +
+        "outro. O tópico 5 volta a esse mecanismo em detalhe.</figcaption>" +
         "</figure>" +
         "<p>Esse arranjo se chama <strong>objeto distribuído</strong>, ou objeto remoto. " +
         "Vale notar uma característica que costuma surpreender. Na maior parte desses " +
@@ -361,19 +361,24 @@ SD.content["02"] = {
         "<strong>recursos</strong>, cada um gerenciado por um componente, que podem ser " +
         "criados, recuperados, modificados e removidos.</p>" +
         "<p>Essa é a abordagem que a Web adotou, conhecida pela sigla REST, de " +
-        "transferência de estado representacional. Uma arquitetura REST tem quatro " +
+        "transferência de estado representacional. O REST exige uma interface uniforme " +
+        "para manipulação de recursos. Na Web, essa interface é fornecida pelos métodos " +
+        "padronizados do HTTP, dos quais <code>GET</code>, <code>POST</code>, " +
+        "<code>PUT</code> e <code>DELETE</code> são os mais associados às operações de " +
+        "criar, ler, atualizar e apagar (CRUD). Uma arquitetura REST tem quatro " +
         "características.</p>" +
         "<ul>" +
         "<li>Os recursos são identificados por um esquema único de nomes.</li>" +
-        "<li>Todos os serviços oferecem a mesma interface, com no máximo quatro " +
-        "operações.</li>" +
+        "<li>Todos os serviços oferecem a mesma interface.</li>" +
         "<li>As mensagens trocadas com o serviço descrevem a si mesmas por completo.</li>" +
-        "<li>Depois de executar uma operação, o componente esquece tudo sobre quem " +
-        "chamou, o que se chama de execução sem estado.</li>" +
+        "<li>Cada requisição deve conter as informações necessárias para ser " +
+        "compreendida, sem depender de estado de sessão armazenado no servidor entre " +
+        "requisições, o que se chama de execução sem estado (stateless).</li>" +
         "</ul>" +
         '<div class="tabela-rolagem">' +
         '<table class="tabela-conteudo" id="tab-rest">' +
-        "<tr><th>Operação</th><th>O que ela faz com o recurso</th></tr>" +
+        "<tr><th>Operação</th><th>O que ela faz com o recurso (forma " +
+        "simplificada)</th></tr>" +
         "<tr><td><code>PUT</code></td><td>Modifica o recurso, transferindo para ele um " +
         "estado novo.</td></tr>" +
         "<tr><td><code>POST</code></td><td>Cria um recurso novo.</td></tr>" +
@@ -406,9 +411,10 @@ SD.content["02"] = {
         "<h3>Estilo publicar-assinar</h3>" +
         "<p>À medida que o sistema cresce e os processos entram e saem com facilidade, " +
         "interessa que a dependência entre eles seja a menor possível. O estilo " +
-        "publicar-assinar responde a isso separando com força o <strong>processamento</strong> " +
-        "da <strong>coordenação</strong>. O sistema passa a ser uma coleção de processos " +
-        "autônomos, e a coordenação é a cola que une o que cada um faz.</p>" +
+        "publicar-assinar responde a isso desacoplando o <strong>processamento</strong> " +
+        "da <strong>coordenação</strong>. O sistema passa a ser composto por processos " +
+        "autônomos, e a coordenação é o mecanismo que integra suas ações em um " +
+        "comportamento coerente.</p>" +
         "<p>Quem produz apenas publica uma notificação descrevendo um evento, sem " +
         "endereçá-la a ninguém. Quem tem interesse registra uma assinatura no middleware, " +
         "descrevendo o tipo de evento que quer receber. O casamento entre notificações e " +
@@ -448,8 +454,9 @@ SD.content["02"] = {
         "quatro estratégias aparecem com frequência.</p>" +
         "<ul>" +
         "<li>O uso de <strong>vários servidores</strong> divide o trabalho entre " +
-        "máquinas. Os dados podem ser particionados entre elas, como acontece na Web, ou " +
-        "replicados em todas, como no Network Information Service (NIS).</li>" +
+        "máquinas. Os dados podem ser particionados entre os servidores, como acontece na " +
+        "Web, ou replicados entre vários deles, como ocorre em serviços de diretório " +
+        "baseados em LDAP (Lightweight Directory Access Protocol).</li>" +
         "<li>O <strong>cache</strong> guarda cópias dos dados perto de quem os usa, tanto " +
         "no navegador quanto em servidores proxy no caminho. Assim o pedido seguinte " +
         "pode ser atendido sem chegar à origem.</li>" +
@@ -589,7 +596,7 @@ SD.content["02"] = {
           title: "Publicar-assinar",
           html:
             "<ul>" +
-            "<li>Separa com força o <strong>processamento</strong> da " +
+            "<li>Desacopla o <strong>processamento</strong> da " +
             "<strong>coordenação</strong>, e nenhum dos dois lados conhece o outro</li>" +
             "<li>Quem produz publica a notificação de um evento. Quem tem interesse " +
             "registra uma assinatura no middleware, que faz o casamento</li>" +
@@ -623,7 +630,8 @@ SD.content["02"] = {
           html:
             "<ul>" +
             "<li><strong>Vários servidores</strong>, com os dados particionados entre " +
-            "eles, como na Web, ou replicados em todos, como no NIS</li>" +
+            "eles, como na Web, ou replicados entre vários deles, como nos serviços de " +
+            "diretório baseados em LDAP</li>" +
             "<li><strong>Cache</strong>, que guarda cópias perto de quem usa, no navegador " +
             "ou em um proxy no caminho</li>" +
             "<li><strong>Código móvel</strong>, que inverte o sentido da viagem e roda na " +
@@ -720,8 +728,8 @@ SD.content["02"] = {
         "<p>A comparação revela uma troca, e não uma solução melhor que a outra, porque " +
         "a arquitetura de duas camadas ganha em latência e perde em manutenção, e a de " +
         "três faz exatamente o inverso. O mesmo raciocínio se estende para <em>n</em> " +
-        "camadas, e a Wikipedia mostra a escala que esse arranjo alcança, atendendo até " +
-        "60 mil pedidos de página por segundo.</p>" +
+        "camadas, e a Wikipedia mostra a escala que esse arranjo alcança, atendendo a " +
+        "dezenas de milhares de pedidos de página por segundo.</p>" +
         "<p>O Asynchronous JavaScript and XML (AJAX) é a técnica que costura cliente e " +
         "servidor na Web interativa. Em vez de recarregar a página inteira a cada ação, " +
         "o JavaScript que roda no navegador pede ao servidor apenas os dados de que " +
@@ -757,7 +765,7 @@ SD.content["02"] = {
         "faz dele a base da transparência em RPC e em RMI. O " +
         "<strong>brokerage</strong> resolve o problema de o cliente não saber de antemão " +
         "quem oferece o serviço de que ele precisa. Ele organiza três " +
-        "participantes, o provedor de serviços, o solicitante e o corretor que aproxima " +
+        "participantes, o provedor de serviços, o solicitante e o broker que aproxima " +
         "os dois, e é o padrão por trás dos diretórios de serviços Web. A " +
         "<strong>reflexão</strong> dá ao próprio sistema a capacidade de examinar a " +
         "própria estrutura em execução, o que se chama de introspecção, e de se adaptar " +
@@ -769,21 +777,22 @@ SD.content["02"] = {
         "frequência, e vale reconhecer cada uma pelo problema que ela resolve, não pelo " +
         "nome do produto que a implementa.</p>" +
         "<ul>" +
-        "<li>O middleware de <strong>objetos distribuídos</strong> faz o objeto remoto " +
-        "ser chamado como se fosse local. Seguem esse modelo o modelo de referência para " +
-        "processamento distribuído aberto, padronizado pela Organização Internacional de " +
-        "Normalização (ISO), além do CORBA e do Java " +
+        "<li>O middleware de <strong>objetos distribuídos</strong> oculta a comunicação " +
+        "pela rede, permitindo usar um objeto remoto como se fosse local. Exemplos desse " +
+        "modelo são o padrão de processamento distribuído aberto da ISO, o CORBA e o Java " +
         "RMI.</li>" +
-        "<li>O de <strong>componentes distribuídos</strong> declara também as " +
-        "dependências de cada peça, e não apenas o que ela oferece. Seguem esse modelo o " +
-        "Fractal, os Enterprise JavaBeans (EJB) e os servidores de aplicação, que " +
-        "sustentam diretamente a arquitetura de três camadas.</li>" +
-        "<li>O de <strong>publicar-assinar</strong> entrega cada evento a quem se " +
-        "declarou interessado nele, sem que o remetente saiba quem são os destinatários. " +
-        "O Java Message Service (JMS) é a realização mais difundida.</li>" +
-        "<li>As <strong>filas de mensagem</strong> guardam a mensagem até que o " +
-        "destinatário venha buscá-la, o que dispensa os dois lados de estarem no ar ao " +
-        "mesmo tempo. O WebSphere MQ (Message Queue) é o exemplo mais conhecido.</li>" +
+        "<li>O middleware de <strong>componentes distribuídos</strong> declara tanto o " +
+        "que cada componente oferece quanto as interfaces de que ele depende. Exemplos " +
+        "são o Fractal, os Enterprise JavaBeans (EJB) e os servidores de aplicação, " +
+        "frequentemente usados em arquiteturas de três camadas.</li>" +
+        "<li>O middleware de <strong>publicar-assinar</strong> entrega cada evento aos " +
+        "consumidores que se declararam interessados nele, sem que o remetente precise " +
+        "conhecê-los. O Java Message Service (JMS) é um exemplo clássico desse modelo no " +
+        "ecossistema Java.</li>" +
+        "<li>As <strong>filas de mensagens</strong> armazenam cada mensagem até que o " +
+        "destinatário possa buscá-la, permitindo que remetente e consumidor não precisem " +
+        "estar ativos ao mesmo tempo. Como exemplo desse modelo, o WebSphere MQ (Message " +
+        "Queue).</li>" +
         "<li>Os <strong>serviços Web</strong> expõem a funcionalidade por interfaces " +
         "integradas à Web, como faz o Apache Axis.</li>" +
         "<li>O middleware <strong>peer-to-peer</strong> organiza nós que executam o " +
@@ -803,40 +812,25 @@ SD.content["02"] = {
         "sabendo qual aplicação vai usá-la. Reaparece aqui a abertura estudada no tópico " +
         "01, agora como problema de projeto interno. Middleware aberto é o que pode ser " +
         "estendido para o caso que ninguém previu sem ser reescrito por dentro, e dois " +
-        "padrões de projeto carregam quase toda essa responsabilidade. O empacotador " +
+        "padrões de projeto carregam quase toda essa responsabilidade. O wrapper " +
         "resolve um problema, o interceptador resolve outro, e os dois perseguem o mesmo " +
         "objetivo.</p>" +
-        "<h4>Empacotadores, quando a interface não serve</h4>" +
-        "<p>Montar um sistema distribuído a partir de peças que já existem esbarra num " +
-        "obstáculo imediato. A interface que o componente antigo oferece dificilmente é a " +
-        "que a aplicação nova precisa chamar. O <strong>empacotador</strong> (wrapper), " +
-        "também chamado de adaptador, é um componente que oferece uma interface aceitável " +
-        "para quem chama e traduz cada função dela para as que o componente de fato tem. " +
-        "Ele resolve o problema da interface incompatível, e nada além disso.</p>" +
-        "<p>O <code>S3</code>, visto na seção anterior, é um exemplo direto. Ele publica " +
-        "duas interfaces, uma no estilo de recursos sobre HTTP e outra mais tradicional. " +
-        "Quem usa a primeira conversa com um servidor Web comum, e esse servidor age como " +
-        "adaptador do serviço de armazenamento real, porque disseca a requisição que chega " +
-        "e repassa as partes a servidores especializados internos. O cliente nunca fala " +
-        "com o armazenamento. Ele fala com o empacotador.</p>" +
-        "<p>Enquanto foram poucos, os empacotadores davam conta da extensibilidade " +
-        "sozinhos. Se a aplicação A guardava dados de que a aplicação B precisava, bastava " +
-        "escrever um empacotador específico para B. O problema aparece na hora de contar " +
-        "quantos esse arranjo exige, porque com <em>N</em> aplicações que dependem umas " +
-        "das outras são <em>N</em> × (<em>N</em> - 1) empacotadores, número que cresce com " +
-        "o quadrado de <em>N</em>.</p>" +
-        "<p>A saída é o <strong>corretor</strong> (broker), um componente logicamente " +
-        "centralizado por onde passam todos os acessos entre aplicações. Cada aplicação " +
-        "manda ao corretor um pedido dizendo do que precisa. O corretor conhece todas as " +
-        "aplicações relevantes, procura as adequadas, combina e transforma as respostas " +
-        "quando é o caso, e devolve o resultado a quem pediu. Como ele oferece uma " +
-        "interface só para cada aplicação, bastam 2<em>N</em> empacotadores, conta que " +
-        "cresce em proporção direta ao número de aplicações. É a mesma corretagem descrita " +
-        "acima, agora com o número que justifica a escolha.</p>" +
-        '<figure class="figura" id="fig-empacotadores">' +
-        '<svg viewBox="0 0 600 270" role="img" aria-labelledby="fig-empacotadores-titulo">' +
-        '<title id="fig-empacotadores-titulo">Quatro aplicações ligadas todas com todas, ' +
-        "do lado esquerdo, e as mesmas quatro ligadas a um corretor central, do lado " +
+        "<h4>Wrappers, quando a interface não serve</h4>" +
+        "<p>Um <strong>wrapper</strong>, ou adaptador, oferece ao cliente uma interface " +
+        "adequada e traduz suas operações para aquelas disponíveis no componente " +
+        "original. Em sistemas distribuídos, porém, wrappers podem fazer mais do que " +
+        "adaptar interfaces. Eles também podem ocultar a implementação e a distribuição " +
+        "internas de um serviço.</p>" +
+        "<p>Wrappers facilitam a integração entre sistemas existentes, mas não escalam " +
+        "bem quando cada par de aplicações exige uma adaptação própria, porque com " +
+        "<em>N</em> aplicações podem ser necessários O(<em>N</em>²) wrappers. Um " +
+        "<strong>broker</strong> reduz esse acoplamento ao intermediar os acessos entre " +
+        "as aplicações. Como cada uma precisa se integrar apenas ao broker, o número cai, " +
+        "em princípio, para O(<em>N</em>).</p>" +
+        '<figure class="figura" id="fig-wrappers">' +
+        '<svg viewBox="0 0 600 270" role="img" aria-labelledby="fig-wrappers-titulo">' +
+        '<title id="fig-wrappers-titulo">Quatro aplicações ligadas todas com todas, ' +
+        "do lado esquerdo, e as mesmas quatro ligadas a um broker central, do lado " +
         "direito, que reduz as seis ligações a quatro.</title>" +
         '<path class="traco" d="M80 67 L200 67"/>' +
         '<path class="traco" d="M80 187 L200 187"/>' +
@@ -852,7 +846,7 @@ SD.content["02"] = {
         '<text x="80" y="192" text-anchor="middle" font-size="15">C</text>' +
         '<rect class="caixa" x="168" y="172" width="64" height="30" rx="6"/>' +
         '<text x="200" y="192" text-anchor="middle" font-size="15">D</text>' +
-        '<text x="140" y="26" text-anchor="middle" font-size="15">Sem corretor</text>' +
+        '<text x="140" y="26" text-anchor="middle" font-size="15">Sem broker</text>' +
         '<text class="rotulo-secundario" x="140" y="240" text-anchor="middle" font-size="13">' +
         "N × (N - 1), aqui 12</text>" +
         '<path class="traco" d="M300 40 L300 216" stroke-dasharray="5 5"/>' +
@@ -861,7 +855,7 @@ SD.content["02"] = {
         '<path class="traco" d="M400 187 L460 127"/>' +
         '<path class="traco" d="M520 187 L460 127"/>' +
         '<rect class="caixa-destaque" x="422" y="112" width="76" height="30" rx="6"/>' +
-        '<text x="460" y="132" text-anchor="middle" font-size="13">corretor</text>' +
+        '<text x="460" y="132" text-anchor="middle" font-size="13">broker</text>' +
         '<rect class="caixa" x="368" y="52" width="64" height="30" rx="6"/>' +
         '<text x="400" y="72" text-anchor="middle" font-size="15">A</text>' +
         '<rect class="caixa" x="488" y="52" width="64" height="30" rx="6"/>' +
@@ -870,14 +864,14 @@ SD.content["02"] = {
         '<text x="400" y="192" text-anchor="middle" font-size="15">C</text>' +
         '<rect class="caixa" x="488" y="172" width="64" height="30" rx="6"/>' +
         '<text x="520" y="192" text-anchor="middle" font-size="15">D</text>' +
-        '<text x="460" y="26" text-anchor="middle" font-size="15">Com corretor</text>' +
+        '<text x="460" y="26" text-anchor="middle" font-size="15">Com broker</text>' +
         '<text class="rotulo-secundario" x="460" y="240" text-anchor="middle" font-size="13">' +
         "2N, aqui 8</text>" +
         "</svg>" +
         '<p class="figura-fonte">Fonte: traduzido de Van Steen e Tanenbaum (2023).</p>' +
-        "<figcaption>Cada ligação exige um empacotador em cada ponta, e é por isso que a " +
-        "conta cresce com o quadrado. Com quatro aplicações são 12 empacotadores sem " +
-        "corretor e 8 com ele, e a distância entre as duas contas aumenta a cada aplicação " +
+        "<figcaption>Cada ligação exige um wrapper em cada ponta, e é por isso que a " +
+        "conta cresce com o quadrado. Com quatro aplicações são 12 wrappers sem broker e " +
+        "8 com ele, e a distância entre as duas contas aumenta a cada aplicação " +
         "nova.</figcaption>" +
         "</figure>" +
         "<h4>Interceptadores, quando o fluxo precisa desviar</h4>" +
@@ -935,14 +929,14 @@ SD.content["02"] = {
         "entre dois deles e faz o desvio de que a aplicação precisa, sem que os passos " +
         "vizinhos tomem conhecimento.</figcaption>" +
         "</figure>" +
-        "<p>Cada uma das duas passagens é um ponto de corte. Suponha que B esteja " +
-        "replicado, porque então cada réplica precisa ser invocada. O " +
-        "<strong>interceptador de requisição</strong> resolve isso sozinho, chamando " +
-        "<code>invoke</code> uma vez para cada réplica. O ganho está em quem não fica " +
-        "sabendo. O objeto A não precisa saber que B está replicado, e o middleware de " +
-        "objetos não precisa de componente nenhum dedicado à chamada replicada. Só o " +
-        "interceptador sabe, e ele foi acrescentado ao middleware depois de o middleware " +
-        "estar pronto.</p>" +
+        "<p>Cada uma dessas duas passagens funciona como um ponto de interceptação. " +
+        "Suponha que B esteja replicado. Nesse caso, cada réplica precisa ser invocada. O " +
+        "<strong>interceptador de requisição</strong> faz isso sozinho, chamando " +
+        "<code>invoke</code> uma vez para cada réplica. O principal ganho é manter essa " +
+        "replicação oculta. O objeto A não precisa saber que B tem várias réplicas, e o " +
+        "middleware de objetos não precisa incluir um componente específico para chamadas " +
+        "replicadas. Apenas o interceptador conhece esse detalhe, e ele pode ser " +
+        "acrescentado depois que o middleware já está pronto.</p>" +
         "<p>O <strong>interceptador de mensagem</strong> age no nível de baixo, onde a " +
         "chamada finalmente vira tráfego de rede. Imagine que o parâmetro " +
         "<code>val</code> seja um vetor enorme de dados. Convém quebrá-lo em partes " +
@@ -951,7 +945,7 @@ SD.content["02"] = {
         "interceptador de nível mais baixo cuida sozinho do resto da conversa com o " +
         "sistema operacional local.</p>" +
         "<h4>Middleware modificável</h4>" +
-        "<p>Empacotadores e interceptadores são meios de estender e adaptar o middleware, " +
+        "<p>Wrappers e interceptadores são meios de estender e adaptar o middleware, " +
         "e a necessidade de adaptar vem de fora. O ambiente em que a aplicação distribuída " +
         "executa muda o tempo todo, com mobilidade, variação forte na qualidade de serviço " +
         "da rede, hardware que falha e bateria que acaba. Em vez de responsabilizar cada " +
@@ -1071,39 +1065,40 @@ SD.content["02"] = {
         "está na nuvem, cada interação paga a latência da Internet, e há aplicações que " +
         "não sobrevivem a esse preço.</figcaption>" +
         "</figure>" +
-        "<p>A pergunta natural é por que não ligar o dispositivo direto à nuvem, já que a " +
-        "rede hoje é boa. Quatro argumentos costumam ser dados, e eles não têm a mesma " +
-        "força.</p>" +
-        "<p>O primeiro é <strong>banda</strong>, e ele envelheceu mal. A banda disponível " +
-        "só cresceu ao longo das décadas, a ponto de valer a pergunta se instalar e manter " +
-        "uma infraestrutura de borda por falta de banda ainda se justifica. Serviços de " +
-        "vídeo são a exceção que sobra, porque quanto mais perto está a fonte, melhores " +
-        "são as garantias de qualidade.</p>" +
-        "<p>O segundo é <strong>latência</strong>, e esse é o argumento forte, porque aqui " +
-        "quem atrapalha é a natureza. Alcançar a nuvem pode custar 100 ms, o que inutiliza " +
-        "boa parte das aplicações interativas. A direção autônoma é o caso limite, já que " +
-        "um carro observa o ambiente e reage continuamente, e coordenar esse movimento " +
-        "pela nuvem é inaceitável em tempo real. O mesmo exemplo mostra o ganho da borda, " +
-        "porque carros podem anunciar a própria posição a uma infraestrutura local e se " +
-        "revelar uns aos outros ao chegar num cruzamento sem visibilidade.</p>" +
-        "<p>O terceiro é <strong>confiabilidade</strong>, e ele vale menos do que parece. " +
-        "Para a maioria das aplicações a conectividade com a nuvem é boa, e nos casos em " +
-        "que depender dela o tempo todo não é opção, como hospitais e fábricas, medidas " +
-        "próprias já existiam antes de a borda ter nome.</p>" +
-        "<p>O quarto é <strong>segurança e privacidade</strong>, e ele exige cuidado. Se " +
-        "uma solução na nuvem não é segura, não há razão para que a de borda seja, e " +
-        "muralha em volta da organização não protege contra ataque de dentro. Existe, " +
-        "porém, um motivo regulatório que é decisivo. Muitas organizações simplesmente não " +
-        "têm permissão para colocar certos dados na nuvem, e prontuário médico que precisa " +
-        "ficar em servidor certificado, com auditoria, obriga a manter infraestrutura " +
-        "própria.</p>" +
-        "<p>Acrescentar essa camada intermediária custa caro em decisão. Na nuvem, o " +
-        "fornecedor decide em boa medida onde e como o serviço é realizado. Com borda, " +
-        "quem decide é a organização cliente, e ela precisa responder o que fica local e o " +
-        "que sobe, com menos recursos, mais heterogeneidade de hardware e carga bem mais " +
-        "variável do que na nuvem. Esse trabalho de decisão tem nome, que é orquestração, " +
-        "e ele se divide em alocar recursos, escolher onde instalar cada serviço e " +
-        "escolher qual borda atende cada pedido.</p>" +
+        "<p>A pergunta natural é por que não conectar o dispositivo diretamente à nuvem, " +
+        "se a rede hoje é tão rápida. Há quatro argumentos comuns a favor da borda, mas " +
+        "eles não têm o mesmo peso.</p>" +
+        "<p>O primeiro é a <strong>largura de banda</strong>, e esse argumento perdeu " +
+        "força com o tempo. A capacidade das redes cresceu tanto que nem sempre compensa " +
+        "instalar e manter infraestrutura de borda apenas para economizar tráfego. " +
+        "Serviços de vídeo são uma exceção importante, porque manter o conteúdo mais perto " +
+        "do usuário ainda ajuda a garantir melhor qualidade de entrega.</p>" +
+        "<p>O segundo argumento é a <strong>latência</strong>, e aqui a limitação é " +
+        "física. A comunicação com a nuvem pode acrescentar dezenas ou até centenas de " +
+        "milissegundos, tempo suficiente para prejudicar aplicações interativas. A direção " +
+        "autônoma é um caso extremo, porque o veículo precisa perceber o ambiente e reagir " +
+        "continuamente, sem depender da nuvem para decisões em tempo real. A borda também " +
+        "pode ajudar na coordenação local, permitindo que veículos compartilhem sua " +
+        "posição por uma infraestrutura próxima, inclusive em cruzamentos sem " +
+        "visibilidade.</p>" +
+        "<p>O terceiro argumento é a <strong>confiabilidade</strong>, mas seu peso costuma " +
+        "ser superestimado. Para a maioria das aplicações, a conexão com a nuvem é " +
+        "suficientemente estável. Nos ambientes em que depender dela continuamente é " +
+        "arriscado, como hospitais e fábricas, já existiam soluções locais antes mesmo da " +
+        "popularização da computação de borda.</p>" +
+        "<p>O quarto é a <strong>segurança e a privacidade</strong>, e aqui é preciso " +
+        "distinguir causas diferentes. Levar o processamento para a borda não torna o " +
+        "sistema automaticamente mais seguro, nem protege contra ameaças internas. Em " +
+        "alguns casos, porém, há exigências regulatórias decisivas, que certos dados não " +
+        "podem sair da organização ou precisam permanecer em infraestrutura certificada e " +
+        "auditável, como pode ocorrer com prontuários médicos.</p>" +
+        "<p>A borda também traz um custo adicional de gestão. Na nuvem, o provedor decide " +
+        "grande parte de onde e como os serviços serão executados. Na borda, essa " +
+        "responsabilidade passa em maior grau para a própria organização, que precisa " +
+        "decidir o que permanece local, o que vai para a nuvem, onde cada serviço será " +
+        "executado e qual nó atenderá cada solicitação. Esse processo é chamado de " +
+        "orquestração e envolve alocação de recursos, posicionamento de serviços e " +
+        "encaminhamento das requisições.</p>" +
         "<h4>Blockchain, quando não há terceiro confiável</h4>" +
         "<p>Um sistema de transações precisa validar a transação, efetivá-la e guardá-la " +
         "para auditoria. Se Alice transfere dez reais para Bob, normalmente um banco " +
@@ -1154,11 +1149,11 @@ SD.content["02"] = {
         "acaba formando um grupo distribuído centralizado e tolerante a falhas, o que está " +
         "longe da descentralização que o discurso em torno do blockchain costuma " +
         "prometer.</p>" +
-        "<p>Nuvem, borda e blockchain fecham a seção porque são exatamente o que ela " +
-        "prometeu no começo, ou seja, padrões compostos a partir das camadas lógicas e " +
-        "físicas que vieram antes. Reconhecer a composição é o que evita projetar cada " +
-        "sistema novo do zero, e é também o que permite enxergar, num arranjo que se " +
-        "anuncia como novidade, o cliente-servidor de sempre com outro nome.</p>",
+        "<p>Nuvem, borda e blockchain encerram a seção porque combinam, de formas " +
+        "diferentes, as camadas lógicas e físicas apresentadas antes. Reconhecer essas " +
+        "combinações evita tratar cada arquitetura como algo inteiramente novo e ajuda a " +
+        "perceber quando uma suposta novidade é, na prática, uma variação de padrões " +
+        "conhecidos, como o cliente-servidor.</p>",
       slides: [
         {
           title: "Camadas lógicas, e onde entra o middleware",
@@ -1183,8 +1178,8 @@ SD.content["02"] = {
             "dados</strong>, e a arquitetura muda com o lugar em que cada um executa</li>" +
             "<li>Não há solução melhor, há troca. Duas camadas ganham em latência e " +
             "perdem em manutenção, três fazem o inverso</li>" +
-            "<li>O raciocínio se estende para n camadas, e a Wikipedia chega a 60 mil " +
-            "pedidos de página por segundo</li>" +
+            "<li>O raciocínio se estende para n camadas, e a Wikipedia atende a dezenas " +
+            "de milhares de pedidos de página por segundo</li>" +
             "<li>O <strong>AJAX</strong> pede ao servidor só os dados de que precisa e " +
             "atualiza só a parte afetada da página, como no Google Maps</li>" +
             "</ul>"
@@ -1199,7 +1194,7 @@ SD.content["02"] = {
             "mas sofre no gráfico muito interativo</li>" +
             "<li>O <strong>proxy</strong> é o representante local do objeto remoto, e " +
             "oferece a mesma interface. É a base da transparência em RPC e RMI</li>" +
-            "<li>O <strong>brokerage</strong> junta provedor, solicitante e corretor</li>" +
+            "<li>O <strong>brokerage</strong> junta provedor, solicitante e broker</li>" +
             "<li>A <strong>reflexão</strong> deixa o sistema inspecionar a si mesmo e se " +
             "adaptar em execução</li>" +
             "</ul>"
@@ -1220,15 +1215,16 @@ SD.content["02"] = {
             "</ul>"
         },
         {
-          title: "O empacotador, e por que veio o corretor",
-          ref: "fig-empacotadores",
+          title: "O wrapper, e por que veio o broker",
+          ref: "fig-wrappers",
           html:
             "<ul>" +
-            "<li>O <strong>empacotador</strong> traduz a interface que existe para a que " +
-            "a aplicação precisa chamar</li>" +
-            "<li>Sem corretor, N aplicações pedem N × (N - 1) empacotadores</li>" +
-            "<li>O <strong>corretor</strong> centraliza os acessos e derruba a conta " +
-            "para 2N</li>" +
+            "<li>O <strong>wrapper</strong> traduz a interface existente para a que a " +
+            "aplicação chama, e pode ocultar a implementação interna</li>" +
+            "<li>Sem broker, cada par de aplicações pede a sua adaptação, o que leva a " +
+            "O(N²)</li>" +
+            "<li>O <strong>broker</strong> intermedeia os acessos, e a conta cai para " +
+            "O(N)</li>" +
             "</ul>"
         },
         {
@@ -1343,10 +1339,10 @@ SD.content["02"] = {
     {
       title: "Modelos fundamentais: interação, falhas e segurança",
       html:
-        "<p>Por mais diferentes que sejam, todos os modelos de arquitetura compartilham " +
-        "o essencial, que são processos comunicando-se por mensagens. Os modelos " +
-        "fundamentais isolam um aspecto de cada vez desse essencial, e é esse isolamento " +
-        "que permite raciocinar com precisão sobre cada um.</p>" +
+        "<p>Apesar das diferenças, todos os modelos de arquitetura partem da mesma base, " +
+        "que são processos que se comunicam por mensagens. Os modelos fundamentais isolam " +
+        "aspectos específicos dessa comunicação, o que permite analisá-los com mais " +
+        "precisão.</p>" +
         "<h3>Modelo de interação</h3>" +
         "<p>Comunicar tem custo, e três características descrevem esse custo. A " +
         "<strong>latência</strong> é o atraso entre o início do envio e o início da " +
@@ -1372,24 +1368,24 @@ SD.content["02"] = {
         "assíncrono vale também para um síncrono, e é por isso que projetar para o caso " +
         "assíncrono é a aposta mais segura.</li>" +
         "</ul>" +
-        "<p>Essas duas variantes são os extremos, e nenhum dos dois descreve bem o que se " +
-        "encontra na prática. Sistema puramente síncrono só existe na teoria, porque " +
-        "garantir todo limite o tempo todo é caro demais. Declarar todo sistema " +
-        "assíncrono, por outro lado, é pessimismo excessivo, já que na maior parte do " +
-        "tempo as mensagens chegam dentro de um prazo razoável.</p>" +
-        "<p>A suposição realista fica no meio e tem nome próprio. Um sistema " +
-        "<strong>parcialmente síncrono</strong> comporta-se como síncrono quase sempre, " +
-        "mas não há limite para quanto tempo ele pode se comportar de forma assíncrona. O " +
-        "comportamento assíncrono é a exceção, e não a regra. Na prática isso significa " +
-        "que o timeout serve para concluir que um processo caiu, e que essa conclusão " +
-        "estará ocasionalmente errada. O projeto precisa aguentar essa detecção errada, e " +
-        "boa parte da dificuldade de tolerar falhas mora exatamente aí.</p>" +
-        "<p>Mesmo sem relógio global, os eventos podem ser ordenados " +
-        "<em>logicamente</em>, porque algumas relações independem de que horas são. Uma " +
-        "mensagem é recebida depois de ter sido enviada, e uma resposta vem depois da " +
-        "leitura do pedido. O <strong>relógio lógico</strong> de Lamport (1978) numera " +
-        "os eventos por essa ordem, o que resolve, por exemplo, os e-mails que chegam " +
-        "fora de ordem na caixa de entrada.</p>" +
+        "<p>Essas duas variantes representam extremos que raramente aparecem de forma " +
+        "pura na prática. Sistemas totalmente síncronos são mais teóricos, pois garantir " +
+        "limites rígidos o tempo todo é caro. Já tratar todo sistema como assíncrono é " +
+        "pessimista demais, porque, na maior parte do tempo, as mensagens chegam dentro de " +
+        "prazos previsíveis.</p>" +
+        "<p>A suposição mais realista fica entre os dois extremos, que o sistema é " +
+        "<strong>parcialmente síncrono</strong>. Na maior parte do tempo, ele se comporta " +
+        "como síncrono, mas pode passar períodos imprevisíveis em comportamento " +
+        "assíncrono. Por isso, um timeout pode ser usado para suspeitar que um processo " +
+        "falhou, embora essa suspeita às vezes esteja errada. O sistema precisa tolerar " +
+        "esses falsos diagnósticos, e aí está boa parte da dificuldade da tolerância a " +
+        "falhas.</p>" +
+        "<p>Mesmo sem um relógio global, é possível ordenar eventos " +
+        "<em>logicamente</em>, usando relações de precedência que independem do horário " +
+        "real. Uma mensagem, por exemplo, só pode ser recebida depois de enviada, e uma " +
+        "resposta só pode existir depois do pedido. O <strong>relógio lógico</strong> de " +
+        "Lamport atribui números aos eventos de modo a preservar essa ordem, ajudando a " +
+        "organizar acontecimentos que podem chegar fora de sequência.</p>" +
         "<h3>Modelo de falhas</h3>" +
         "<p>Antes da classificação, convém separar três palavras que o uso corrente " +
         "confunde. Um <strong>defeito</strong> é a causa, ou seja, aquilo que está errado " +
@@ -1476,14 +1472,14 @@ SD.content["02"] = {
         '<table class="tabela-conteudo" id="tab-deteccao">' +
         "<tr><th>Cenário</th><th>O que quem observa consegue concluir</th></tr>" +
         "<tr><td>Parada detectável (fail-stop)</td>" +
-        "<td>Conclui com certeza que o outro parou, porque os canais são confiáveis e " +
-        "existe um atraso máximo conhecido para a resposta.</td></tr>" +
+        "<td>Conclui com certeza que o outro parou, supondo que os canais são confiáveis " +
+        "e existe um atraso máximo conhecido para a resposta.</td></tr>" +
         "<tr><td>Parada com ruído (fail-noisy)</td>" +
         "<td>Chega à conclusão certa, mas só depois de um tempo indeterminado em que as " +
         "detecções dele não são confiáveis.</td></tr>" +
         "<tr><td>Parada silenciosa (fail-silent)</td>" +
         "<td>Não consegue distinguir a parada da omissão, mesmo com os canais " +
-        "funcionando, e por isso não sabe se o outro morreu ou apenas deixou de " +
+        "funcionando, e por isso não sabe se o outro processo parou ou apenas deixou de " +
         "responder.</td></tr>" +
         "<tr><td>Falha inofensiva (fail-safe)</td>" +
         "<td>Enfrenta falhas arbitrárias que, apesar de arbitrárias, não causam " +
@@ -1497,22 +1493,22 @@ SD.content["02"] = {
         "fica a conclusão que um processo consegue tirar sobre o outro, mais caro fica o " +
         "protocolo que precisa funcionar apesar disso. Os cinco rótulos estão em inglês " +
         "porque é nessa forma que você vai encontrá-los na literatura e nos artigos.</p>" +
-        "<p>Há ainda um corte transversal que evita discussão inútil sobre intenção. Uma " +
-        "falha <strong>por omissão</strong> acontece quando o componente deixa de fazer " +
-        "algo que deveria ter feito, e uma falha <strong>por comissão</strong> acontece " +
-        "quando ele faz algo que não deveria. Essa distinção não julga se houve má-fé, o " +
-        "que é útil porque muitas vezes não dá para saber. Um computador com sistema " +
-        "operacional mal construído que atrapalha o desempenho dos outros está agindo com " +
-        "malícia? A pergunta não tem resposta e nem precisa ter.</p>" +
-        "<p>A <strong>falha de resposta</strong> é o caso de comissão com nome próprio. O " +
-        "componente não se cala, ele responde, e a resposta está errada. Essa é a família " +
-        "mais incômoda das quatro, porque quem recebe a resposta não tem, olhando apenas " +
-        "para ela, como saber que foi enganado.</p>" +
-        "<p>Ela se subdivide em duas. Na <em>falha de valor</em>, o conteúdo da resposta " +
-        "está errado, como no total de uma compra somado sem um dos itens. Na <em>falha " +
-        "de transição de estado</em>, o componente desvia do fluxo de controle correto, " +
-        "por exemplo ao receber um pedido que não sabe tratar e tomar uma ação qualquer " +
-        "em vez de recusá-lo.</p>" +
+        "<p>Há ainda uma distinção útil que independe da intenção. Uma falha " +
+        "<strong>por omissão</strong> ocorre quando o componente deixa de fazer algo que " +
+        "deveria; uma falha <strong>por comissão</strong>, quando faz algo que não " +
+        "deveria. Essa classificação não exige saber se houve má-fé, o que é importante " +
+        "porque muitas vezes isso é impossível de determinar. Se um sistema operacional " +
+        "mal projetado prejudica o desempenho dos outros, pouco importa se houve intenção, " +
+        "basta observar o comportamento.</p>" +
+        "<p>A <strong>falha de resposta</strong> é uma forma de falha por comissão, pois " +
+        "o componente responde, mas a resposta está errada. Ela é especialmente " +
+        "problemática porque, ao receber a resposta, o outro componente pode não ter como " +
+        "perceber que há algo incorreto.</p>" +
+        "<p>Há dois casos principais. Na <em>falha de valor</em>, o conteúdo da resposta " +
+        "está errado, como quando o total de uma compra é calculado sem um dos itens. Na " +
+        "<em>falha de transição de estado</em>, o componente segue um fluxo de execução " +
+        "incorreto, por exemplo ao receber um pedido que não sabe tratar e executar alguma " +
+        "ação em vez de rejeitá-lo.</p>" +
         "<p>A <strong>falha arbitrária</strong>, também chamada de bizantina, é a pior " +
         "semântica possível, porque qualquer comportamento pode ocorrer, inclusive " +
         "responder errado ou omitir passos de forma seletiva. Em canais ela é rara, " +
@@ -2018,9 +2014,9 @@ SD.content["02"] = {
         "Estilo de arquitetura que vê o sistema distribuído como uma coleção de " +
         "recursos, cada um gerenciado por um componente. Os recursos são identificados " +
         "por um esquema único de nomes, todos os serviços oferecem a mesma interface " +
-        "com no máximo quatro operações, as mensagens se descrevem por completo e a " +
-        "execução é sem estado, ou seja, o componente esquece quem chamou assim que " +
-        "termina."
+        "uniforme, as mensagens se descrevem por completo e a execução é sem estado, ou " +
+        "seja, cada requisição traz o que é preciso para ser compreendida, sem depender " +
+        "de estado de sessão guardado no servidor entre requisições."
     },
     {
       term: "Computação de borda",
@@ -2073,20 +2069,21 @@ SD.content["02"] = {
         "mensagens. O SSL com o TLS e as VPN são as realizações mais comuns."
     },
     {
-      term: "Empacotador (wrapper)",
+      term: "Wrapper (adaptador)",
       definition:
-        "Componente que oferece uma interface aceitável para quem chama e traduz cada " +
-        "função dela para as que o componente de destino de fato tem. Também chamado de " +
-        "adaptador, resolve o problema da interface incompatível ao montar um sistema a " +
-        "partir de peças que já existem."
+        "Componente que oferece ao cliente uma interface adequada e traduz as operações " +
+        "dela para as que o componente original de fato tem. Resolve o problema da " +
+        "interface incompatível ao montar um sistema a partir de peças que já existem, e " +
+        "em sistemas distribuídos pode ocultar também a implementação e a distribuição " +
+        "internas de um serviço."
     },
     {
-      term: "Corretor (broker)",
+      term: "Broker",
       definition:
-        "Componente logicamente centralizado por onde passam todos os acessos entre " +
+        "Componente logicamente centralizado que intermedeia os acessos entre " +
         "aplicações. Ele conhece as aplicações relevantes, procura as adequadas e " +
-        "devolve o resultado a quem pediu, o que derruba o número de empacotadores " +
-        "necessários de N × (N - 1) para 2N."
+        "devolve o resultado a quem pediu. Como cada aplicação precisa se integrar " +
+        "apenas a ele, o número de wrappers necessários cai de O(N²) para O(N)."
     },
     {
       term: "Interceptador",
@@ -2118,7 +2115,7 @@ SD.content["02"] = {
     "VAN STEEN, M.; TANENBAUM, A. S. Distributed Systems. 4. ed. (versão DS 4.03). " +
     "distributed-systems.net. Cap. 2. Architectures (fonte principal deste tópico: " +
     "estilos de arquitetura, orientação a serviços, microsserviços, REST, " +
-    "publicar-assinar, middleware com empacotadores, corretor, interceptadores e " +
+    "publicar-assinar, middleware com wrappers, broker, interceptadores e " +
     "modificabilidade, multicamadas, par a par, nuvem, borda e blockchain).",
     "VAN STEEN, M.; TANENBAUM, A. S. Op. cit. Cap. 8. Fault tolerance, seção 8.1 " +
     "(defeito, erro e falha; a taxonomia de falhas e a escala de detecção) e seção " +
