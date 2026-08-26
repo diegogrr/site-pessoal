@@ -212,6 +212,15 @@ SD.demoPagina = (function () {
     var alvo = document.getElementById(config.montarEm || "demo-mount");
     if (!alvo) return;
 
+    /* A página autônoma carrega o mesmo módulo de tema do SPA e dos roteiros,
+       mas precisa inicializá-lo e ligar o próprio botão. Sem isso o atributo
+       data-theme ficava preso em light e o botão era apenas decorativo. */
+    if (SD.theme) {
+      SD.theme.init();
+      var alternador = document.getElementById("theme-toggle");
+      if (alternador) alternador.addEventListener("click", SD.theme.toggle);
+    }
+
     var modulo = SD.demos && SD.demos[config.demo];
     if (!modulo || !modulo.mount) {
       alvo.innerHTML =
