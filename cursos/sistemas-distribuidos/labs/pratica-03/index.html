@@ -18,7 +18,7 @@
   <a class="voltar" href="../../index.html#/topico/03">‹ Tópico 3</a>
   <span class="titulo">Prática 03 · Redes e Interligação em Rede</span>
   <span class="espaco"></span>
-  <span class="contador" id="lab-contador">0 de 10 passos</span>
+  <span class="contador" id="lab-contador">0 de 7 passos</span>
   <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
 </div>
 
@@ -31,19 +31,20 @@
     <p class="eyebrow">Prática 03 · Tópico 3 · AWS Academy Sandbox</p>
     <h1>Quem consegue iniciar a conversa</h1>
     <p class="lab-lead">
-      Você vai construir uma rede inteira à mão, com endereços dos dois protocolos, e depois
-      pôr três máquinas dentro dela. Uma delas vai ter um endereço IPv6 único no mundo, com o
-      filtro de entrada aberto, e mesmo assim ninguém de fora vai conseguir falar com ela. Uma
-      linha de tabela de rotas explica o porquê, e apagar essa linha, recriá-la apontando para
-      outro lugar e devolvê-la ao lugar de origem é o que você vai fazer no segundo
-      experimento.
+      Um script monta uma rede inteira, com endereços dos dois protocolos, e põe quatro
+      máquinas dentro dela. Uma delas vai ter um endereço IPv6 único no mundo, com o filtro de
+      entrada aberto, e mesmo assim ninguém de fora vai conseguir falar com ela. Uma linha de
+      tabela de rotas explica o porquê, e apagar essa linha, recriá-la apontando para outro
+      lugar e devolvê-la ao lugar de origem é o que você vai fazer no segundo experimento. No
+      terceiro você mede quanto custa cada caminho, e descobre que a resposta contraria a
+      intuição.
     </p>
 
     <div class="lab-chips">
-      <span class="chip">◷ 100 min</span>
+      <span class="chip">◷ 75 min</span>
       <span class="chip">▲ dificuldade 3 de 5</span>
       <span class="chip">☁ AWS Academy Sandbox</span>
-      <span class="chip">▤ 3 instâncias t3.micro</span>
+      <span class="chip">▤ 4 instâncias t3.micro</span>
       <span class="chip">$ menos de US$ 0,10</span>
       <span class="chip">👤 individual</span>
     </div>
@@ -64,26 +65,23 @@
       <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
       <p>
         A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>, o que
-        inclui a rede que você vai construir, as instâncias e a chave. Reserve o bloco inteiro
-        de duas aulas. Se a sessão acabar no meio, existe um script de recuperação que refaz a
-        rede toda em um comando, e ele está na seção <a href="#se-der-errado">Se der
-        errado</a>.
+        inclui a rede que você vai construir, as instâncias, a chave e a credencial. Reserve o
+        bloco inteiro de uma aula, com folga. Se a sessão acabar no meio, o mesmo script do passo 2
+        refaz o ambiente inteiro em um comando, e a seção <a href="#se-der-errado">Se der
+        errado</a> explica como.
       </p>
     </div>
 
     <div class="lab-sumario">
       <p class="titulo">Nesta prática</p>
       <ol>
-        <li><a href="#passo-1">Abrir o laboratório, preparar a chave e olhar o seu próprio IPv6</a></li>
-        <li><a href="#passo-2">Conhecer as redes que já existem e dar IPv6 à VPC padrão</a></li>
-        <li><a href="#passo-3">Criar a VPC e recortar as três sub-redes</a></li>
-        <li><a href="#passo-4">Pendurar os três dispositivos de borda</a></li>
-        <li><a href="#passo-5">Escrever as duas tabelas de rotas</a></li>
-        <li><a href="#passo-6">Subir os três nós</a></li>
-        <li><a href="#passo-7">Experimento 1: quem consegue iniciar a conversa</a></li>
-        <li><a href="#passo-8">Experimento 2: a tabela de rotas como objeto vivo</a></li>
-        <li><a href="#passo-9">Experimento 3: o preço do caminho</a></li>
-        <li><a href="#passo-10">Anotar os resultados, encerrar e limpar</a></li>
+        <li><a href="#passo-1">Abrir o laboratório, preparar a chave e conferir a ferramenta</a></li>
+        <li><a href="#passo-2">Rodar o script que monta o ambiente</a></li>
+        <li><a href="#passo-3">Ler a rede que passou a existir</a></li>
+        <li><a href="#passo-4">Experimento 1: quem consegue iniciar a conversa</a></li>
+        <li><a href="#passo-5">Experimento 2: a tabela de rotas como objeto vivo</a></li>
+        <li><a href="#passo-6">Experimento 3: o preço do caminho</a></li>
+        <li><a href="#passo-7">Anotar os resultados, encerrar e limpar</a></li>
       </ol>
     </div>
   </header>
@@ -98,14 +96,34 @@
         <strong>Sandbox</strong>.</li>
       <li>Um terminal com cliente de <em>secure shell</em> (<strong>SSH</strong>). No Windows
         o <strong>PowerShell</strong> já traz um instalado, e no macOS ou Linux serve o
-        terminal do sistema. Você vai abrir <strong>três janelas</strong> dele.</li>
-      <li>Nada para instalar, nem no seu computador nem nas máquinas remotas.</li>
+        terminal do sistema. Você vai abrir <strong>quatro janelas</strong> dele.</li>
+      <li><strong>O AWS CLI instalado</strong>, que é a única coisa nova desta prática. Ele é a
+        interface de linha de comando (CLI) que a Amazon distribui, e é por ela que a rede de
+        hoje vai nascer.
+        Instale antes da aula pela
+        <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+        target="_blank" rel="noopener">página oficial da AWS</a>, que traz o passo a passo dos
+        três sistemas. Leva perto de dois minutos e <strong>não pede privilégio de
+        administrador</strong>. O passo 1 confere se ele responde, e se você chegar sem, dá
+        tempo de instalar ali mesmo.</li>
+      <li>Nas máquinas remotas, nada para instalar. O software delas continua vindo pronto.</li>
       <li>As práticas 01 e 02 <strong>não são pré-requisito</strong>. Se você as fez, o passo
-        1 é o mesmo caminho e você vai andar depressa nele.</li>
-      <li><strong>Não é preciso ter IPv6 em casa.</strong> O passo 1 verifica se você tem, por
-        curiosidade, e a prática inteira funciona sem. Tudo que precisa de IPv6 acontece
-        dentro da nuvem, entre as máquinas que você mesmo vai criar.</li>
+        1 é quase o mesmo caminho e você vai andar depressa nele.</li>
+      <li><strong>Não é preciso ter IPv6 em casa.</strong> A prática inteira funciona sem, e
+        tudo que precisa de IPv6 acontece dentro da nuvem, entre as máquinas que o script vai
+        criar. Se você tiver, a seção <a href="#extensoes">Se sobrar tempo</a> traz o que
+        muda.</li>
     </ul>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Se o computador for do laboratório do campus</p>
+      <p>
+        Máquinas de laboratório costumam voltar ao estado original a cada reinício, e nesse
+        caso o AWS CLI precisa ser instalado de novo no começo de cada aula. Conte com uns dois
+        minutos a mais e siga o mesmo link. A instalação por usuário não pede administrador,
+        que é justamente a que serve nesse cenário.
+      </p>
+    </div>
 
     <div class="os-switch" role="group" aria-label="Escolha do sistema operacional">
       <button type="button" data-os-btn="win" aria-pressed="true">Windows / PowerShell</button>
@@ -127,11 +145,16 @@
     <h2><span class="step-num is-accent">AWS</span><span>O mínimo de AWS para esta prática</span></h2>
     <p>
       Esta é a primeira prática em que a <strong>rede é o objeto de estudo</strong>, e não o
-      chão por onde as coisas passam. Por isso ela contraria uma regra das anteriores, em que
-      o tempo de aula nunca era gasto digitando. Aqui você vai digitar cerca de vinte e cinco
-      comandos, todos entregues prontos em blocos de copiar, porque o assistente gráfico de
-      criação de VPC monta a tabela de rotas sozinho e sem nomeá-la, que é justamente o objeto
-      do segundo experimento. O software das máquinas continua vindo pronto, como sempre.
+      chão por onde as coisas passam. Um script monta a rede inteira em cinco minutos, narrando
+      cada coisa que faz, e o seu trabalho começa onde ele para. Você vai ler o que existe,
+      reconhecer cada peça no console e depois <strong>mexer nas tabelas de rotas com as
+      máquinas ligadas</strong>, que é onde o conceito se testa.
+    </p>
+    <p>
+      A escolha de não construir à mão tem um motivo de relógio. Digitar a rede consome mais da
+      metade do tempo de aula e não ensina nada que a leitura não ensine, enquanto apagar uma
+      linha de tabela e ver um serviço sumir ensina de um jeito que nenhuma leitura alcança. O
+      script existe para você chegar cedo nessa parte.
     </p>
 
     <div class="tabela-rolavel">
@@ -185,7 +208,7 @@
             <td><strong>Gateway somente de saída</strong></td>
             <td>O equivalente do NAT gateway para <strong>IPv6</strong>, e o equivalente só no
               resultado. Ele deixa sair a conexão iniciada de dentro, recusa a iniciada de
-              fora e <strong>não traduz endereço nenhum</strong>. Não tem endereço próprio,
+              fora e <strong>não traduz nenhum endereço</strong>. Não tem endereço próprio,
               não custa nada e fica pronto na hora.</td>
           </tr>
           <tr>
@@ -196,23 +219,35 @@
           </tr>
           <tr>
             <td><strong>Grupo de segurança</strong></td>
-            <td>Um filtro de pacotes com estado, preso à interface da instância. Ele bloqueia
-              tudo por padrão. Guarde uma coisa, porque ela decide o experimento 1. A regra de
-              <em>saída</em> que todo grupo novo já traz libera
-              <code>0.0.0.0/0</code>, e <strong>isso não cobre o IPv6</strong>.</td>
+            <td>Um filtro de pacotes com estado, preso à interface da instância. Ele bloqueia a
+              <em>entrada</em> por padrão e libera a <em>saída</em>. Guarde uma coisa, porque ela
+              decide como você vai ler o experimento 1. A regra de saída que vem de fábrica
+              <strong>acompanha os protocolos que a VPC tem</strong>. Numa rede só IPv4 ela
+              nomeia apenas <code>0.0.0.0/0</code>, e numa rede com bloco IPv6 ela já nasce
+              cobrindo <code>::/0</code> também.</td>
           </tr>
           <tr>
             <td><strong>Elastic Compute Cloud (EC2) e instância</strong></td>
             <td>O EC2 é o serviço que aluga máquinas virtuais, e cada máquina ligada por ele
-              se chama <em>instância</em>. Vamos usar três, todas do tipo
+              se chama <em>instância</em>. Vamos usar quatro, todas do tipo
               <code>t3.micro</code>, e o que vai distingui-las é a sub-rede em que
               nascem.</td>
           </tr>
           <tr>
-            <td><strong>CloudShell</strong></td>
-            <td>Um terminal Linux dentro do próprio console, já autenticado na sua conta. É de
-              lá que você vai construir a rede. O ícone fica na barra de cima do console, ao
-              lado do sino de notificações.</td>
+            <td><strong>AWS CLI</strong></td>
+            <td>A ferramenta de linha de comando da AWS, instalada no <strong>seu</strong>
+              computador. Todo comando que começa com <code>aws</code> nesta página fala com a
+              nuvem por ela. É a mesma ferramenta em qualquer sistema, e o que muda de um para
+              o outro é só o terminal em volta.</td>
+          </tr>
+          <tr>
+            <td><strong>Perfil e credencial temporária</strong></td>
+            <td>O AWS CLI descobre com qual conta falar lendo um <em>perfil</em>, que é um
+              bloco de credencial guardado num arquivo de configuração seu. O laboratório
+              entrega uma credencial <strong>temporária</strong>, com três partes em vez de
+              duas, e a terceira é o <em>token</em> de sessão que a faz expirar junto com o
+              laboratório. O script grava tudo num perfil chamado <code>sd-sandbox</code>, e o
+              passo 7 o apaga.</td>
           </tr>
         </tbody>
       </table>
@@ -238,9 +273,10 @@
   <section class="lab-step" id="ficha">
     <h2><span class="step-num is-accent">✎</span><span>Ficha do ambiente</span></h2>
     <p>
-      Preencha os seis campos abaixo assim que tiver os endereços (passo 6). Todos os
-      comandos desta página passam a mostrar os seus valores reais, e o botão
-      <em>copiar</em> já leva o comando pronto. Os dados ficam só no seu navegador.
+      O passo 2 termina imprimindo doze linhas. Cole o bloco inteiro no campo abaixo e clique
+      em preencher, ou digite campo a campo se preferir. A partir daí todo comando desta página
+      mostra os seus valores reais, e o botão <em>copiar</em> já leva o comando pronto. Os dados
+      ficam só no seu navegador.
     </p>
     <p>
       As <strong>saídas de exemplo</strong> não acompanham. Elas guardam os endereços e os
@@ -249,14 +285,14 @@
       comando já preenchido é o esperado.
     </p>
 
-    <div class="callout is-warn">
-      <p class="callout-title">⚠ Esta página ainda está esperando o piloto</p>
-      <p>
-        As saídas de exemplo e as faixas de referência desta prática serão colhidas numa
-        execução real e ainda não estão aqui. Onde elas faltam, o lugar delas está marcado com
-        <strong>a colher no piloto</strong> e uma descrição do que esperar. O restante do
-        roteiro está completo, e os comandos são os definitivos.
-      </p>
+    <div class="ficha-colar">
+      <label for="p03-colar">Colar de uma vez o bloco que o script imprimiu</label>
+      <textarea id="p03-colar" data-ficha-colar rows="5"
+        placeholder="IP_PUB_P=54.226.7.9&#10;IPV6_P=2600:1f18:57c5:7100::a1&#10;..."></textarea>
+      <div class="ficha-colar-acoes">
+        <button type="button" class="btn-copiar" data-ficha-aplicar>preencher a ficha</button>
+        <span class="ficha-colar-aviso" data-ficha-resultado role="status"></span>
+      </div>
     </div>
 
     <div class="ficha">
@@ -268,12 +304,27 @@
         <input type="text" data-ficha="IP_PRIV_A" placeholder="ex.: 10.10.2.15" autocomplete="off"></label>
       <label>IPv6 do nó A
         <input type="text" data-ficha="IPV6_A" placeholder="ex.: 2600:1f18:57c5:7101::b2" autocomplete="off"></label>
+      <label>IPv4 privado do nó B
+        <input type="text" data-ficha="IP_PRIV_B" placeholder="ex.: 10.10.3.15" autocomplete="off"></label>
+      <label>IPv6 do nó B
+        <input type="text" data-ficha="IPV6_B" placeholder="ex.: 2600:1f18:57c5:7102::d4" autocomplete="off"></label>
       <label>IPv4 público do nó E
         <input type="text" data-ficha="IP_PUB_E" placeholder="ex.: 3.94.120.55" autocomplete="off"></label>
       <label>IPv6 do nó E
         <input type="text" data-ficha="IPV6_E" placeholder="ex.: 2600:1f18:2b4a:9800::c3" autocomplete="off"></label>
+      <label>Tabela de rotas privada
+        <input type="text" data-ficha="RT_PRIV" placeholder="ex.: rtb-0f9e3960c3ed8eb3b" autocomplete="off"></label>
+      <label>Grupo de segurança dos nós
+        <input type="text" data-ficha="SG_NOS" placeholder="ex.: sg-0c76ec85d0c274cfe" autocomplete="off"></label>
+      <label>Gateway de internet da sd-vpc
+        <input type="text" data-ficha="IGW" placeholder="ex.: igw-01ec2886dc93736cf" autocomplete="off"></label>
+      <label>Gateway somente de saída
+        <input type="text" data-ficha="EIGW" placeholder="ex.: eigw-0696ffed1b8db603e" autocomplete="off"></label>
+      <label>NAT gateway
+        <input type="text" data-ficha="NAT" placeholder="ex.: nat-088f833ea1c149e54" autocomplete="off"></label>
     </div>
-    <p class="saida">A cada nova sessão do Sandbox os endereços mudam. Volte aqui e atualize.</p>
+    <p class="saida">A cada nova sessão do Sandbox tudo isto muda. Rode o script de novo e cole
+o bloco novo aqui.</p>
   </section>
 
   <!-- ============================================================
@@ -283,7 +334,7 @@
     <h2><span class="step-num is-accent">▦</span><span>Diagrama de arquitetura de nuvem</span></h2>
 
     <p>
-      Os passos 2 a 6 criam duas redes e três máquinas. Vale ver antes o desenho do que vai
+      O script do passo 2 cria duas redes e quatro máquinas. Vale ver antes o desenho do que vai
       existir no fim, porque é mais fácil reconhecer cada peça na tela do console depois de
       tê-la visto no lugar. Olhe para as <strong>setas dos três dispositivos de borda</strong>,
       que é onde mora o argumento da prática. O gateway de internet tem duas, uma entrando e
@@ -294,7 +345,7 @@
       <div class="diagrama-rolagem">
         <svg id="diagrama-pratica-03-infra" class="fig-pratica-03-infra" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 740" role="img" aria-labelledby="pratica-03-infra-titulo pratica-03-infra-desc">
 <title id="pratica-03-infra-titulo">A rede da Prática 03 na AWS</title>
-<desc id="pratica-03-infra-desc">Duas VPCs na região us-east-1. À esquerda, a sd-vpc que o aluno cria, com o bloco 10.10.0.0/16 e um /56 de IPv6 da Amazon, dividida em três sub-redes. A sd-publica-a, na zona us-east-1a, hospeda o nó P, que é o bastião. A sd-privada-a, na mesma zona, hospeda o nó A, que não tem endereço IPv4 público. A sd-privada-b, na zona us-east-1b, nasce sem nenhum nó e compartilha a tabela de rotas da outra sub-rede privada. Na borda da sd-vpc estão os três dispositivos de saída. O gateway de internet tem uma seta entrando e outra saindo. O NAT gateway tem só uma seta, que sai da sub-rede privada e segue para o gateway de internet, e ele traduz o endereço. O gateway somente de saída também tem só uma seta, que sai, e não traduz nada. À direita, a VPC padrão da conta, que ganhou um bloco IPv6 no passo 2 e hospeda o nó E, o observador de fora, com o gateway de internet que ela já trazia pronto.</desc>
+<desc id="pratica-03-infra-desc">Duas VPCs na região us-east-1. À esquerda, a sd-vpc que o aluno cria, com o bloco 10.10.0.0/16 e um /56 de IPv6 da Amazon, dividida em três sub-redes. A sd-publica-a, na zona us-east-1a, hospeda o nó P, que é o bastião. A sd-privada-a, na mesma zona, hospeda o nó A, que não tem endereço IPv4 público. A sd-privada-b, na zona us-east-1b, hospeda o nó B, também sem endereço IPv4 público, e compartilha com a sd-privada-a a mesma tabela de rotas. Na borda da sd-vpc estão os três dispositivos de saída. O gateway de internet tem uma seta entrando e outra saindo. O NAT gateway tem só uma seta, que sai da sub-rede privada e segue para o gateway de internet, e ele traduz o endereço. O gateway somente de saída também tem só uma seta, que sai, e não traduz nada. À direita, a VPC padrão da conta, que ganhou um bloco IPv6 no passo 2 e hospeda o nó E, o observador de fora, com o gateway de internet que ela já trazia pronto.</desc>
 <style>
   .fig-pratica-03-infra{--diag-fundo:var(--color-bg-elevated,#ffffff);
        --diag-texto:var(--color-text,#16202e);
@@ -436,8 +487,14 @@
 <rect x="1110" y="336" width="170" height="29" class="faixa"/>
 <text x="1195.0" y="355" class="rotulo-faixa" text-anchor="middle">serviço :8080</text>
 <text x="1195.0" y="383" class="rotulo-endereco" text-anchor="middle">IPv4 público e IPv6</text>
-<text x="892" y="510" class="rotulo" text-anchor="middle">nenhum nó aqui</text>
-<text x="892" y="530" class="rotulo-endereco" text-anchor="middle">e a mesma rt-privada</text>
+<rect x="892" y="440" width="170" height="150" class="instancia"/>
+<use href="#pratica-03-infra-ic-Res_Amazon-EC2_Instance_48" x="953.0" y="454" width="48" height="48"/>
+<text x="977.0" y="528" class="rotulo-instancia" text-anchor="middle">nó B</text>
+<text x="977.0" y="546" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="892" y="561" width="170" height="29" class="faixa"/>
+<text x="977.0" y="580" class="rotulo-faixa" text-anchor="middle">serviço :8080</text>
+<text x="977.0" y="608" class="rotulo-endereco" text-anchor="middle">IPv4 privado e IPv6, SEM IPv4 público</text>
+<text x="892" y="560" class="rotulo-endereco" text-anchor="middle">outra zona, e a mesma rt-privada</text>
 <use href="#pratica-03-infra-ic-Res_User_48_Light" x="60" y="40" width="48" height="48" class="so-claro"/>
 <use href="#pratica-03-infra-ic-Res_User_48_Dark" x="60" y="40" width="48" height="48" class="so-escuro"/>
 <text x="84" y="106" class="rotulo" text-anchor="middle">Aluno</text>
@@ -465,13 +522,13 @@
 <text x="280" y="658" class="rotulo-seta" text-anchor="end">só IPv6, e não traduz nada</text>
 <path d="M 400 580 L 312 580" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
 <path d="M 268 580 L 150 580" class="seta" marker-end="url(#pratica-03-infra-ponta)"/>
-<text x="210" y="570" class="rotulo-seta" text-anchor="middle">para a internet</text>
+<text x="210" y="570" class="rotulo-seta" text-anchor="middle">para a Internet</text>
 <use href="#pratica-03-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" x="1173" y="648" width="44" height="44"/>
 <text x="1195" y="640" class="rotulo-seta" text-anchor="middle">gateway de internet</text>
 </svg>
       </div>
       <figcaption>
-        A rede depois dos passos 2 a 6. Dois compromissos do desenho ficam declarados aqui. O
+        A rede depois do passo 2. Dois compromissos do desenho ficam declarados aqui. O
         NAT gateway aparece na borda, junto dos outros dois, para a comparação caber num
         olhar, mas ele mora mesmo é dentro da <code>sd-publica-a</code>. E o ícone do gateway
         somente de saída é o do gateway de internet, porque a AWS não publica um ícone próprio
@@ -480,19 +537,22 @@
     </figure>
 
     <p>
-      Repare em duas ausências. A <code>sd-privada-b</code> nasce <strong>vazia</strong>, e
-      não é esquecimento. Ela existe para você ver a mesma tabela de rotas servindo a duas
-      sub-redes, que é o argumento de que tabela e sub-rede são objetos diferentes. E o nó A
-      não tem endereço IPv4 público, embora tenha um endereço IPv6 tão único no mundo quanto o
-      dos outros dois. Essa assimetria é o que o experimento 1 explora.
+      Repare em duas coisas que parecem detalhe e não são. A primeira é que a
+      <code>sd-privada-b</code> está em <strong>outra zona de disponibilidade</strong>, sozinha,
+      e mesmo assim divide a tabela de rotas com a <code>sd-privada-a</code>. Isso mostra de uma
+      vez que tabela e sub-rede são objetos diferentes, e é também a única variável do
+      experimento 3. A segunda é que o nó A e o nó B <strong>não têm endereço IPv4
+      público</strong>, embora tenham um endereço IPv6 tão único no mundo quanto o dos outros
+      dois. Essa assimetria é o que o experimento 1 explora.
     </p>
 
     <p>
       O nó E mora fora da <code>sd-vpc</code> de propósito. Dentro de uma VPC a rota
-      <code>local</code> liga todas as sub-redes umas às outras sem passar por gateway nenhum,
-      então <strong>nenhum nó de dentro consegue bancar o papel de internet</strong> para
-      testar o nó A. Por isso o observador de fora nasce na VPC padrão da conta, que já vem
-      com sub-redes e gateway prontos e à qual você só vai acrescentar um bloco IPv6.
+      <code>local</code> liga todas as sub-redes umas às outras sem passar por nenhum gateway,
+      então <strong>nenhum nó interno pode representar um observador da Internet</strong> para
+      testar o nó A. Por isso o observador de fora nasce na VPC padrão da conta, que já vem com
+      sub-redes e com um gateway de internet pendurado, e à qual o script vai acrescentar um
+      bloco IPv6 e as duas rotas que faltavam.
     </p>
   </section>
 
@@ -500,7 +560,7 @@
        Passo 1
        ============================================================ -->
   <section class="lab-step" id="passo-1">
-    <h2><span class="step-num">1</span><span>Abrir o laboratório, preparar a chave e olhar o seu próprio IPv6</span><span class="step-time">6 min</span></h2>
+    <h2><span class="step-num">1</span><span>Abrir o laboratório, preparar a chave e conferir a ferramenta</span><span class="step-time">8 min</span></h2>
 
     <ol>
       <li>No curso da AWS Academy, abra o laboratório <strong>Sandbox</strong> e clique em
@@ -508,18 +568,21 @@
       <li>Clique em <strong>AWS</strong> para abrir o console em outra aba. Confira no canto
         superior direito que a região é <strong>N. Virginia (us-east-1)</strong>.</li>
       <li>De volta à aba do laboratório, clique em <strong>Details</strong> e depois em
-        <strong>Show</strong>. Na janela que abre, clique em <strong>Download PEM</strong> e
-        salve o arquivo <code>labsuser.pem</code>. A extensão vem de <em>privacy-enhanced
-        mail</em> (PEM), um formato antigo de correio seguro que sobreviveu como jeito padrão
-        de guardar chaves em texto.</li>
+        <strong>Show</strong>. Nessa janela estão as duas coisas que você vai usar hoje. Clique
+        em <strong>Download PEM</strong> e salve o arquivo <code>labsuser.pem</code>. A extensão
+        vem de <em>privacy-enhanced mail</em> (PEM), um formato antigo de correio seguro que
+        sobreviveu como jeito padrão de guardar chaves em texto. <strong>Deixe essa janela
+        aberta</strong>, porque o passo 2 vai pedir a credencial que está nela.</li>
     </ol>
 
     <div class="callout is-warn">
-      <p class="callout-title">⚠ A chave vale só para esta sessão</p>
+      <p class="callout-title">⚠ A chave e a credencial valem só para esta sessão</p>
       <p>
-        Toda vez que você iniciar o laboratório de novo, baixe o <code>labsuser.pem</code>
-        outra vez e descarte o antigo. Tentar entrar com a chave da sessão passada dá
-        <code>Permission denied (publickey)</code>, e essa mensagem não explica nada.
+        Toda vez que você iniciar o laboratório de novo, baixe o <code>labsuser.pem</code> outra
+        vez e descarte o antigo. Tentar entrar com a chave da sessão passada dá
+        <code>Permission denied (publickey)</code>, e essa mensagem não explica nada. A
+        credencial da linha de comando expira junto, e o sintoma dela é diferente, porque os
+        comandos passam a falhar com <code>ExpiredToken</code>.
       </p>
     </div>
 
@@ -552,12 +615,72 @@ chmod 400 labsuser.pem</pre>
       </div>
     </div>
 
-    <h3>1.1 O seu computador tem IPv6?</h3>
+    <h3>1.1 O AWS CLI responde nesta máquina?</h3>
     <p>
-      Vale saber, e a resposta muda o que você pode tentar no fim da prática. O comando abaixo
-      pede uma página a um endereço que só responde por IPv6. Se a sua operadora entrega IPv6
-      até a sua casa, ele responde <code>200</code>. Se não entrega, ele falha, e essa falha é
-      o caso comum no Brasil residencial. <strong>Nenhum passo depende disso.</strong>
+      Toda a construção de hoje sai da sua própria máquina, e quem fala com a AWS é o
+      <strong>AWS CLI</strong>. O comando abaixo é o mesmo nos dois sistemas e responde em um
+      segundo.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws --version</pre>
+    </div>
+    <p class="saida">aws-cli/2.34.17 Python/3.14.3 Windows/11 exe/AMD64
+
+Os numeros mudam. O que importa e a linha comecar com aws-cli/2.</p>
+
+    <p>
+      Se o comando responder que não foi encontrado, instale o AWS CLI agora, pela
+      <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+      target="_blank" rel="noopener">página de instalação da própria AWS</a>, que traz o passo a
+      passo dos três sistemas. Leva perto de dois minutos e <strong>não exige privilégio de
+      administrador</strong>, porque os três sistemas oferecem uma instalação só para o seu
+      usuário. Feche e reabra o terminal depois, para o comando entrar no caminho de busca.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Por que instalar em vez de usar o terminal do navegador</p>
+      <p>
+        O console da AWS oferece um terminal pronto, já autenticado, e as práticas anteriores o
+        usariam sem pensar. Aqui a escolha é outra de propósito. A ferramenta na sua máquina,
+        lendo uma credencial de um arquivo seu, é exatamente o arranjo que o
+        <strong>Terraform</strong> vai usar mais adiante na disciplina, e chegar lá com esse
+        caminho já montado poupa uma aula inteira. É também o arranjo do trabalho de verdade,
+        onde ninguém provisiona infraestrutura por uma aba de navegador.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c1">
+      <label for="p03-c1"><strong>Checkpoint 1.</strong> O laboratório está verde, o console
+        está em us-east-1, tenho o <code>labsuser.pem</code> desta sessão com a permissão
+        ajustada, a janela <em>Details</em> está aberta e o <code>aws --version</code>
+        responde.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 2
+       ============================================================ -->
+  <section class="lab-step" id="passo-2">
+    <h2><span class="step-num">2</span><span>Rodar o script que monta o ambiente</span><span class="step-time">6 min</span></h2>
+
+    <p>
+      Um script constrói a rede inteira e sobe os quatro nós. Ele não esconde nada, porque
+      anuncia cada passo antes de executá-lo e explica por que aquilo está sendo feito. Leia a
+      tela enquanto ele roda, já que o passo 3 vai pedir que você reconheça no console o que
+      passou por ali.
+    </p>
+
+    <p>
+      Baixe o arquivo do seu sistema pelo botão <strong>baixar</strong>, no bloco correspondente
+      mais abaixo, e salve-o na mesma pasta <code>Downloads</code> onde está a chave. Depois
+      execute a linha a seguir.
     </p>
 
     <div class="so-win">
@@ -567,9 +690,14 @@ chmod 400 labsuser.pem</pre>
           <span class="espaco"></span>
           <button type="button" class="btn-copiar" data-copiar>copiar</button>
         </div>
-        <pre>curl.exe -6 -s -m 6 -o NUL -w "resposta %{http_code}`n" https://ipv6.google.com</pre>
+        <pre>cd $env:USERPROFILE\Downloads
+powershell -ExecutionPolicy Bypass -File .\preparar-ambiente.ps1</pre>
       </div>
+      <p class="saida">O -ExecutionPolicy Bypass e necessario, e nao e uma gambiarra. O Windows
+recusa por padrao executar script baixado da Internet, e essa opcao vale
+so para esta execucao, sem mudar nenhuma configuracao da maquina.</p>
     </div>
+
     <div class="so-unix">
       <div class="cmd">
         <div class="cmd-head">
@@ -577,607 +705,1055 @@ chmod 400 labsuser.pem</pre>
           <span class="espaco"></span>
           <button type="button" class="btn-copiar" data-copiar>copiar</button>
         </div>
-        <pre>curl -6 -s -m 6 -o /dev/null -w "resposta %{http_code}\n" https://ipv6.google.com</pre>
+        <pre>cd ~/Downloads
+bash preparar-ambiente.sh</pre>
       </div>
     </div>
-    <p class="saida">Com IPv6 em casa:  resposta 200
-Sem IPv6 em casa:  curl: (7) Couldn't connect to server   ou   resposta 000</p>
 
-    <h3>1.2 Abrir a CloudShell</h3>
+    <h3>2.1 A credencial, que ele vai pedir</h3>
     <p>
-      É de dentro dela que a rede vai nascer. No console, clique no ícone de terminal na barra
-      de cima, à direita da caixa de busca. A primeira abertura leva perto de meio minuto.
-      Confirme que ela está autenticada e na região certa.
+      Nos primeiros segundos o script pergunta três valores. Eles estão na janela
+      <strong>Details</strong> que você deixou aberta no passo 1, no bloco de credencial do AWS
+      CLI. Copie um de cada vez. Os dois últimos não aparecem enquanto você cola, do mesmo jeito
+      que uma senha no terminal, e isso é proposital.
     </p>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        <span class="onde">o que o script pergunta</span>
       </div>
-      <pre>aws ec2 describe-availability-zones --query 'AvailabilityZones[].ZoneName' --output text</pre>
+      <pre>  aws_access_key_id     : ASIA...
+  aws_secret_access_key :
+  aws_session_token     :</pre>
     </div>
-    <p class="saida">us-east-1a	us-east-1b	us-east-1c	us-east-1d	us-east-1e	us-east-1f</p>
 
-    <div class="check">
-      <input type="checkbox" id="p03-c1">
-      <label for="p03-c1"><strong>Checkpoint 1.</strong> O laboratório está verde, o console
-        está em us-east-1, tenho o <code>labsuser.pem</code> desta sessão com a permissão
-        ajustada e a CloudShell responde.</label>
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ O que essa credencial é, e o que ela não é</p>
+      <p>
+        Ela é <strong>temporária</strong> e morre com a sessão do laboratório, que é por isso
+        que existe um terceiro valor, o <em>token</em> de sessão. O script a grava num perfil
+        chamado <code>sd-sandbox</code>, com nome próprio para não passar por cima da
+        configuração de quem já usa a AWS nesta máquina, e o passo 7 apaga esse perfil no fim.
+      </p>
+      <p>
+        Guarde o hábito e não o caso particular. <strong>Credencial não se versiona, não se
+        cola em conversa e não fica em máquina compartilhada.</strong> Numa conta de verdade o
+        caminho nem seria esse, e sim um papel assumido ou o
+        <code>aws configure sso</code>, justamente para não existir chave parada em disco.
+      </p>
     </div>
-  </section>
 
-  <!-- ============================================================
-       Passo 2
-       ============================================================ -->
-  <section class="lab-step" id="passo-2">
-    <h2><span class="step-num">2</span><span>Conhecer as redes que já existem e dar IPv6 à VPC padrão</span><span class="step-time">9 min</span></h2>
-
+    <h3>2.2 O que ele faz, e quanto tempo leva</h3>
     <p>
-      A conta do Sandbox não abre vazia. Ela já traz <strong>três VPCs</strong>, duas delas
-      criadas pelo próprio ambiente para hospedar o editor de código e um bastião. Ler as três
-      antes de escrever a primeira tabela de rotas sua custa cinco minutos e economiza a
-      confusão de olhar para uma tabela sem ter visto nenhuma outra.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>aws ec2 describe-vpcs \
-  --query 'Vpcs[].{VPC:VpcId,CIDR:CidrBlock,Padrao:IsDefault,Nome:Tags[?Key==`Name`]|[0].Value}' \
-  --output table</pre>
-    </div>
-    <p class="saida">A colher no piloto. Espere uma tabela com três linhas. Uma tem
-Padrao igual a True e bloco 172.31.0.0/16, e as outras duas, com nome, usam
-o MESMO bloco 10.0.0.0/16 sem que isso seja problema, porque VPCs isoladas
-não se enxergam.</p>
-
-    <p>
-      Agora as tabelas de rotas de todas elas, uma de cada vez. O laço abaixo pede o
-      identificador de cada tabela e, para cada uma, imprime as linhas com o destino IPv4, o
-      destino IPv6 e o próximo salto.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>for RT in $(aws ec2 describe-route-tables --query 'RouteTables[].RouteTableId' --output text); do
-  echo "== tabela $RT"
-  aws ec2 describe-route-tables --route-table-ids $RT \
-    --query 'RouteTables[0].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,GatewayId]' \
-    --output text
-done</pre>
-    </div>
-    <p class="saida">A colher no piloto. Cada bloco traz uma linha por rota, com três
-colunas. Onde a coluna não se aplica, o texto é None.</p>
-
-    <p>
-      Três coisas para olhar, e todas as três voltam mais tarde. A primeira é que
-      <strong>toda tabela tem uma linha que ninguém escreveu</strong>, com o bloco da própria
-      VPC e o próximo salto <code>local</code>. É ela que liga as sub-redes de uma VPC umas às
-      outras, e ela não sai da tabela nem por decreto. A segunda é a linha
-      <code>0.0.0.0/0</code> apontando para um
-      <button type="button" class="nota-termo" data-nota="proximo-salto-e-rota-padrao">gateway
-      de internet</button>, que existe em duas das três redes. A terceira é uma ausência,
-      porque <strong>nenhuma das três tem linha de IPv6</strong>, e a coluna do meio vem
-      <code>None</code> em todas elas.
-    </p>
-
-    <h3>2.1 Dar um bloco IPv6 à VPC padrão</h3>
-    <p>
-      O nó E, o observador de fora, vai nascer na VPC padrão no passo 6, e precisa de um
-      endereço IPv6 para conversar com o nó A. A VPC padrão não tem bloco IPv6, então o
-      primeiro trabalho é pedir um à Amazon. O comando abaixo guarda o identificador da rede
-      numa variável e pede o bloco.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>VPC_PADRAO=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
-  --query 'Vpcs[0].VpcId' --output text)
-aws ec2 associate-vpc-cidr-block --vpc-id $VPC_PADRAO --amazon-provided-ipv6-cidr-block \
-  --query 'Ipv6CidrBlockAssociation.Ipv6CidrBlockState.State' --output text</pre>
-    </div>
-    <p class="saida">associating</p>
-
-    <p>
-      A associação leva poucos segundos. Leia o bloco que chegou, recorte um pedaço dele para
-      a sub-rede da zona <code>us-east-1a</code> e escreva a rota de saída IPv6 na tabela que
-      já existe.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>IPV6_PADRAO=$(aws ec2 describe-vpcs --vpc-ids $VPC_PADRAO \
-  --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
-SUB_PADRAO=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC_PADRAO \
-  Name=availability-zone,Values=us-east-1a --query 'Subnets[0].SubnetId' --output text)
-aws ec2 associate-subnet-cidr-block --subnet-id $SUB_PADRAO \
-  --ipv6-cidr-block ${IPV6_PADRAO%00::/56}00::/64 \
-  --query 'Ipv6CidrBlockAssociation.Ipv6CidrBlock' --output text</pre>
-    </div>
-    <p class="saida">A colher no piloto. Espere um prefixo /64 com o mesmo começo do /56 da
-VPC, na forma 2600:1f18:xxxx:xx00::/64.</p>
-
-    <p>
-      O recorte acima é a lição de <em>roteamento entre domínios sem classes</em> aparecendo
-      em forma de comando. A Amazon entrega sempre um
-      <button type="button" class="nota-termo" data-nota="prefixo-ipv6-56-e-64">bloco
-      /56</button> por VPC, e a sub-rede leva um /64. A diferença de oito bits é o que sobra
-      para você numerar sub-redes, e é exatamente por isso que o comando troca o último par
-      hexadecimal do prefixo em vez de inventar um endereço novo.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>RT_PADRAO=$(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_PADRAO \
-  --query 'RouteTables[0].RouteTableId' --output text)
-IGW_PADRAO=$(aws ec2 describe-internet-gateways \
-  --filters Name=attachment.vpc-id,Values=$VPC_PADRAO \
-  --query 'InternetGateways[0].InternetGatewayId' --output text)
-aws ec2 create-route --route-table-id $RT_PADRAO --destination-ipv6-cidr-block ::/0 \
-  --gateway-id $IGW_PADRAO</pre>
-    </div>
-    <p class="saida">{
-    "Return": true
-}</p>
-
-    <p>
-      A rede que era só IPv4 acabou de virar rede de <strong>pilha dupla</strong>, e custou
-      três comandos. Repare que o gateway de internet não mudou. O mesmo dispositivo que já
-      atendia o IPv4 passou a atender o IPv6, porque ele sempre soube atender os dois e
-      ninguém tinha escrito a linha que o mandava fazer isso.
-    </p>
-
-    <div class="check">
-      <input type="checkbox" id="p03-c2">
-      <label for="p03-c2"><strong>Checkpoint 2.</strong> Li as tabelas de rotas das três redes
-        prontas, a VPC padrão tem um bloco /56, a sub-rede de us-east-1a tem um /64 e a tabela
-        dela tem a linha <code>::/0</code>.</label>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Passo 3
-       ============================================================ -->
-  <section class="lab-step" id="passo-3">
-    <h2><span class="step-num">3</span><span>Criar a VPC e recortar as três sub-redes</span><span class="step-time">11 min</span></h2>
-
-    <p>
-      Agora a rede da prática. Ela nasce com dois blocos, um escolhido por você e outro
-      entregue pela Amazon. O bloco IPv4 é <code>10.10.0.0/16</code>, e a escolha não é gosto
-      pessoal. As duas redes que o ambiente já trouxe usam <code>10.0.0.0/16</code> as duas, e
-      um terceiro <code>10.0.0.0/16</code> na tela deixaria a linha <code>local</code> da sua
-      tabela de rotas sem força de exemplo justamente no passo em que ela precisa tê-la.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>VPC=$(aws ec2 create-vpc --cidr-block 10.10.0.0/16 --amazon-provided-ipv6-cidr-block \
-  --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=sd-vpc}]' \
-  --query 'Vpc.VpcId' --output text)
-aws ec2 wait vpc-available --vpc-ids $VPC
-PREFIXO=$(aws ec2 describe-vpcs --vpc-ids $VPC \
-  --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
-RAIZ=${PREFIXO%00::/56}
-echo "VPC $VPC    prefixo $PREFIXO    raiz $RAIZ"</pre>
-    </div>
-    <p class="saida">A colher no piloto. Uma linha só, com o identificador da VPC na forma
-vpc- seguida de dezessete caracteres, o prefixo /56 e a raiz dele sem os
-dois últimos dígitos.</p>
-
-    <p>
-      A variável <code>RAIZ</code> é o prefixo sem o último par hexadecimal, e é dela que as
-      três sub-redes vão sair. Onde o IPv4 muda o terceiro octeto, de <code>10.10.1</code> para
-      <code>10.10.2</code> e <code>10.10.3</code>, o IPv6 muda o par final do quarto grupo, de
-      <code>00</code> para <code>01</code> e <code>02</code>. É a mesma ideia nos dois
-      protocolos, com quantidades muito diferentes de endereço dentro de cada pedaço.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>criar_subrede () {
-  aws ec2 create-subnet --vpc-id $VPC --availability-zone "$4" \
-    --cidr-block "$2" --ipv6-cidr-block "$3" \
-    --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=$1}]" \
-    --query 'Subnet.SubnetId' --output text
-}
-SUB_PUB=$(criar_subrede    sd-publica-a 10.10.1.0/24 ${RAIZ}00::/64 us-east-1a)
-SUB_PRIV_A=$(criar_subrede sd-privada-a 10.10.2.0/24 ${RAIZ}01::/64 us-east-1a)
-SUB_PRIV_B=$(criar_subrede sd-privada-b 10.10.3.0/24 ${RAIZ}02::/64 us-east-1b)
-aws ec2 modify-subnet-attribute --subnet-id $SUB_PUB --map-public-ip-on-launch
-echo "publica $SUB_PUB    privada A $SUB_PRIV_A    privada B $SUB_PRIV_B"</pre>
-    </div>
-    <p class="saida">A colher no piloto. Uma linha com os três identificadores, na forma
-subnet- seguida de dezessete caracteres.</p>
-
-    <p>
-      A última linha antes do <code>echo</code> liga a atribuição automática de endereço IPv4
-      público na sub-rede pública. Guarde esse detalhe, porque ele volta no experimento 2. O
-      que faz uma sub-rede ser pública é a tabela de rotas, e não esse atributo. O atributo só
-      decide se a instância que nascer ali <strong>ganha um endereço público</strong>, o que é
-      assunto diferente e igualmente necessário.
-    </p>
-
-    <p>
-      Confira o resultado no console, porque é mais fácil de ler do que qualquer saída de
-      terminal. Busque por <strong>VPC</strong>, escolha <strong>Your VPCs</strong>, marque a
-      <code>sd-vpc</code> e abra a aba <strong>Resource map</strong>. O mapa mostra a VPC, as
-      três sub-redes e as tabelas de rotas ligadas a elas. Por enquanto as três sub-redes
-      penduram na mesma tabela, que é a principal, criada junto com a VPC. Isso muda no passo
-      5.
-    </p>
-
-    <div class="check">
-      <input type="checkbox" id="p03-c3">
-      <label for="p03-c3"><strong>Checkpoint 3.</strong> A <code>sd-vpc</code> existe com os
-        dois blocos, as três sub-redes aparecem no mapa de recursos e cada uma tem um /24 e um
-        /64 diferentes.</label>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Passo 4
-       ============================================================ -->
-  <section class="lab-step" id="passo-4">
-    <h2><span class="step-num">4</span><span>Pendurar os três dispositivos de borda</span><span class="step-time">8 min</span></h2>
-
-    <p>
-      A rede tem endereços e não tem porta nenhuma. Nada entra e nada sai. Os três
-      dispositivos a seguir resolvem isso de três maneiras diferentes, e a tabela compara as
-      três antes de você criá-las.
+      São seis passos anunciados na tela, e o conjunto leva perto de cinco minutos. Quase toda
+      a espera é de um recurso só, e o script diz qual quando chega nele.
     </p>
 
     <div class="tabela-rolavel">
       <table class="lab-tabela">
         <thead>
-          <tr><th>Dispositivo</th><th>Atende</th><th>Sentido</th><th>Traduz endereço?</th></tr>
+          <tr><th>Passo do script</th><th>O que ele cria</th></tr>
         </thead>
         <tbody>
-          <tr><td>Gateway de internet</td><td>IPv4 e IPv6</td><td>Entra e sai</td><td>Não</td></tr>
-          <tr><td>NAT gateway</td><td>Só IPv4</td><td>Só sai</td><td><strong>Sim</strong></td></tr>
-          <tr><td>Gateway somente de saída</td><td>Só IPv6</td><td>Só sai</td><td>Não</td></tr>
+          <tr><td>1</td><td>Uma foto da conta antes de qualquer mudança, guardada em arquivo</td></tr>
+          <tr><td>2</td><td>Bloco IPv6 e as duas rotas de saída na VPC padrão</td></tr>
+          <tr><td>3</td><td>A <code>sd-vpc</code> e as três sub-redes, recortadas do bloco da Amazon</td></tr>
+          <tr><td>4</td><td>Os três dispositivos de borda, cronometrados para comparação</td></tr>
+          <tr><td>5</td><td>As duas tabelas de rotas, que são o coração da prática</td></tr>
+          <tr><td>6</td><td>Os dois grupos de segurança e os quatro nós</td></tr>
         </tbody>
       </table>
     </div>
 
+    <h3>2.3 Preencher a ficha</h3>
     <p>
-      A ordem dos comandos tem um motivo. O <strong>NAT gateway leva perto de dois
-      minutos</strong> para ficar disponível, e é o único dos três que faz esperar, então ele
-      é criado cedo e a espera acontece enquanto você escreve as tabelas de rotas no passo 5.
-      Ele também é o único que custa dinheiro e o único que exige um endereço reservado.
+      A última coisa que o script imprime é um bloco de doze linhas com os endereços e os
+      identificadores. Copie o bloco inteiro e cole na
+      <a href="#ficha">ficha do ambiente</a>, no campo que aceita colar de uma vez. A partir daí
+      todo comando desta página aparece com os seus valores reais, e o botão <em>copiar</em>
+      entrega o comando pronto.
     </p>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        <span class="onde">a forma do bloco final</span>
       </div>
-      <pre>IGW=$(aws ec2 create-internet-gateway \
+      <pre>IP_PUB_P=100.55.64.71
+IPV6_P=2600:1f18:6c43:3d00:57a5:7fe7:f3f6:694b
+IP_PRIV_A=10.10.2.79
+IPV6_A=2600:1f18:6c43:3d01:f679:ccfa:ac91:4d19
+IPV6_B=2600:1f18:6c43:3d02:45a5:cb69:bb3:75c7
+IP_PUB_E=3.93.68.149
+IPV6_E=2600:1f18:fb:8000:d151:3267:fc87:cd74
+RT_PRIV=rtb-0f9e3960c3ed8eb3b
+SG_NOS=sg-0c76ec85d0c274cfe
+IGW=igw-01ec2886dc93736cf
+EIGW=eigw-0696ffed1b8db603e
+NAT=nat-088f833ea1c149e54</pre>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c2">
+      <label for="p03-c2"><strong>Checkpoint 2.</strong> O script terminou dizendo que o
+        ambiente está de pé, e a ficha do ambiente está preenchida com as doze
+        linhas.</label>
+    </div>
+
+    <details class="lab-detalhe">
+      <summary>Ver o script antes de executá-lo (recomendado)</summary>
+      <p>
+        Ler o que você vai executar é um hábito, não um exagero. Os dois arquivos abaixo fazem
+        exatamente as mesmas coisas, com as mesmas mensagens, e existem em duas linguagens
+        porque o Windows e o Unix falam shells diferentes. <strong>Guarde essa duplicação</strong>,
+        porque ela é o argumento do Terraform mais adiante na disciplina, onde um arquivo só
+        descreve a mesma infraestrutura e roda igual nos três sistemas.
+      </p>
+      <div class="so-win">
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="onde">preparar-ambiente.ps1</span>
+            <span class="espaco"></span>
+            <button type="button" class="btn-copiar" data-baixar="preparar-ps1"
+              data-arquivo="preparar-ambiente.ps1">baixar</button>
+            <button type="button" class="btn-copiar" data-copiar="preparar-ps1">copiar</button>
+          </div>
+          <pre id="preparar-ps1"># ============================================================
+# Pratica 03 (Topico 3) - Sistemas Distribuidos - IFSP Salto
+# Prepara o ambiente inteiro da pratica, no seu computador.
+#
+# Este e o script do Windows. No macOS e no Linux use o gemeo
+# preparar-ambiente.sh, que faz exatamente as mesmas coisas.
+#
+#   powershell -ExecutionPolicy Bypass -File .\preparar-ambiente.ps1
+#   powershell -ExecutionPolicy Bypass -File .\preparar-ambiente.ps1 -Apagar
+#
+# O -ExecutionPolicy Bypass e necessario porque o Windows recusa,
+# por padrao, executar script baixado da Internet. Ele vale so
+# para esta execucao e nao muda nenhuma configuracao da maquina.
+#
+# Ele constroi a rede que os experimentos usam, sobe os quatro nos
+# e imprime no fim o bloco que voce cola na ficha do roteiro.
+# Cada passo e anunciado antes de acontecer, para voce acompanhar
+# o que esta sendo feito e por que.
+#
+# Sem acentos de proposito, porque o mesmo texto precisa sair
+# legivel no terminal do macOS, no do Linux e no console do
+# Windows, que nem sempre concordam sobre codificacao.
+# ============================================================
+param([switch]$Apagar)
+
+$ErrorActionPreference = 'Continue'
+
+$BASE_PUBLICADA = 'https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03'
+$PERFIL = if ($env:SD_PERFIL) { $env:SD_PERFIL } else { 'sd-sandbox' }
+$REGIAO = 'us-east-1'
+$ZONA_A = 'us-east-1a'
+$ZONA_B = 'us-east-1b'
+$CIDR_VPC = '10.10.0.0/16'
+$PASTA = Join-Path $env:USERPROFILE 'sd-pratica03'
+$FICHA = Join-Path $PASTA 'identificadores.env'
+$ANTES = Join-Path $PASTA 'antes.txt'
+
+function titulo($t) {
+  Write-Host ''
+  Write-Host '============================================================'
+  Write-Host " $t"
+  Write-Host '============================================================'
+}
+function diz($t)   { Write-Host "  $t" }
+function morre($t) { Write-Host ''; Write-Host "FALHA: $t"; exit 1 }
+function segundos($t0) { [int]((Get-Date) - $t0).TotalSeconds }
+
+function texto-secreto($rotulo) {
+  $seguro = Read-Host -Prompt $rotulo -AsSecureString
+  $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($seguro)
+  try   { [Runtime.InteropServices.Marshal]::PtrToStringAuto($ptr) }
+  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+}
+
+# ------------------------------------------------------------
+# Credencial. Dois caminhos, nesta ordem.
+# 1. O perfil sd-sandbox ja existe e ainda vale.
+# 2. O perfil nao existe ou venceu, entao perguntamos os tres valores.
+#
+# O perfil tem nome proprio de proposito. Escrever em [default]
+# passaria por cima da configuracao de quem ja usa a AWS na
+# propria maquina, e apagar depois ficaria impossivel de fazer
+# sem risco.
+# ------------------------------------------------------------
+function autenticado {
+  aws sts get-caller-identity --output text 2&gt;$null | Out-Null
+  return ($LASTEXITCODE -eq 0)
+}
+
+function perguntar-credencial {
+  diz 'Abra o laboratorio no AWS Academy, clique em Details e depois em Show.'
+  diz 'Copie os tres valores do bloco de credencial, um de cada vez.'
+  diz 'Os dois ultimos sao secretos, entao nao aparecem enquanto voce cola.'
+  diz 'Isso e proposital, e e o mesmo comportamento de uma senha no terminal.'
+  Write-Host ''
+
+  $chave   = Read-Host '  aws_access_key_id    '
+  $segredo = texto-secreto '  aws_secret_access_key'
+  $token   = texto-secreto '  aws_session_token    '
+
+  if (-not $chave)   { morre 'o aws_access_key_id veio vazio' }
+  if (-not $segredo) { morre 'o aws_secret_access_key veio vazio' }
+  if (-not $token)   { morre 'o aws_session_token veio vazio. Ele e obrigatorio, porque a credencial do laboratorio e temporaria' }
+
+  aws configure set aws_access_key_id     $chave   --profile $PERFIL
+  aws configure set aws_secret_access_key $segredo --profile $PERFIL
+  aws configure set aws_session_token     $token   --profile $PERFIL
+  aws configure set region                $REGIAO  --profile $PERFIL
+  Remove-Variable chave, segredo, token
+  diz "credencial gravada no perfil $PERFIL"
+}
+
+function preparar-credencial {
+  if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
+    morre 'o AWS CLI nao esta instalado. Instale por https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html e rode este script de novo'
+  }
+  diz "AWS CLI encontrado, versao $(aws --version)"
+
+  $env:AWS_PROFILE = $PERFIL
+  $env:AWS_DEFAULT_REGION = $REGIAO
+  if (autenticado) {
+    diz "usando o perfil $PERFIL, que ja estava configurado e ainda vale"
+  } else {
+    titulo 'credencial do laboratorio'
+    perguntar-credencial
+    if (-not (autenticado)) {
+      morre 'a credencial nao foi aceita. O caso comum e ela ter expirado, e a solucao e clicar em Start Lab de novo e copiar os tres valores outra vez'
+    }
+  }
+
+  $conta = aws sts get-caller-identity --query Account --output text
+  $arn = aws sts get-caller-identity --query Arn --output text
+  diz "identidade confirmada: $arn"
+  diz "conta terminada em $($conta.Substring(8)), regiao $REGIAO"
+}
+
+function id-da-vpc {
+  $v = aws ec2 describe-vpcs --filters Name=tag:Name,Values=sd-vpc Name=state,Values=available --query 'Vpcs[0].VpcId' --output text 2&gt;$null
+  return $v
+}
+
+# ------------------------------------------------------------
+# Apagar, na ordem inversa da criacao
+# ------------------------------------------------------------
+function apagar-tudo {
+  titulo 'apagando o que a pratica 03 criou'
+  $VPC = id-da-vpc
+  $VPC_APAGADA = $true
+
+  diz 'encerrando as instancias'
+  $IDS = aws ec2 describe-instances --filters 'Name=tag:Name,Values=sd-P,sd-A,sd-B,sd-E' 'Name=instance-state-name,Values=pending,running,stopped' --query 'Reservations[].Instances[].InstanceId' --output text
+  if ($IDS) {
+    $lista = $IDS.Split()
+    aws ec2 terminate-instances --instance-ids $lista | Out-Null
+    diz 'esperando as quatro encerrarem, perto de um minuto'
+    aws ec2 wait instance-terminated --instance-ids $lista
+  }
+
+  if ($VPC -and $VPC -ne 'None') {
+    $VPC_APAGADA = $false
+    $NAT = aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$VPC" --query 'NatGateways[?State==`available` || State==`pending`].NatGatewayId' --output text
+    if ($NAT) {
+      # O endereco elastico e lido do proprio NAT gateway. Varrer os
+      # enderecos livres da conta soltaria tambem os do Vocareum.
+      $EIP = aws ec2 describe-nat-gateways --nat-gateway-ids $NAT --query 'NatGateways[0].NatGatewayAddresses[0].AllocationId' --output text
+      aws ec2 delete-nat-gateway --nat-gateway-id $NAT | Out-Null
+      diz 'esperando o NAT gateway sumir, que e o passo mais demorado'
+      aws ec2 wait nat-gateway-deleted --nat-gateway-ids $NAT
+      if ($EIP -ne 'None') { aws ec2 release-address --allocation-id $EIP }
+      diz 'NAT gateway apagado e endereco elastico devolvido'
+    }
+    $todos = aws ec2 describe-egress-only-internet-gateways --query 'EgressOnlyInternetGateways[].EgressOnlyInternetGatewayId' --output text
+    if ($todos) {
+      foreach ($EIGW in $todos.Split()) {
+        $dono = aws ec2 describe-egress-only-internet-gateways --egress-only-internet-gateway-ids $EIGW --query 'EgressOnlyInternetGateways[0].Attachments[0].VpcId' --output text
+        if ($dono -eq $VPC) { aws ec2 delete-egress-only-internet-gateway --egress-only-internet-gateway-id $EIGW | Out-Null }
+      }
+    }
+    $IGW = aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC" --query 'InternetGateways[0].InternetGatewayId' --output text
+    if ($IGW -and $IGW -ne 'None') {
+      aws ec2 detach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC
+      aws ec2 delete-internet-gateway --internet-gateway-id $IGW
+    }
+    $subs = aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC" --query 'Subnets[].SubnetId' --output text
+    if ($subs) { foreach ($s in $subs.Split()) { aws ec2 delete-subnet --subnet-id $s } }
+    # A tabela principal nao se apaga, e some junto com a VPC. Tentar e
+    # ignorar o erro sai mais barato que descobrir qual das duas ela e.
+    $rts = aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC" --query 'RouteTables[].RouteTableId' --output text
+    if ($rts) { foreach ($r in $rts.Split()) { aws ec2 delete-route-table --route-table-id $r 2&gt;$null | Out-Null } }
+    $sgs = aws ec2 describe-security-groups --filters 'Name=group-name,Values=sd-nos' --query 'SecurityGroups[].GroupId' --output text
+    if ($sgs) { foreach ($g in $sgs.Split()) { aws ec2 delete-security-group --group-id $g 2&gt;$null | Out-Null } }
+    aws ec2 delete-vpc --vpc-id $VPC
+    if ($LASTEXITCODE -eq 0) {
+      $VPC_APAGADA = $true
+      diz 'sd-vpc apagada com tudo que havia dentro'
+    } else {
+      diz 'limpeza incompleta, a AWS recusou apagar a sd-vpc'
+      diz 'recursos que ainda sobraram na VPC:'
+      aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=$VPC" --query 'NetworkInterfaces[].{Interface:NetworkInterfaceId,Descricao:Description,Estado:Status}' --output table
+      aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC" --query 'Subnets[].{Subrede:SubnetId,Nome:Tags[?Key==`Name`]|[0].Value}' --output table
+      aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC" --query 'RouteTables[].{Tabela:RouteTableId,Nome:Tags[?Key==`Name`]|[0].Value}' --output table
+    }
+  }
+
+  # A varredura final por nome independe da existencia da sd-vpc. O grupo
+  # sd-observador mora na VPC padrao, e o sd-eip pode sobreviver sem o NAT.
+  $sgsRestantes = aws ec2 describe-security-groups --filters 'Name=group-name,Values=sd-observador' --query 'SecurityGroups[].GroupId' --output text
+  if ($sgsRestantes) { foreach ($g in $sgsRestantes.Split()) { aws ec2 delete-security-group --group-id $g 2&gt;$null | Out-Null } }
+  $eipsRestantes = aws ec2 describe-addresses --filters 'Name=tag:Name,Values=sd-eip' --query 'Addresses[].AllocationId' --output text
+  if ($eipsRestantes) { foreach ($e in $eipsRestantes.Split()) { aws ec2 release-address --allocation-id $e 2&gt;$null | Out-Null } }
+
+  Set-Location $env:USERPROFILE
+  if (Test-Path $PASTA) { Remove-Item -Recurse -Force $PASTA }
+
+  # A credencial sai por ultimo, e sai mesmo. Ela e temporaria e ja nao
+  # serve, mas deixar credencial em maquina de laboratorio compartilhada
+  # e o tipo de habito que custa caro fora da sala de aula.
+  if ($env:AWS_PROFILE -eq $PERFIL) {
+    aws configure set aws_access_key_id     '' --profile $PERFIL 2&gt;$null
+    aws configure set aws_secret_access_key '' --profile $PERFIL 2&gt;$null
+    aws configure set aws_session_token     '' --profile $PERFIL 2&gt;$null
+    diz "credencial do perfil $PERFIL apagada deste computador"
+  }
+
+  if (-not $VPC_APAGADA) {
+    titulo 'limpeza incompleta'
+    diz 'Espere 30 segundos e confira os recursos listados antes de tentar de novo.'
+    exit 1
+  }
+
+  titulo 'pronto'
+  diz 'A VPC padrao continua com o bloco IPv6 e as duas rotas do passo 2.'
+  diz 'Elas somem sozinhas quando voce clicar em End Lab.'
+  exit 0
+}
+
+# ------------------------------------------------------------
+# Comeco
+# ------------------------------------------------------------
+titulo 'Pratica 03: preparando o ambiente'
+diz 'Sistemas Distribuidos, IFSP Campus Salto'
+Write-Host ''
+preparar-credencial
+
+if ($Apagar) { apagar-tudo }
+
+$existente = id-da-vpc
+if ($existente -and $existente -ne 'None') {
+  morre "ja existe uma sd-vpc nesta conta ($existente). Rode com -Apagar antes, para nao ficar com duas redes iguais e nenhuma explicacao"
+}
+
+if (-not (Test-Path $PASTA)) { New-Item -ItemType Directory $PASTA | Out-Null }
+Set-Location $PASTA
+
+# ------------------------------------------------------------
+titulo 'passo 1 de 6: a foto da conta antes de qualquer mudanca'
+diz 'Guardo aqui como a conta esta agora, porque daqui a pouco ela muda.'
+diz 'O roteiro pede que voce leia esta foto, e ela fica em:'
+diz $ANTES
+$foto = @()
+$foto += "Foto da conta em $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), antes de a pratica 03 criar qualquer coisa."
+$foto += ''
+$foto += '== as redes que ja existem =='
+$foto += (aws ec2 describe-vpcs --query 'Vpcs[].{VPC:VpcId,CIDR:CidrBlock,Padrao:IsDefault,IPv6:Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock,Nome:Tags[?Key==`Name`]|[0].Value}' --output table)
+$foto += ''
+$foto += '== as tabelas de rotas delas, com a contagem de linhas IPv6 =='
+$foto += (aws ec2 describe-route-tables --query 'sort_by(RouteTables[].{Tabela:RouteTableId,VPC:VpcId,Rotas:length(Routes),LinhasIPv6:length(Routes[?DestinationIpv6CidrBlock!=null])},&amp;VPC)' --output table)
+$foto += ''
+$foto += '== e as rotas, uma a uma =='
+foreach ($RT in (aws ec2 describe-route-tables --query 'RouteTables[].RouteTableId' --output text).Split()) {
+  $foto += "-- tabela $RT"
+  $foto += (aws ec2 describe-route-tables --route-table-ids $RT --query 'RouteTables[0].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,GatewayId,Origin]' --output text)
+}
+[IO.File]::WriteAllLines($ANTES, [string[]]$foto, (New-Object System.Text.UTF8Encoding($false)))
+diz 'foto guardada'
+
+# ------------------------------------------------------------
+titulo 'passo 2 de 6: dando saida e IPv6 a VPC padrao'
+diz 'O no E, o observador de fora, vai nascer nesta rede.'
+diz 'Ela precisa de duas coisas que nao tem, um bloco IPv6 e um caminho'
+diz 'de saida. O gateway de internet dela ja existe, e nao ha rota ate ele.'
+$VPC_PADRAO = aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text
+$IPV6_PADRAO = aws ec2 describe-vpcs --vpc-ids $VPC_PADRAO --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text
+if ($IPV6_PADRAO -eq 'None') {
+  diz 'pedindo um bloco /56 a Amazon'
+  $t0 = Get-Date
+  aws ec2 associate-vpc-cidr-block --vpc-id $VPC_PADRAO --amazon-provided-ipv6-cidr-block | Out-Null
+  if ($LASTEXITCODE -ne 0) { morre 'nao consegui pedir o bloco IPv6' }
+  $tentativas = 0
+  while ($IPV6_PADRAO -eq 'None' -and $tentativas -lt 30) {
+    Start-Sleep -Seconds 2
+    $tentativas++
+    $IPV6_PADRAO = aws ec2 describe-vpcs --vpc-ids $VPC_PADRAO --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text
+  }
+  diz "bloco $IPV6_PADRAO entregue em $(segundos $t0) s"
+}
+$SUB_PADRAO = aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_PADRAO" "Name=availability-zone,Values=$ZONA_A" --query 'Subnets[0].SubnetId' --output text
+$jaTem = aws ec2 describe-subnets --subnet-ids $SUB_PADRAO --query 'Subnets[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text
+$RAIZ_PADRAO = $IPV6_PADRAO -replace '00::/56$', ''
+if ($jaTem -eq 'None') {
+  aws ec2 associate-subnet-cidr-block --subnet-id $SUB_PADRAO --ipv6-cidr-block ($RAIZ_PADRAO + '00::/64') | Out-Null
+  diz "sub-rede de $ZONA_A recortada em $($RAIZ_PADRAO)00::/64"
+}
+$RT_PADRAO = aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_PADRAO" --query 'RouteTables[0].RouteTableId' --output text
+$IGW_PADRAO = aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC_PADRAO" --query 'InternetGateways[0].InternetGatewayId' --output text
+# As DUAS rotas, e a de IPv4 nao e redundancia. A tabela da VPC padrao do
+# Sandbox vem com a linha local e nada mais, mesmo tendo um gateway de
+# internet ligado a ela. Verificado em duas sessoes reais em 2026-08-23,
+# em contas diferentes.
+aws ec2 create-route --route-table-id $RT_PADRAO --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_PADRAO 2&gt;$null | Out-Null
+aws ec2 create-route --route-table-id $RT_PADRAO --destination-ipv6-cidr-block ::/0 --gateway-id $IGW_PADRAO 2&gt;$null | Out-Null
+diz "as duas rotas de saida escritas, as duas para $IGW_PADRAO"
+diz 'a rede que nao falava com ninguem virou rede de pilha dupla'
+
+# ------------------------------------------------------------
+titulo 'passo 3 de 6: a sd-vpc e as tres sub-redes'
+diz "O bloco IPv4 e $CIDR_VPC, escolhido para nao repetir o 10.0.0.0/16"
+diz 'que as duas redes do laboratorio ja usam.'
+$VPC = aws ec2 create-vpc --cidr-block $CIDR_VPC --amazon-provided-ipv6-cidr-block --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=sd-vpc}]' --query 'Vpc.VpcId' --output text
+if ($LASTEXITCODE -ne 0) { morre 'nao consegui criar a VPC' }
+aws ec2 wait vpc-available --vpc-ids $VPC
+$PREFIXO = aws ec2 describe-vpcs --vpc-ids $VPC --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text
+$RAIZ = $PREFIXO -replace '00::/56$', ''
+diz "sd-vpc criada como $VPC, com o prefixo $PREFIXO"
+Write-Host ''
+diz 'Agora o recorte, que e o CIDR do topico 3 virando comando.'
+diz 'A Amazon entrega um /56 por VPC e cada sub-rede leva um /64. Os oito'
+diz 'bits de diferenca sao o que sobra para voce numerar as sub-redes, e e'
+diz 'por isso que o que muda abaixo e o par final, de 00 para 01 e 02.'
+Write-Host ''
+Write-Host ('    {0,-14} {1,-16} {2}' -f 'sd-publica-a', '10.10.1.0/24', ($RAIZ + '00::/64'))
+Write-Host ('    {0,-14} {1,-16} {2}' -f 'sd-privada-a', '10.10.2.0/24', ($RAIZ + '01::/64'))
+Write-Host ('    {0,-14} {1,-16} {2}' -f 'sd-privada-b', '10.10.3.0/24', ($RAIZ + '02::/64'))
+Write-Host ''
+
+function criar-subrede($nome, $cidr4, $cidr6, $zona) {
+  aws ec2 create-subnet --vpc-id $VPC --cidr-block $cidr4 --ipv6-cidr-block $cidr6 --availability-zone $zona --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=$nome}]" --query 'Subnet.SubnetId' --output text
+}
+$SUB_PUB    = criar-subrede 'sd-publica-a' '10.10.1.0/24' ($RAIZ + '00::/64') $ZONA_A
+$SUB_PRIV_A = criar-subrede 'sd-privada-a' '10.10.2.0/24' ($RAIZ + '01::/64') $ZONA_A
+$SUB_PRIV_B = criar-subrede 'sd-privada-b' '10.10.3.0/24' ($RAIZ + '02::/64') $ZONA_B
+aws ec2 modify-subnet-attribute --subnet-id $SUB_PUB --map-public-ip-on-launch
+diz "as tres criadas. Repare que a sd-privada-b fica em $ZONA_B, e as"
+diz "outras duas em $ZONA_A. Essa escolha e medida no experimento 3."
+
+# ------------------------------------------------------------
+titulo 'passo 4 de 6: os tres dispositivos de borda'
+diz 'A rede tem enderecos e nao tem nenhuma porta aberta. Nada entra e nada sai.'
+$IGW = aws ec2 create-internet-gateway --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=sd-igw}]' --query 'InternetGateway.InternetGatewayId' --output text
+aws ec2 attach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC
+diz "gateway de internet $IGW criado e ligado. Ele atende os dois"
+diz 'protocolos e deixa passar conversa iniciada dos dois lados.'
+Write-Host ''
+
+$tNat = Get-Date
+$EIP = aws ec2 allocate-address --domain vpc --tag-specifications 'ResourceType=elastic-ip,Tags=[{Key=Name,Value=sd-eip}]' --query AllocationId --output text
+$NAT = aws ec2 create-nat-gateway --subnet-id $SUB_PUB --allocation-id $EIP --tag-specifications 'ResourceType=natgateway,Tags=[{Key=Name,Value=sd-nat}]' --query 'NatGateway.NatGatewayId' --output text
+diz "NAT gateway $NAT pedido. Ele so atende IPv4, precisou de um endereco"
+diz "elastico reservado ($EIP), precisa morar numa sub-rede publica e leva"
+diz 'um tempo para ficar de pe. Seguimos enquanto ele nasce.'
+Write-Host ''
+
+$tEigw = Get-Date
+$EIGW = aws ec2 create-egress-only-internet-gateway --vpc-id $VPC --query 'EgressOnlyInternetGateway.EgressOnlyInternetGatewayId' --output text
+$segEigw = segundos $tEigw
+diz "gateway somente de saida $EIGW pronto em $segEigw s."
+diz 'Ele e o equivalente do NAT gateway para IPv6, e so no resultado.'
+diz 'Nasceu sem endereco, sem sub-rede e sem espera, porque nao traduz nada.'
+
+# ------------------------------------------------------------
+titulo 'passo 5 de 6: as duas tabelas de rotas'
+diz 'Aqui mora o argumento da pratica. As duas tabelas tem a mesma forma'
+diz 'e diferem em duas linhas, e sao essas duas linhas que decidem qual'
+diz 'sub-rede e publica e qual e privada.'
+$RT_PUB = aws ec2 create-route-table --vpc-id $VPC --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=rt-publica}]' --query 'RouteTable.RouteTableId' --output text
+aws ec2 create-route --route-table-id $RT_PUB --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW | Out-Null
+aws ec2 create-route --route-table-id $RT_PUB --destination-ipv6-cidr-block ::/0 --gateway-id $IGW | Out-Null
+aws ec2 associate-route-table --route-table-id $RT_PUB --subnet-id $SUB_PUB | Out-Null
+diz "rt-publica $RT_PUB, com os dois destinos de fora indo para o mesmo"
+diz 'gateway de internet, e associada a sd-publica-a'
+
+$RT_PRIV = aws ec2 create-route-table --vpc-id $VPC --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=rt-privada}]' --query 'RouteTable.RouteTableId' --output text
+aws ec2 create-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 --egress-only-internet-gateway-id $EIGW | Out-Null
+aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_A | Out-Null
+aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_B | Out-Null
+diz "rt-privada $RT_PRIV, servindo as DUAS sub-redes privadas ao mesmo"
+diz 'tempo, o que mostra que tabela e sub-rede sao objetos diferentes'
+Write-Host ''
+
+diz 'esperando o NAT gateway, que e a unica espera desta preparacao'
+aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT
+if ($LASTEXITCODE -ne 0) { morre 'o NAT gateway nao ficou disponivel' }
+$segNat = segundos $tNat
+aws ec2 create-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 --nat-gateway-id $NAT | Out-Null
+diz "NAT gateway disponivel em $segNat s, e a rota IPv4 da rt-privada escrita"
+Write-Host ''
+diz 'Guarde a comparacao, porque ela e conteudo:'
+diz "  gateway somente de saida  $segEigw s   sem endereco, sem sub-rede, nao traduz"
+diz "  NAT gateway               $segNat s   com endereco, numa sub-rede, traduz"
+diz 'Os dois entregam o mesmo resultado pratico, por mecanismos opostos.'
+
+# ------------------------------------------------------------
+titulo 'passo 6 de 6: os quatro nos'
+diz 'Baixando o mesmo script de inicializacao que os quatro vao executar.'
+try {
+  Invoke-WebRequest -UseBasicParsing -Uri "$BASE_PUBLICADA/setup.sh" -OutFile (Join-Path $PASTA 'setup.sh') -ErrorAction Stop
+} catch {
+  morre "nao consegui baixar o setup.sh de $BASE_PUBLICADA"
+}
+diz "setup.sh baixado, $((Get-Item (Join-Path $PASTA 'setup.sh')).Length) bytes"
+
+function abrir-portas($sg) {
+  # Onde a VPC tem bloco IPv6, a regra de saida padrao ja cobre ::/0 e a AWS
+  # responde InvalidPermission.Duplicate. Pedimos assim mesmo, para o script
+  # servir tambem a uma rede so de IPv4, e engolimos a recusa.
+  aws ec2 authorize-security-group-egress --group-id $sg --ip-permissions 'IpProtocol=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' 2&gt;$null | Out-Null
+  aws ec2 authorize-security-group-ingress --group-id $sg --ip-permissions `
+    'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]' `
+    'IpProtocol=tcp,FromPort=8080,ToPort=8080,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]' `
+    'IpProtocol=icmp,FromPort=-1,ToPort=-1,IpRanges=[{CidrIp=0.0.0.0/0}]' `
+    'IpProtocol=icmpv6,FromPort=-1,ToPort=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' | Out-Null
+}
+$SG_NOS = aws ec2 create-security-group --group-name sd-nos --description 'Pratica 03 nos da sd-vpc' --vpc-id $VPC --query GroupId --output text
+$SG_E   = aws ec2 create-security-group --group-name sd-observador --description 'Pratica 03 observador na VPC padrao' --vpc-id $VPC_PADRAO --query GroupId --output text
+abrir-portas $SG_NOS
+abrir-portas $SG_E
+diz 'dois grupos de seguranca criados, os dois com a entrada aberta de'
+diz 'proposito, para o experimento 1 medir roteamento e nao filtro'
+
+$AMI = aws ec2 describe-images --owners amazon --filters 'Name=name,Values=al2023-ami-2023*-x86_64' 'Name=state,Values=available' --query 'sort_by(Images,&amp;CreationDate)[-1].ImageId' --output text
+diz "imagem mais recente do Amazon Linux 2023: $AMI"
+
+function subir-no($nome, $sub, $sg, $publico) {
+  aws ec2 run-instances --image-id $AMI --instance-type t3.micro --key-name vockey `
+    --subnet-id $sub --security-group-ids $sg --ipv6-address-count 1 $publico `
+    --iam-instance-profile Name=LabInstanceProfile `
+    --metadata-options 'InstanceMetadataTags=enabled' `
+    --user-data file://setup.sh `
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$nome}]" `
+    --query 'Instances[0].InstanceId' --output text
+}
+Write-Host ''
+diz 'sd-P na sd-publica-a, com endereco publico. Serve como porta de entrada.'
+$NO_P = subir-no 'sd-P' $SUB_PUB    $SG_NOS '--associate-public-ip-address'
+diz 'sd-E na VPC padrao, com endereco publico. Atua como observador de fora.'
+$NO_E = subir-no 'sd-E' $SUB_PADRAO $SG_E   '--associate-public-ip-address'
+diz 'sd-A na sd-privada-a, SEM endereco publico. E o alvo dos experimentos.'
+$NO_A = subir-no 'sd-A' $SUB_PRIV_A $SG_NOS '--no-associate-public-ip-address'
+diz "sd-B na sd-privada-b, em $ZONA_B. So ele muda de zona, e e essa a"
+diz 'unica diferenca que o experimento 3 vai medir contra o sd-A.'
+$NO_B = subir-no 'sd-B' $SUB_PRIV_B $SG_NOS '--no-associate-public-ip-address'
+Write-Host ''
+diz 'os quatro sobem em paralelo, entao a espera e a de um so'
+aws ec2 wait instance-running --instance-ids $NO_P $NO_E $NO_A $NO_B
+
+function endereco($id, $campo) {
+  aws ec2 describe-instances --instance-ids $id --query "Reservations[0].Instances[0].$campo" --output text
+}
+
+$linhas = @(
+  "IP_PUB_P=$(endereco $NO_P 'PublicIpAddress')",
+  "IPV6_P=$(endereco $NO_P 'Ipv6Address')",
+  "IP_PRIV_A=$(endereco $NO_A 'PrivateIpAddress')",
+  "IPV6_A=$(endereco $NO_A 'Ipv6Address')",
+  "IP_PRIV_B=$(endereco $NO_B 'PrivateIpAddress')",
+  "IPV6_B=$(endereco $NO_B 'Ipv6Address')",
+  "IP_PUB_E=$(endereco $NO_E 'PublicIpAddress')",
+  "IPV6_E=$(endereco $NO_E 'Ipv6Address')",
+  "RT_PRIV=$RT_PRIV",
+  "SG_NOS=$SG_NOS",
+  "IGW=$IGW",
+  "EIGW=$EIGW",
+  "NAT=$NAT"
+)
+[IO.File]::WriteAllLines($FICHA, [string[]]$linhas, (New-Object System.Text.UTF8Encoding($false)))
+
+titulo 'pronto. O ambiente da pratica 03 esta de pe'
+diz 'Copie o bloco abaixo inteiro e cole na ficha do roteiro, no campo'
+diz 'que diz colar de uma vez. Ele tambem ficou guardado em:'
+diz $FICHA
+Write-Host ''
+$linhas | ForEach-Object { Write-Host $_ }
+Write-Host ''
+diz 'As instancias ainda estao instalando as ferramentas de rede.'
+diz 'Espere um minuto antes de abrir as janelas do experimento 1.'
+diz "A foto da conta antes das mudancas esta em $ANTES."</pre>
+        </div>
+      </div>
+      <div class="so-unix">
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="onde">preparar-ambiente.sh</span>
+            <span class="espaco"></span>
+            <button type="button" class="btn-copiar" data-baixar="preparar-sh"
+              data-arquivo="preparar-ambiente.sh">baixar</button>
+            <button type="button" class="btn-copiar" data-copiar="preparar-sh">copiar</button>
+          </div>
+          <pre id="preparar-sh">#!/bin/bash
+# ============================================================
+# Pratica 03 (Topico 3) - Sistemas Distribuidos - IFSP Salto
+# Prepara o ambiente inteiro da pratica, no seu computador.
+#
+# Este e o script do macOS e do Linux. No Windows use o gemeo
+# preparar-ambiente.ps1, que faz exatamente as mesmas coisas.
+#
+#   bash preparar-ambiente.sh            monta tudo
+#   bash preparar-ambiente.sh --apagar   apaga tudo o que ele criou
+#
+# Ele constroi a rede que os experimentos usam, sobe os quatro nos
+# e imprime no fim o bloco que voce cola na ficha do roteiro.
+# Cada passo e anunciado antes de acontecer, para voce acompanhar
+# o que esta sendo feito e por que.
+#
+# Sem acentos de proposito, porque o mesmo texto precisa sair
+# legivel no terminal do macOS, no do Linux e no console do
+# Windows, que nem sempre concordam sobre codificacao.
+# ============================================================
+set -u
+
+BASE_PUBLICADA="https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03"
+PERFIL="${SD_PERFIL:-sd-sandbox}"
+REGIAO="us-east-1"
+ZONA_A="us-east-1a"
+ZONA_B="us-east-1b"
+CIDR_VPC="10.10.0.0/16"
+PASTA="$HOME/sd-pratica03"
+FICHA="$PASTA/identificadores.env"
+ANTES="$PASTA/antes.txt"
+
+titulo() { printf '\n============================================================\n %s\n============================================================\n' "$1"; }
+diz()    { printf '  %s\n' "$1"; }
+morre()  { printf '\nFALHA: %s\n' "$1" &gt;&amp;2; exit 1; }
+agora()  { date +%s; }
+
+# ------------------------------------------------------------
+# Credencial. Dois caminhos, nesta ordem.
+# 1. O perfil sd-sandbox ja existe e ainda vale.
+# 2. O perfil nao existe ou venceu, entao perguntamos os tres valores.
+#
+# O perfil tem nome proprio de proposito. Escrever em [default]
+# passaria por cima da configuracao de quem ja usa a AWS na
+# propria maquina, e apagar depois ficaria impossivel de fazer
+# sem risco.
+# ------------------------------------------------------------
+autenticado() {
+  aws sts get-caller-identity --output text &gt;/dev/null 2&gt;&amp;1
+}
+
+perguntar_credencial() {
+  diz "Abra o laboratorio no AWS Academy, clique em Details e depois em Show."
+  diz "Copie os tres valores do bloco de credencial, um de cada vez."
+  diz "Os dois ultimos sao secretos, entao nao aparecem enquanto voce cola."
+  diz "Isso e proposital, e e o mesmo comportamento de uma senha no terminal."
+  printf '\n'
+
+  printf '  aws_access_key_id     : '
+  read -r CHAVE
+  printf '  aws_secret_access_key : '
+  read -rs SEGREDO; printf '\n'
+  printf '  aws_session_token     : '
+  read -rs TOKEN; printf '\n'
+
+  [ -n "$CHAVE" ]   || morre "o aws_access_key_id veio vazio"
+  [ -n "$SEGREDO" ] || morre "o aws_secret_access_key veio vazio"
+  [ -n "$TOKEN" ]   || morre "o aws_session_token veio vazio. Ele e obrigatorio, porque a credencial do laboratorio e temporaria"
+
+  aws configure set aws_access_key_id     "$CHAVE"   --profile "$PERFIL"
+  aws configure set aws_secret_access_key "$SEGREDO" --profile "$PERFIL"
+  aws configure set aws_session_token     "$TOKEN"   --profile "$PERFIL"
+  aws configure set region                "$REGIAO"  --profile "$PERFIL"
+  unset CHAVE SEGREDO TOKEN
+  diz "credencial gravada no perfil $PERFIL"
+}
+
+preparar_credencial() {
+  command -v aws &gt;/dev/null 2&gt;&amp;1 || morre \
+    "o AWS CLI nao esta instalado. Instale por https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html e rode este script de novo"
+  diz "AWS CLI encontrado, versao $(aws --version 2&gt;&amp;1)"
+
+  export AWS_PROFILE="$PERFIL"
+  export AWS_DEFAULT_REGION="$REGIAO"
+  if autenticado; then
+    diz "usando o perfil $PERFIL, que ja estava configurado e ainda vale"
+  else
+    titulo "credencial do laboratorio"
+    perguntar_credencial
+    autenticado || morre \
+      "a credencial nao foi aceita. O caso comum e ela ter expirado, e a solucao e clicar em Start Lab de novo e copiar os tres valores outra vez"
+  fi
+
+  CONTA=$(aws sts get-caller-identity --query Account --output text)
+  ARN=$(aws sts get-caller-identity --query Arn --output text)
+  diz "identidade confirmada: $ARN"
+  diz "conta terminada em ${CONTA#????????}, regiao $REGIAO"
+}
+
+# ------------------------------------------------------------
+# Apagar, na ordem inversa da criacao
+# ------------------------------------------------------------
+id_da_vpc() {
+  aws ec2 describe-vpcs --filters Name=tag:Name,Values=sd-vpc \
+    Name=state,Values=available --query 'Vpcs[0].VpcId' --output text 2&gt;/dev/null
+}
+
+apagar_tudo() {
+  titulo "apagando o que a pratica 03 criou"
+  VPC=$(id_da_vpc)
+  VPC_APAGADA=1
+
+  diz "encerrando as instancias"
+  IDS=$(aws ec2 describe-instances \
+    --filters "Name=tag:Name,Values=sd-P,sd-A,sd-B,sd-E" \
+              "Name=instance-state-name,Values=pending,running,stopped" \
+    --query 'Reservations[].Instances[].InstanceId' --output text)
+  if [ -n "$IDS" ]; then
+    aws ec2 terminate-instances --instance-ids $IDS &gt;/dev/null
+    diz "esperando as quatro encerrarem, perto de um minuto"
+    aws ec2 wait instance-terminated --instance-ids $IDS
+  fi
+
+  if [ "$VPC" != "None" ] &amp;&amp; [ -n "$VPC" ]; then
+    VPC_APAGADA=0
+    NAT=$(aws ec2 describe-nat-gateways --filter Name=vpc-id,Values=$VPC \
+      --query 'NatGateways[?State==`available` || State==`pending`].NatGatewayId' \
+      --output text)
+    if [ -n "$NAT" ]; then
+      # O endereco elastico e lido do proprio NAT gateway. Varrer os
+      # enderecos livres da conta soltaria tambem os do Vocareum.
+      EIP=$(aws ec2 describe-nat-gateways --nat-gateway-ids $NAT \
+        --query 'NatGateways[0].NatGatewayAddresses[0].AllocationId' --output text)
+      aws ec2 delete-nat-gateway --nat-gateway-id $NAT &gt;/dev/null
+      diz "esperando o NAT gateway sumir, que e o passo mais demorado"
+      aws ec2 wait nat-gateway-deleted --nat-gateway-ids $NAT
+      [ "$EIP" = "None" ] || aws ec2 release-address --allocation-id $EIP
+      diz "NAT gateway apagado e endereco elastico devolvido"
+    fi
+    for EIGW in $(aws ec2 describe-egress-only-internet-gateways \
+        --query 'EgressOnlyInternetGateways[].EgressOnlyInternetGatewayId' \
+        --output text); do
+      DONO=$(aws ec2 describe-egress-only-internet-gateways \
+        --egress-only-internet-gateway-ids $EIGW \
+        --query 'EgressOnlyInternetGateways[0].Attachments[0].VpcId' --output text)
+      [ "$DONO" = "$VPC" ] &amp;&amp; aws ec2 delete-egress-only-internet-gateway \
+        --egress-only-internet-gateway-id $EIGW &gt;/dev/null
+    done
+    IGW=$(aws ec2 describe-internet-gateways \
+      --filters Name=attachment.vpc-id,Values=$VPC \
+      --query 'InternetGateways[0].InternetGatewayId' --output text)
+    if [ "$IGW" != "None" ] &amp;&amp; [ -n "$IGW" ]; then
+      aws ec2 detach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC
+      aws ec2 delete-internet-gateway --internet-gateway-id $IGW
+    fi
+    for SUB in $(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC \
+        --query 'Subnets[].SubnetId' --output text); do
+      aws ec2 delete-subnet --subnet-id $SUB
+    done
+    # A tabela principal nao se apaga, e some junto com a VPC. Tentar e
+    # ignorar o erro sai mais barato que descobrir qual das duas ela e.
+    for RT in $(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC \
+        --query 'RouteTables[].RouteTableId' --output text); do
+      aws ec2 delete-route-table --route-table-id $RT &gt;/dev/null 2&gt;&amp;1
+    done
+    for SG in $(aws ec2 describe-security-groups \
+        --filters Name=group-name,Values=sd-nos \
+        --query 'SecurityGroups[].GroupId' --output text); do
+      aws ec2 delete-security-group --group-id $SG &gt;/dev/null 2&gt;&amp;1
+    done
+    if aws ec2 delete-vpc --vpc-id $VPC; then
+      VPC_APAGADA=1
+      diz "sd-vpc apagada com tudo que havia dentro"
+    else
+      diz "limpeza incompleta, a AWS recusou apagar a sd-vpc"
+      diz "recursos que ainda sobraram na VPC:"
+      aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$VPC \
+        --query 'NetworkInterfaces[].{Interface:NetworkInterfaceId,Descricao:Description,Estado:Status}' \
+        --output table
+      aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC \
+        --query 'Subnets[].{Subrede:SubnetId,Nome:Tags[?Key==`Name`]|[0].Value}' \
+        --output table
+      aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC \
+        --query 'RouteTables[].{Tabela:RouteTableId,Nome:Tags[?Key==`Name`]|[0].Value}' \
+        --output table
+    fi
+  fi
+
+  # A varredura final por nome independe da existencia da sd-vpc. O grupo
+  # sd-observador mora na VPC padrao, e o sd-eip pode sobreviver sem o NAT.
+  for SG in $(aws ec2 describe-security-groups \
+      --filters Name=group-name,Values=sd-observador \
+      --query 'SecurityGroups[].GroupId' --output text); do
+    aws ec2 delete-security-group --group-id $SG &gt;/dev/null 2&gt;&amp;1
+  done
+  for EIP_SOLTO in $(aws ec2 describe-addresses \
+      --filters Name=tag:Name,Values=sd-eip \
+      --query 'Addresses[].AllocationId' --output text); do
+    aws ec2 release-address --allocation-id $EIP_SOLTO &gt;/dev/null 2&gt;&amp;1
+  done
+
+  rm -rf "$PASTA"
+
+  # A credencial sai por ultimo, e sai mesmo. Ela e temporaria e ja nao
+  # serve, mas deixar credencial em maquina de laboratorio compartilhada
+  # e o tipo de habito que custa caro fora da sala de aula.
+  if [ "${AWS_PROFILE:-}" = "$PERFIL" ]; then
+    aws configure set aws_access_key_id     "" --profile "$PERFIL" 2&gt;/dev/null
+    aws configure set aws_secret_access_key "" --profile "$PERFIL" 2&gt;/dev/null
+    aws configure set aws_session_token     "" --profile "$PERFIL" 2&gt;/dev/null
+    diz "credencial do perfil $PERFIL apagada deste computador"
+  fi
+
+  if [ "$VPC_APAGADA" -ne 1 ]; then
+    titulo "limpeza incompleta"
+    diz "Espere 30 segundos e confira os recursos listados antes de tentar de novo."
+    exit 1
+  fi
+
+  titulo "pronto"
+  diz "A VPC padrao continua com o bloco IPv6 e as duas rotas do passo 2."
+  diz "Elas somem sozinhas quando voce clicar em End Lab."
+  exit 0
+}
+
+# ------------------------------------------------------------
+# Comeco
+# ------------------------------------------------------------
+titulo "Pratica 03: preparando o ambiente"
+diz "Sistemas Distribuidos, IFSP Campus Salto"
+printf '\n'
+preparar_credencial
+
+[ "${1:-}" = "--apagar" ] &amp;&amp; apagar_tudo
+
+VPC_EXISTENTE=$(id_da_vpc)
+if [ "$VPC_EXISTENTE" != "None" ] &amp;&amp; [ -n "$VPC_EXISTENTE" ]; then
+  morre "ja existe uma sd-vpc nesta conta ($VPC_EXISTENTE). Rode com --apagar antes, para nao ficar com duas redes iguais e nenhuma explicacao"
+fi
+
+mkdir -p "$PASTA"
+cd "$PASTA" || morre "nao consegui usar a pasta $PASTA"
+
+# ------------------------------------------------------------
+titulo "passo 1 de 6: a foto da conta antes de qualquer mudanca"
+diz "Guardo aqui como a conta esta agora, porque daqui a pouco ela muda."
+diz "O roteiro pede que voce leia esta foto, e ela fica em:"
+diz "$ANTES"
+{
+  echo "Foto da conta em $(date '+%Y-%m-%d %H:%M:%S'), antes de a pratica 03 criar qualquer coisa."
+  echo
+  echo "== as redes que ja existem =="
+  aws ec2 describe-vpcs \
+    --query 'Vpcs[].{VPC:VpcId,CIDR:CidrBlock,Padrao:IsDefault,IPv6:Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock,Nome:Tags[?Key==`Name`]|[0].Value}' \
+    --output table
+  echo
+  echo "== as tabelas de rotas delas, com a contagem de linhas IPv6 =="
+  aws ec2 describe-route-tables \
+    --query 'sort_by(RouteTables[].{Tabela:RouteTableId,VPC:VpcId,Rotas:length(Routes),LinhasIPv6:length(Routes[?DestinationIpv6CidrBlock!=null])},&amp;VPC)' \
+    --output table
+  echo
+  echo "== e as rotas, uma a uma =="
+  for RT in $(aws ec2 describe-route-tables --query 'RouteTables[].RouteTableId' --output text); do
+    echo "-- tabela $RT"
+    aws ec2 describe-route-tables --route-table-ids $RT \
+      --query 'RouteTables[0].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,GatewayId,Origin]' \
+      --output text
+  done
+} &gt; "$ANTES" 2&gt;&amp;1
+diz "foto guardada"
+
+# ------------------------------------------------------------
+titulo "passo 2 de 6: dando saida e IPv6 a VPC padrao"
+diz "O no E, o observador de fora, vai nascer nesta rede."
+diz "Ela precisa de duas coisas que nao tem, um bloco IPv6 e um caminho"
+diz "de saida. O gateway de internet dela ja existe, e nao ha rota ate ele."
+VPC_PADRAO=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
+  --query 'Vpcs[0].VpcId' --output text)
+IPV6_PADRAO=$(aws ec2 describe-vpcs --vpc-ids $VPC_PADRAO \
+  --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
+if [ "$IPV6_PADRAO" = "None" ]; then
+  diz "pedindo um bloco /56 a Amazon"
+  T0=$(agora)
+  aws ec2 associate-vpc-cidr-block --vpc-id $VPC_PADRAO \
+    --amazon-provided-ipv6-cidr-block &gt;/dev/null || morre "nao consegui pedir o bloco IPv6"
+  TENTATIVAS=0
+  while [ "$IPV6_PADRAO" = "None" ] &amp;&amp; [ $TENTATIVAS -lt 30 ]; do
+    sleep 2
+    TENTATIVAS=$((TENTATIVAS + 1))
+    IPV6_PADRAO=$(aws ec2 describe-vpcs --vpc-ids $VPC_PADRAO \
+      --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
+  done
+  diz "bloco $IPV6_PADRAO entregue em $(( $(agora) - T0 )) s"
+fi
+SUB_PADRAO=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC_PADRAO \
+  Name=availability-zone,Values=$ZONA_A --query 'Subnets[0].SubnetId' --output text)
+JA_TEM=$(aws ec2 describe-subnets --subnet-ids $SUB_PADRAO \
+  --query 'Subnets[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
+if [ "$JA_TEM" = "None" ]; then
+  aws ec2 associate-subnet-cidr-block --subnet-id $SUB_PADRAO \
+    --ipv6-cidr-block "${IPV6_PADRAO%00::/56}00::/64" &gt;/dev/null
+  diz "sub-rede de $ZONA_A recortada em ${IPV6_PADRAO%00::/56}00::/64"
+fi
+RT_PADRAO=$(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_PADRAO \
+  --query 'RouteTables[0].RouteTableId' --output text)
+IGW_PADRAO=$(aws ec2 describe-internet-gateways \
+  --filters Name=attachment.vpc-id,Values=$VPC_PADRAO \
+  --query 'InternetGateways[0].InternetGatewayId' --output text)
+# As DUAS rotas, e a de IPv4 nao e redundancia. A tabela da VPC padrao do
+# Sandbox vem com a linha local e nada mais, mesmo tendo um gateway de
+# internet ligado a ela. Verificado em duas sessoes reais em 2026-08-23,
+# em contas diferentes.
+aws ec2 create-route --route-table-id $RT_PADRAO --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id $IGW_PADRAO &gt;/dev/null 2&gt;&amp;1
+aws ec2 create-route --route-table-id $RT_PADRAO --destination-ipv6-cidr-block ::/0 \
+  --gateway-id $IGW_PADRAO &gt;/dev/null 2&gt;&amp;1
+diz "as duas rotas de saida escritas, as duas para $IGW_PADRAO"
+diz "a rede que nao falava com ninguem virou rede de pilha dupla"
+
+# ------------------------------------------------------------
+titulo "passo 3 de 6: a sd-vpc e as tres sub-redes"
+diz "O bloco IPv4 e $CIDR_VPC, escolhido para nao repetir o 10.0.0.0/16"
+diz "que as duas redes do laboratorio ja usam."
+VPC=$(aws ec2 create-vpc --cidr-block $CIDR_VPC --amazon-provided-ipv6-cidr-block \
+  --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=sd-vpc}]' \
+  --query 'Vpc.VpcId' --output text) || morre "nao consegui criar a VPC"
+aws ec2 wait vpc-available --vpc-ids $VPC
+PREFIXO=$(aws ec2 describe-vpcs --vpc-ids $VPC \
+  --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' --output text)
+RAIZ=${PREFIXO%00::/56}
+diz "sd-vpc criada como $VPC, com o prefixo $PREFIXO"
+printf '\n'
+diz "Agora o recorte, que e o CIDR do topico 3 virando comando."
+diz "A Amazon entrega um /56 por VPC e cada sub-rede leva um /64. Os oito"
+diz "bits de diferenca sao o que sobra para voce numerar as sub-redes, e e"
+diz "por isso que o que muda abaixo e o par final, de 00 para 01 e 02."
+printf '\n'
+printf '    %-14s %-16s %s\n' "sd-publica-a" "10.10.1.0/24" "${RAIZ}00::/64"
+printf '    %-14s %-16s %s\n' "sd-privada-a" "10.10.2.0/24" "${RAIZ}01::/64"
+printf '    %-14s %-16s %s\n' "sd-privada-b" "10.10.3.0/24" "${RAIZ}02::/64"
+printf '\n'
+
+criar_subrede() {
+  aws ec2 create-subnet --vpc-id $VPC --cidr-block "$2" \
+    --ipv6-cidr-block "$3" --availability-zone "$4" \
+    --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=$1}]" \
+    --query 'Subnet.SubnetId' --output text
+}
+SUB_PUB=$(criar_subrede sd-publica-a 10.10.1.0/24 "${RAIZ}00::/64" $ZONA_A)
+SUB_PRIV_A=$(criar_subrede sd-privada-a 10.10.2.0/24 "${RAIZ}01::/64" $ZONA_A)
+SUB_PRIV_B=$(criar_subrede sd-privada-b 10.10.3.0/24 "${RAIZ}02::/64" $ZONA_B)
+aws ec2 modify-subnet-attribute --subnet-id $SUB_PUB --map-public-ip-on-launch
+diz "as tres criadas. Repare que a sd-privada-b fica em $ZONA_B, e as"
+diz "outras duas em $ZONA_A. Essa escolha e medida no experimento 3."
+
+# ------------------------------------------------------------
+titulo "passo 4 de 6: os tres dispositivos de borda"
+diz "A rede tem enderecos e nao tem nenhuma porta aberta. Nada entra e nada sai."
+IGW=$(aws ec2 create-internet-gateway \
   --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=sd-igw}]' \
   --query 'InternetGateway.InternetGatewayId' --output text)
 aws ec2 attach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC
+diz "gateway de internet $IGW criado e ligado. Ele atende os dois"
+diz "protocolos e deixa passar conversa iniciada dos dois lados."
+printf '\n'
 
-EIP=$(aws ec2 allocate-address --domain vpc --query AllocationId --output text)
+T_NAT=$(agora)
+EIP=$(aws ec2 allocate-address --domain vpc \
+  --tag-specifications 'ResourceType=elastic-ip,Tags=[{Key=Name,Value=sd-eip}]' \
+  --query AllocationId --output text)
 NAT=$(aws ec2 create-nat-gateway --subnet-id $SUB_PUB --allocation-id $EIP \
   --tag-specifications 'ResourceType=natgateway,Tags=[{Key=Name,Value=sd-nat}]' \
   --query 'NatGateway.NatGatewayId' --output text)
+diz "NAT gateway $NAT pedido. Ele so atende IPv4, precisou de um endereco"
+diz "elastico reservado ($EIP), precisa morar numa sub-rede publica e leva"
+diz "um tempo para ficar de pe. Seguimos enquanto ele nasce."
+printf '\n'
 
+T_EIGW=$(agora)
 EIGW=$(aws ec2 create-egress-only-internet-gateway --vpc-id $VPC \
   --query 'EgressOnlyInternetGateway.EgressOnlyInternetGatewayId' --output text)
-echo "IGW $IGW    NAT $NAT    EIGW $EIGW"</pre>
-    </div>
-    <p class="saida">A colher no piloto. Uma linha com os três identificadores, com os
-prefixos igw-, nat- e eigw-.</p>
+SEG_EIGW=$(( $(agora) - T_EIGW ))
+diz "gateway somente de saida $EIGW pronto em $SEG_EIGW s."
+diz "Ele e o equivalente do NAT gateway para IPv6, e so no resultado."
+diz "Nasceu sem endereco, sem sub-rede e sem espera, porque nao traduz nada."
 
-    <p>
-      Repare no que o terceiro comando <strong>não</strong> pediu. O
-      <button type="button" class="nota-termo" data-nota="gateway-somente-de-saida">gateway
-      somente de saída</button> nasceu sem endereço, sem sub-rede e sem espera, enquanto o NAT
-      gateway precisou de um endereço reservado, de uma sub-rede pública onde morar e de dois
-      minutos de paciência. Os dois vão entregar o mesmo resultado prático, que é deixar sair
-      e não deixar entrar, e a diferença de preço entre eles é a diferença entre traduzir
-      endereço e não precisar traduzir.
-    </p>
-
-    <div class="check">
-      <input type="checkbox" id="p03-c4">
-      <label for="p03-c4"><strong>Checkpoint 4.</strong> Os três identificadores apareceram, o
-        gateway de internet está ligado à <code>sd-vpc</code> e o NAT gateway está sendo
-        criado.</label>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Passo 5
-       ============================================================ -->
-  <section class="lab-step" id="passo-5">
-    <h2><span class="step-num">5</span><span>Escrever as duas tabelas de rotas</span><span class="step-time">11 min</span></h2>
-
-    <p>
-      Este é o coração da prática. As duas tabelas vão ter a <strong>mesma forma</strong> e
-      diferir em duas linhas, e são essas duas linhas que decidem qual sub-rede é pública e
-      qual é privada. Comece pela pública, que é a mais simples, porque manda os dois destinos
-      de fora para o mesmo dispositivo.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>RT_PUB=$(aws ec2 create-route-table --vpc-id $VPC \
+# ------------------------------------------------------------
+titulo "passo 5 de 6: as duas tabelas de rotas"
+diz "Aqui mora o argumento da pratica. As duas tabelas tem a mesma forma"
+diz "e diferem em duas linhas, e sao essas duas linhas que decidem qual"
+diz "sub-rede e publica e qual e privada."
+RT_PUB=$(aws ec2 create-route-table --vpc-id $VPC \
   --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=rt-publica}]' \
   --query 'RouteTable.RouteTableId' --output text)
 aws ec2 create-route --route-table-id $RT_PUB --destination-cidr-block 0.0.0.0/0 \
-  --gateway-id $IGW --output text
+  --gateway-id $IGW &gt;/dev/null
 aws ec2 create-route --route-table-id $RT_PUB --destination-ipv6-cidr-block ::/0 \
-  --gateway-id $IGW --output text
-aws ec2 associate-route-table --route-table-id $RT_PUB --subnet-id $SUB_PUB \
-  --query AssociationId --output text</pre>
-    </div>
-    <p class="saida">A colher no piloto. Duas linhas com True, das duas rotas criadas, e
-depois um identificador de associação na forma rtbassoc-.</p>
+  --gateway-id $IGW &gt;/dev/null
+aws ec2 associate-route-table --route-table-id $RT_PUB --subnet-id $SUB_PUB &gt;/dev/null
+diz "rt-publica $RT_PUB, com os dois destinos de fora indo para o mesmo"
+diz "gateway de internet, e associada a sd-publica-a"
 
-    <p>
-      Agora a privada. Ela também manda os dois destinos de fora para fora, e a diferença é
-      que <strong>cada protocolo vai por um dispositivo diferente</strong>. A rota IPv6 já
-      pode ser escrita, porque o gateway somente de saída nasceu pronto. A rota IPv4 espera o
-      NAT gateway, e o comando de espera está logo abaixo.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>RT_PRIV=$(aws ec2 create-route-table --vpc-id $VPC \
+RT_PRIV=$(aws ec2 create-route-table --vpc-id $VPC \
   --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=rt-privada}]' \
   --query 'RouteTable.RouteTableId' --output text)
 aws ec2 create-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 \
-  --egress-only-internet-gateway-id $EIGW --output text
-aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_A \
-  --query AssociationId --output text
-aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_B \
-  --query AssociationId --output text</pre>
-    </div>
+  --egress-only-internet-gateway-id $EIGW &gt;/dev/null
+aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_A &gt;/dev/null
+aws ec2 associate-route-table --route-table-id $RT_PRIV --subnet-id $SUB_PRIV_B &gt;/dev/null
+diz "rt-privada $RT_PRIV, servindo as DUAS sub-redes privadas ao mesmo"
+diz "tempo, o que mostra que tabela e sub-rede sao objetos diferentes"
+printf '\n'
 
-    <p>
-      Os dois últimos comandos são o argumento inteiro de que <strong>tabela e sub-rede são
-      objetos diferentes</strong>. Uma tabela de rotas serve quantas sub-redes você quiser, e
-      as duas privadas acabaram de pendurar na mesma. A <code>sd-privada-b</code> nem tem
-      máquina dentro, e mesmo assim já sabe por onde sairia se tivesse.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>echo "esperando o NAT gateway ficar disponivel, perto de dois minutos"
-aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT
+diz "esperando o NAT gateway, que e a unica espera desta preparacao"
+aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT || morre "o NAT gateway nao ficou disponivel"
+SEG_NAT=$(( $(agora) - T_NAT ))
 aws ec2 create-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 \
-  --nat-gateway-id $NAT --output text</pre>
-    </div>
-    <p class="saida">esperando o NAT gateway ficar disponivel, perto de dois minutos
-True</p>
+  --nat-gateway-id $NAT &gt;/dev/null
+diz "NAT gateway disponivel em $SEG_NAT s, e a rota IPv4 da rt-privada escrita"
+printf '\n'
+diz "Guarde a comparacao, porque ela e conteudo:"
+diz "  gateway somente de saida  $SEG_EIGW s   sem endereco, sem sub-rede, nao traduz"
+diz "  NAT gateway               $SEG_NAT s   com endereco, numa sub-rede, traduz"
+diz "Os dois entregam o mesmo resultado pratico, por mecanismos opostos."
 
-    <h3>5.1 Ler as duas tabelas lado a lado</h3>
-    <p>
-      Antes de seguir, olhe para o que você escreveu. O comando abaixo imprime as duas tabelas
-      com as mesmas colunas.
-    </p>
+# ------------------------------------------------------------
+titulo "passo 6 de 6: os quatro nos"
+diz "Baixando o mesmo script de inicializacao que os quatro vao executar."
+curl -sfO "$BASE_PUBLICADA/setup.sh" || morre "nao consegui baixar o setup.sh de $BASE_PUBLICADA"
+diz "setup.sh baixado, $(wc -c &lt; setup.sh) bytes"
 
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>for RT in $RT_PUB $RT_PRIV; do
-  echo "== $RT"
-  aws ec2 describe-route-tables --route-table-ids $RT --output text \
-    --query 'RouteTables[0].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,
-              GatewayId,NatGatewayId,EgressOnlyInternetGatewayId]'
-done</pre>
-    </div>
-
-    <p>
-      O resultado tem esta forma, com os identificadores encurtados para caber na linha. As
-      duas primeiras linhas de cada tabela são as rotas <code>local</code>, uma para cada
-      protocolo, e nenhuma das duas foi escrita por você.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">a forma do resultado</span>
-      </div>
-      <pre>rt-publica          associada a: sd-publica-a
-  10.10.0.0/16           local
-  2600:...::/56          local
-  0.0.0.0/0              igw-...
-  ::/0                   igw-...
-
-rt-privada          associada a: sd-privada-a e sd-privada-b
-  10.10.0.0/16           local
-  2600:...::/56          local
-  0.0.0.0/0              nat-...
-  ::/0                   eigw-...</pre>
-    </div>
-
-    <p>
-      Duas linhas de diferença, e é isso. Nenhuma das duas sub-redes tem atributo dizendo se é
-      pública ou privada, e nenhuma delas sabe o que é. Quem sabe é a tabela associada a ela.
-      Guarde essa frase, porque o experimento 2 vai testá-la de quatro maneiras.
-    </p>
-
-    <h3>5.2 Guardar os identificadores</h3>
-    <p>
-      As variáveis acima vivem na sessão da CloudShell, e a sessão morre depois de vinte
-      minutos parada. O comando abaixo escreve todas elas num arquivo do seu diretório
-      pessoal, que a CloudShell preserva entre sessões. Se a aba fechar, um
-      <code>source</code> devolve tudo.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>cat &gt; ~/sd-pratica03.env &lt;&lt;EOF
-VPC=$VPC
-VPC_PADRAO=$VPC_PADRAO
-SUB_PUB=$SUB_PUB
-SUB_PRIV_A=$SUB_PRIV_A
-SUB_PRIV_B=$SUB_PRIV_B
-SUB_PADRAO=$SUB_PADRAO
-IGW=$IGW
-NAT=$NAT
-EIGW=$EIGW
-RT_PUB=$RT_PUB
-RT_PRIV=$RT_PRIV
-EOF
-cat ~/sd-pratica03.env</pre>
-    </div>
-    <p class="saida">Onze linhas na forma NOME=valor. Para recuperá-las numa aba nova:
-source ~/sd-pratica03.env</p>
-
-    <div class="check">
-      <input type="checkbox" id="p03-c5">
-      <label for="p03-c5"><strong>Checkpoint 5.</strong> As duas tabelas existem, a privada
-        serve duas sub-redes, o NAT gateway está disponível e o arquivo
-        <code>~/sd-pratica03.env</code> tem os onze identificadores.</label>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Passo 6
-       ============================================================ -->
-  <section class="lab-step" id="passo-6">
-    <h2><span class="step-num">6</span><span>Subir os três nós</span><span class="step-time">13 min</span></h2>
-
-    <p>
-      A rede está pronta, e agora entram as máquinas. A ordem importa e é a mesma ordem
-      pedagógica. O nó A nasce numa sub-rede privada e o script de inicialização dele precisa
-      alcançar os repositórios do sistema para instalar as ferramentas de rede, o que só
-      funciona depois de o NAT gateway estar disponível e a rota escrita. Foi isso que o passo
-      5 acabou de garantir.
-    </p>
-
-    <h3>6.1 Os dois grupos de segurança, e a linha que quase estraga tudo</h3>
-    <p>
-      Um grupo de segurança novo já vem com uma regra de saída que libera tudo para
-      <code>0.0.0.0/0</code>. Essa regra <strong>não cobre o IPv6</strong>, e a omissão é o
-      caso comum, não a exceção. Sem uma regra <code>::/0</code> explícita, a tentativa do
-      experimento 1 falharia no filtro de saída da própria máquina que tentou, e você leria
-      como recusa de roteamento uma recusa de firewall, que é exatamente a confusão que esta
-      prática existe para desfazer. Os dois grupos abaixo nascem com as duas linhas de saída.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>abrir_portas () {
+abrir_portas() {
+  # Onde a VPC tem bloco IPv6, a regra de saida padrao ja cobre ::/0 e a AWS
+  # responde InvalidPermission.Duplicate. Pedimos assim mesmo, para o script
+  # servir tambem a uma rede so de IPv4, e engolimos a recusa.
   aws ec2 authorize-security-group-egress --group-id "$1" \
-    --ip-permissions 'IpProtocol=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' --output text
+    --ip-permissions 'IpProtocol=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' &gt;/dev/null 2&gt;&amp;1
   aws ec2 authorize-security-group-ingress --group-id "$1" --ip-permissions \
     'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]' \
     'IpProtocol=tcp,FromPort=8080,ToPort=8080,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]' \
     'IpProtocol=icmp,FromPort=-1,ToPort=-1,IpRanges=[{CidrIp=0.0.0.0/0}]' \
-    'IpProtocol=icmpv6,FromPort=-1,ToPort=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' --output text
+    'IpProtocol=icmpv6,FromPort=-1,ToPort=-1,Ipv6Ranges=[{CidrIpv6=::/0}]' &gt;/dev/null
 }
 SG_NOS=$(aws ec2 create-security-group --group-name sd-nos \
-  --description "Pratica 03 nos da sd-vpc" --vpc-id $VPC --query GroupId --output text)
+  --description "Pratica 03 nos da sd-vpc" --vpc-id $VPC \
+  --query GroupId --output text)
 SG_E=$(aws ec2 create-security-group --group-name sd-observador \
   --description "Pratica 03 observador na VPC padrao" --vpc-id $VPC_PADRAO \
   --query GroupId --output text)
 abrir_portas $SG_NOS
 abrir_portas $SG_E
-echo "SG_NOS=$SG_NOS" &gt;&gt; ~/sd-pratica03.env
-echo "SG_E=$SG_E" &gt;&gt; ~/sd-pratica03.env</pre>
-    </div>
+diz "dois grupos de seguranca criados, os dois com a entrada aberta de"
+diz "proposito, para o experimento 1 medir roteamento e nao filtro"
 
-    <div class="callout is-warn">
-      <p class="callout-title">⚠ Sim, o filtro de entrada fica aberto de propósito</p>
-      <p>
-        Os dois grupos aceitam SSH, HTTP na porta 8080 e o protocolo de mensagens de controle
-        da internet (ICMP), nas versões dos dois protocolos, vindos de qualquer lugar. É o
-        ICMP que responde ao <code>ping</code>, e sem ele o experimento 3 não teria como
-        medir. Num sistema de verdade essa abertura toda seria descuido. Aqui é o contrário disso.
-        Se o filtro bloqueasse, você não teria como distinguir a recusa do filtro da recusa do
-        roteamento, e sairia da prática achando que o gateway somente de saída é um firewall.
-        Com o filtro aberto, a <strong>única</strong> coisa que impede o nó E de entrar é o
-        caminho de volta, e o experimento 1 pede que você confira a regra antes de tirar a
-        conclusão.
-      </p>
-    </div>
-
-    <h3>6.2 Lançar as três instâncias</h3>
-    <p>
-      O primeiro comando descobre a imagem mais recente do Amazon Linux 2023. Os três nós
-      sobem com a mesma imagem, o mesmo tipo, a mesma chave e o <strong>mesmo script de
-      inicialização</strong>, e o que os diferencia é a sub-rede onde nascem e o endereço que
-      recebem. Baixe o script antes, porque é ele que o comando de lançamento envia.
-    </p>
-
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>curl -sfO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03/setup.sh
-wc -c setup.sh
 AMI=$(aws ec2 describe-images --owners amazon \
   --filters 'Name=name,Values=al2023-ami-2023*-x86_64' 'Name=state,Values=available' \
   --query 'sort_by(Images,&amp;CreationDate)[-1].ImageId' --output text)
-echo $AMI</pre>
-    </div>
-    <p class="saida">A colher no piloto. O tamanho do script em bytes e, depois, um
-identificador na forma ami- seguida de dezessete caracteres.</p>
+diz "imagem mais recente do Amazon Linux 2023: $AMI"
 
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
-      </div>
-      <pre>subir_no () {
+subir_no() {
   aws ec2 run-instances --image-id $AMI --instance-type t3.micro --key-name vockey \
     --subnet-id "$2" --security-group-ids "$3" --ipv6-address-count 1 "$4" \
     --iam-instance-profile Name=LabInstanceProfile \
@@ -1186,62 +1762,63 @@ identificador na forma ami- seguida de dezessete caracteres.</p>
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$1}]" \
     --query 'Instances[0].InstanceId' --output text
 }
+printf '\n'
+diz "sd-P na sd-publica-a, com endereco publico. Serve como porta de entrada."
 NO_P=$(subir_no sd-P $SUB_PUB    $SG_NOS --associate-public-ip-address)
+diz "sd-E na VPC padrao, com endereco publico. Atua como observador de fora."
 NO_E=$(subir_no sd-E $SUB_PADRAO $SG_E   --associate-public-ip-address)
+diz "sd-A na sd-privada-a, SEM endereco publico. E o alvo dos experimentos."
 NO_A=$(subir_no sd-A $SUB_PRIV_A $SG_NOS --no-associate-public-ip-address)
-aws ec2 wait instance-running --instance-ids $NO_P $NO_E $NO_A
-echo "P $NO_P    E $NO_E    A $NO_A"</pre>
-    </div>
+diz "sd-B na sd-privada-b, em $ZONA_B. So ele muda de zona, e e essa a"
+diz "unica diferenca que o experimento 3 vai medir contra o sd-A."
+NO_B=$(subir_no sd-B $SUB_PRIV_B $SG_NOS --no-associate-public-ip-address)
+printf '\n'
+diz "os quatro sobem em paralelo, entao a espera e a de um so"
+aws ec2 wait instance-running --instance-ids $NO_P $NO_E $NO_A $NO_B
 
-    <p>
-      Os três sobem um atrás do outro e <strong>inicializam em paralelo</strong>, então a
-      espera é a de um só. A opção <code>--metadata-options</code> é a que faz o script
-      descobrir o próprio papel, porque ela expõe a etiqueta <code>Name</code> da instância no
-      serviço de metadados. A opção <code>--iam-instance-profile</code> custa uma linha e
-      compra uma saída de emergência, que está na seção <a href="#se-der-errado">Se der
-      errado</a>.
-    </p>
+endereco() {
+  aws ec2 describe-instances --instance-ids "$1" \
+    --query "Reservations[0].Instances[0].$2" --output text
+}
 
-    <h3>6.3 Colher os endereços</h3>
-    <p>
-      Espere cerca de um minuto depois de as instâncias ficarem em execução, porque o script
-      instala pacotes no primeiro boot. Depois colha os seis endereços de uma vez e leve-os
-      para a <a href="#ficha">ficha do ambiente</a>, no topo da página.
-    </p>
+{
+  echo "IP_PUB_P=$(endereco $NO_P PublicIpAddress)"
+  echo "IPV6_P=$(endereco $NO_P Ipv6Address)"
+  echo "IP_PRIV_A=$(endereco $NO_A PrivateIpAddress)"
+  echo "IPV6_A=$(endereco $NO_A Ipv6Address)"
+  echo "IP_PRIV_B=$(endereco $NO_B PrivateIpAddress)"
+  echo "IPV6_B=$(endereco $NO_B Ipv6Address)"
+  echo "IP_PUB_E=$(endereco $NO_E PublicIpAddress)"
+  echo "IPV6_E=$(endereco $NO_E Ipv6Address)"
+  echo "RT_PRIV=$RT_PRIV"
+  echo "SG_NOS=$SG_NOS"
+  echo "IGW=$IGW"
+  echo "EIGW=$EIGW"
+  echo "NAT=$NAT"
+} &gt; "$FICHA"
 
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+titulo "pronto. O ambiente da pratica 03 esta de pe"
+diz "Copie o bloco abaixo inteiro e cole na ficha do roteiro, no campo"
+diz "que diz colar de uma vez. Ele tambem ficou guardado em:"
+diz "$FICHA"
+printf '\n'
+cat "$FICHA"
+printf '\n'
+diz "As instancias ainda estao instalando as ferramentas de rede."
+diz "Espere um minuto antes de abrir as janelas do experimento 1."
+diz "A foto da conta antes das mudancas esta em $ANTES."</pre>
+        </div>
       </div>
-      <pre>echo "no    IPv4 privado    IPv4 publico    IPv6"
-aws ec2 describe-instances --filters 'Name=tag:Name,Values=sd-P,sd-A,sd-E' \
-  'Name=instance-state-name,Values=running' --output text \
-  --query 'Reservations[].Instances[].[Tags[?Key==`Name`]|[0].Value,
-            PrivateIpAddress,PublicIpAddress,Ipv6Address]'</pre>
-    </div>
-    <p class="saida">A colher no piloto. Uma tabela de três linhas. Confira que a linha do
-nó A tem a coluna IPv4publico vazia e a coluna IPv6 preenchida, o que é a
-assimetria que o experimento 1 vai explorar.</p>
-
-    <div class="check">
-      <input type="checkbox" id="p03-c6">
-      <label for="p03-c6"><strong>Checkpoint 6.</strong> Os três nós estão em execução, o nó A
-        não tem IPv4 público, os três têm IPv6 e a ficha do ambiente está preenchida com os
-        seis endereços.</label>
-    </div>
+    </details>
 
     <details class="lab-detalhe">
-      <summary>Ver o script de inicialização antes de executá-lo (recomendado)</summary>
+      <summary>Ver o que cada nó executa ao nascer</summary>
       <p>
-        É este o arquivo que o <code>curl</code> baixou e que o
-        <code>run-instances</code> enviou. Ele não instala nada de fora dos repositórios do
-        sistema. Descobre a identidade do nó no serviço de metadados, muda o nome da máquina
-        para o prompt dizer onde você está, instala quatro ferramentas de rede, sobe um
-        serviço HTTP mínimo que diz quem respondeu e de que endereço veio o pedido, e instala
-        o atalho <code>sd-rede</code>. Ler o que você vai executar é um hábito, não um
-        exagero.
+        É este o arquivo que o script baixa e envia no campo "User data" das quatro instâncias.
+        Ele não instala nada de fora dos repositórios do sistema. Descobre a identidade do nó no
+        serviço de metadados, muda o nome da máquina para o prompt dizer onde você está, instala
+        quatro ferramentas de rede, sobe um serviço HTTP mínimo que diz quem respondeu e de que
+        endereço veio o pedido, e instala o atalho <code>sd-rede</code>.
       </p>
       <div class="cmd">
         <div class="cmd-head">
@@ -1254,13 +1831,13 @@ assimetria que o experimento 1 vai explorar.</p>
         <pre id="setup-sh">#!/bin/bash
 # ============================================================
 # Pratica 03 (Topico 3) - Sistemas Distribuidos - IFSP Salto
-# Script de inicializacao dos tres nos (campo "User data" do EC2).
+# Script de inicializacao dos quatro nos (campo "User data" do EC2).
 # Roda uma unica vez, no primeiro boot da instancia.
 #
-# O MESMO texto sobe nos tres nos. O papel (P, A ou E) nao vem
+# O MESMO texto sobe nos quatro nos. O papel (P, A, B ou E) nao vem
 # escrito aqui: ele e lido da etiqueta Name da propria instancia,
-# pelo servico de metadados, porque os tres nascem com
-# InstanceMetadataTags=enabled. Assim nao existem tres versoes
+# pelo servico de metadados, porque os quatro nascem com
+# InstanceMetadataTags=enabled. Assim nao existem quatro versoes
 # deste arquivo para manter em acordo.
 #
 # Sem acentos de proposito: o user data executa antes do locale
@@ -1273,8 +1850,8 @@ mkdir -p /opt/sd
 
 # ---- Identidade do no, lida do servico de metadados da instancia ----
 # 169.254.169.254 e um endereco de link local: responde apenas dentro
-# da propria instancia, e nao consome rota nenhuma da VPC. E por isso
-# que ele funciona no no A antes mesmo de existir saida para a internet.
+# da propria instancia, e nao consome nenhuma rota da VPC. E por isso
+# que ele funciona no no A antes mesmo de existir saida para a Internet.
 TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
   -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
 MD="http://169.254.169.254/latest/meta-data"
@@ -1474,19 +2051,173 @@ systemctl enable --now sd-servico
 
 echo "pratica 03: no $PAPEL pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.txt</pre>
       </div>
-      <p>
-        O botão <strong>baixar</strong> salva o arquivo no seu computador. Ele serve para o
-        caso de o <code>curl</code> da CloudShell falhar, e aí você envia o arquivo pelo menu
-        <strong>Actions</strong>, opção <em>Upload file</em>, da própria CloudShell.
-      </p>
     </details>
   </section>
 
   <!-- ============================================================
-       Passo 7
+       Passo 3
        ============================================================ -->
-  <section class="lab-step" id="passo-7">
-    <h2><span class="step-num">7</span><span>Experimento 1: quem consegue iniciar a conversa</span><span class="step-time">13 min</span></h2>
+  <section class="lab-step" id="passo-3">
+    <h2><span class="step-num">3</span><span>Ler a rede que passou a existir</span><span class="step-time">12 min</span></h2>
+
+    <p>
+      Este passo não cria nada. Ele lê, e é o passo mais importante antes dos experimentos,
+      porque os três seguintes vão mexer no que você reconhecer aqui. Todos os comandos são
+      de consulta e valem igual nos dois sistemas.
+    </p>
+
+    <h3>3.1 Como a conta estava antes</h3>
+    <p>
+      O primeiro passo do script guardou uma foto da conta antes de qualquer mudança, e ela
+      existe porque a mudança apaga a evidência. Abra o arquivo, que está em
+      <code>sd-pratica03/antes.txt</code> dentro da sua pasta pessoal.
+    </p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">PowerShell, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>notepad $env:USERPROFILE\sd-pratica03\antes.txt</pre>
+      </div>
+    </div>
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">terminal, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>less ~/sd-pratica03/antes.txt</pre>
+      </div>
+    </div>
+
+    <p>
+      Três coisas para achar nesse arquivo, e todas as três voltam mais tarde. A primeira é que
+      <strong>toda tabela tem uma linha que ninguém escreveu</strong>, com o bloco da própria
+      VPC e o próximo salto <code>local</code>. É ela que liga as sub-redes de uma VPC umas às
+      outras, e ela não sai da tabela nem por decreto. A segunda é a linha
+      <code>0.0.0.0/0</code> apontando para um
+      <button type="button" class="nota-termo" data-nota="proximo-salto-e-rota-padrao">gateway
+      de internet</button>, que existe em duas das três redes e <strong>falta justamente na VPC
+      padrão</strong>. A terceira é uma ausência maior, porque <strong>nenhuma das três tinha
+      linha de IPv6</strong>, e a coluna correspondente vem <code>None</code> em todas elas.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">💡 A rede que tem a porta e não tem o caminho até ela</p>
+      <p>
+        A VPC padrão da conta <strong>tem</strong> um gateway de internet pendurado, e você
+        confere isso no console em <strong>VPC &gt; Internet gateways</strong>, onde ele aparece
+        com o estado <code>Attached</code>. O que ela não tinha era uma linha de tabela que
+        chegasse até ele. As seis sub-redes dela prometem endereço IPv4 público a quem nascer
+        ali, e esse endereço não levava a nenhum lugar.
+      </p>
+      <p>
+        Guarde a cena, porque ela é a tese desta prática aparecendo antes da hora. O dispositivo
+        não decide nada sozinho, e quem decide é a tabela. O passo 2 do script escreveu as duas
+        linhas que faltavam, e foi só por isso que o nó E existe hoje com saída.
+      </p>
+    </div>
+
+    <h3>3.2 As duas tabelas que decidem tudo, lado a lado</h3>
+    <p>
+      Agora as tabelas da rede que você acabou de criar. Elas têm a <strong>mesma forma</strong>
+      e diferem em duas linhas, e são essas duas linhas que fazem uma sub-rede ser pública e a
+      outra ser privada.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-route-tables --profile sd-sandbox --output text --query "RouteTables[?Tags[?Value=='rt-publica']].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,GatewayId,NatGatewayId,EgressOnlyInternetGatewayId]"</pre>
+    </div>
+    <p class="saida">10.10.0.0/16              None   local     None   None
+0.0.0.0/0                 None   igw-...   None   None
+None      2600:...::/56          local     None   None
+None      ::/0                   igw-...   None   None</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-route-tables --profile sd-sandbox --output text --query "RouteTables[?Tags[?Value=='rt-privada']].Routes[].[DestinationCidrBlock,DestinationIpv6CidrBlock,GatewayId,NatGatewayId,EgressOnlyInternetGatewayId]"</pre>
+    </div>
+    <p class="saida">10.10.0.0/16              None   local     None    None
+0.0.0.0/0                 None   None      nat-... None
+None      2600:...::/56          local     None    None
+None      ::/0                   None      None    eigw-...</p>
+
+    <p>
+      Duas linhas de diferença, e é isso. As duas primeiras de cada tabela são as rotas
+      <code>local</code>, uma por protocolo, e nenhuma das duas foi escrita por ninguém.
+      Nenhuma das sub-redes tem atributo dizendo se é pública ou privada, e nenhuma delas sabe o
+      que é. <strong>Quem sabe é a tabela associada a ela.</strong> Guarde essa frase, porque o
+      experimento 2 vai testá-la de quatro maneiras.
+    </p>
+
+    <h3>3.3 Os quatro nós, e a assimetria que interessa</h3>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-instances --profile sd-sandbox --output table --filters "Name=tag:Name,Values=sd-P,sd-A,sd-B,sd-E" "Name=instance-state-name,Values=running" --query "sort_by(Reservations[].Instances[].{No:Tags[?Key=='Name']|[0].Value,Zona:Placement.AvailabilityZone,IPv4privado:PrivateIpAddress,IPv4publico:PublicIpAddress},&amp;No)"</pre>
+    </div>
+    <p class="saida">Quatro linhas. Confira duas coisas. A do no A e a do no B tem a coluna
+IPv4publico vazia, que e a assimetria explorada pelo experimento 1, e a
+do no B e a unica com a zona us-east-1b, que e o que o experimento 3 mede.</p>
+
+    <p>
+      O grupo de segurança nasceu com saída liberada para os dois protocolos. Leia a regra
+      agora, pois a questão da prática no Moodle vai pedir exatamente esta observação.
+    </p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>aws ec2 describe-security-groups --profile sd-sandbox --output table --group-ids <span class="var" data-var="SG_NOS">SG-DOS-NOS</span> --query "SecurityGroups[0].IpPermissionsEgress[].[IpProtocol,IpRanges[0].CidrIp,Ipv6Ranges[0].CidrIpv6]"</pre>
+    </div>
+    <p class="saida">--------------------------------
+|    DescribeSecurityGroups    |
++------+-------------+---------+
+|  -1  |  0.0.0.0/0  |  None   |
+|  -1  |  None       |  ::/0   |
++------+-------------+---------+</p>
+
+    <p>
+      Confira também no console, porque ele é mais fácil de ler que qualquer saída de terminal.
+      Busque por <strong>VPC</strong>, escolha <strong>Your VPCs</strong>, marque a
+      <code>sd-vpc</code> e abra a aba <strong>Resource map</strong>. O mapa mostra a VPC, as
+      três sub-redes e qual tabela de rotas serve cada uma. Repare que a
+      <code>rt-privada</code> aparece ligada a <strong>duas</strong> sub-redes ao mesmo tempo, o
+      que é o argumento inteiro de que tabela e sub-rede são objetos diferentes.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p03-c3">
+      <label for="p03-c3"><strong>Checkpoint 3.</strong> Li a foto do antes e sei dizer o que
+        faltava na VPC padrão, vi as duas tabelas lado a lado e sei apontar as duas linhas em
+        que elas diferem, confirmei a saída IPv4 e IPv6 do grupo de segurança e vi que o nó A e
+        o nó B não têm endereço IPv4 público e que só o nó B está em outra zona.</label>
+    </div>
+  </section>
+  <!-- ============================================================
+       Passo 4
+       ============================================================ -->
+  <section class="lab-step" id="passo-4">
+    <h2><span class="step-num">4</span><span>Experimento 1: quem consegue iniciar a conversa</span><span class="step-time">13 min</span></h2>
 
     <div class="callout">
       <p class="callout-title">💡 Quem digita e quem responde</p>
@@ -1494,18 +2225,34 @@ echo "pratica 03: no $PAPEL pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.t
         Daqui em diante quase todo comando roda em um nó e pergunta a outro. O rótulo cinza no
         alto de cada bloco marca sempre <strong>quem digita</strong>, e nunca quem responde.
         Quem responde vem dito no parágrafo que abre cada tentativa. Abra
-        <strong>três janelas</strong> de terminal e deixe as três ligadas até o fim da
-        prática.
+        <strong>quatro janelas</strong> de terminal e deixe as quatro ligadas até o fim da
+        prática. As janelas 1, 2 e 3 entram nos nós por SSH, e a <strong>janela 4 fica no seu
+        computador</strong>, falando com a AWS. Ela é fácil de reconhecer, porque o
+        <em>prompt</em> dela é o único que não começa com <code>sd-</code>.
       </p>
     </div>
 
     <p>
       A janela 1 entra no nó P pelo endereço IPv4 público dele. A janela 3 entra no nó E, do
       mesmo jeito. A janela 2 é a diferente, porque o nó A não tem endereço público e não
-      existe por onde entrar diretamente. Ela salta por P com a opção <code>-J</code>, que
-      manda o cliente SSH abrir a conexão com A <em>através</em> de P sem copiar a sua chave
+      existe por onde entrar diretamente. Ela salta por P com a opção <code>ProxyCommand</code>,
+      que manda o cliente SSH abrir a conexão com A <em>através</em> de P sem copiar a sua chave
       privada para dentro da nuvem.
     </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Por que o comando da janela 2 nomeia a chave duas vezes</p>
+      <p>
+        Porque são <strong>duas conexões</strong>, e cada uma precisa se autenticar. A primeira
+        vai do seu computador até o nó P e a segunda vai de P até A, pelo túnel que a primeira
+        abriu. A opção <code>-J</code>, que é o atalho conhecido para isso, existe e parece
+        resolver, mas ela monta a conexão do salto <strong>sem repassar o <code>-i</code></strong>.
+        O cliente tenta então as suas chaves pessoais no primeiro trecho, não tem nenhuma que
+        sirva e devolve <code>Permission denied (publickey)</code>, uma mensagem que aponta para
+        o lugar errado. Escrever o <code>ProxyCommand</code> por extenso é mais longo e não
+        tem esse problema.
+      </p>
+    </div>
 
     <div class="so-win">
       <div class="cmd">
@@ -1522,7 +2269,7 @@ echo "pratica 03: no $PAPEL pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.t
           <span class="espaco"></span>
           <button type="button" class="btn-copiar" data-copiar>copiar</button>
         </div>
-        <pre>ssh -i $env:USERPROFILE\Downloads\labsuser.pem -J ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span> ec2-user@<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span></pre>
+        <pre>ssh -i $env:USERPROFILE\Downloads\labsuser.pem -o "ProxyCommand=ssh -i $env:USERPROFILE\Downloads\labsuser.pem -W %h:%p ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span>" ec2-user@<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span></pre>
       </div>
       <div class="cmd">
         <div class="cmd-head">
@@ -1549,7 +2296,7 @@ echo "pratica 03: no $PAPEL pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.t
           <span class="espaco"></span>
           <button type="button" class="btn-copiar" data-copiar>copiar</button>
         </div>
-        <pre>ssh -i ~/Downloads/labsuser.pem -J ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span> ec2-user@<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span></pre>
+        <pre>ssh -i ~/Downloads/labsuser.pem -o "ProxyCommand=ssh -i ~/Downloads/labsuser.pem -W %h:%p ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span>" ec2-user@<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span></pre>
       </div>
       <div class="cmd">
         <div class="cmd-head">
@@ -1568,16 +2315,25 @@ echo "pratica 03: no $PAPEL pronto em $(date -Is)" &gt;&gt; /opt/sd/identidade.t
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">nas três janelas</span>
+        <span class="onde">nas janelas 1, 2 e 3</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
       <pre>sd-rede</pre>
     </div>
-    <p class="saida">A colher no piloto. Três linhas. A do nó A traz, na segunda, o aviso
-SEM endereco publico, e as três trazem um endereço IPv6 global na terceira.</p>
+    <p class="saida">no    : P   instancia i-03763dce92e5fcd2d   zona us-east-1a
+IPv4  : 10.10.1.115/24   publico 100.55.64.71
+IPv6  : 2600:1f18:6c43:3d00:57a5:7fe7:f3f6:694b/128
 
-    <h3>7.1 Do nó E para o nó A, pelo IPv4</h3>
+no    : A   instancia i-09b5852d5868fcafa   zona us-east-1a
+IPv4  : 10.10.2.79/24   SEM endereco publico
+IPv6  : 2600:1f18:6c43:3d01:f679:ccfa:ac91:4d19/128
+
+no    : E   instancia i-00e82a689a8ffba53   zona us-east-1a
+IPv4  : 172.31.30.170/20   publico 3.93.68.149
+IPv6  : 2600:1f18:fb:8000:d151:3267:fc87:cd74/128</p>
+
+    <h3>4.1 Do nó E para o nó A, pelo IPv4</h3>
     <p>
       Quem pergunta é o nó E, e quem deveria responder é o serviço do nó A. O problema aparece
       antes do comando. Não existe endereço IPv4 a que se dirigir, porque o nó A não tem um
@@ -1592,8 +2348,8 @@ SEM endereco publico, e as três trazem um endereço IPv6 global na terceira.</p
       </div>
       <pre>curl -4 -s -m 5 http://<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span>:8080/ ; echo "saiu com $?"</pre>
     </div>
-    <p class="saida">A colher no piloto. Espere cinco segundos de silêncio e depois
-saiu com 28, que é o código do tempo esgotado.</p>
+    <p class="saida">(cinco segundos de silencio)
+saiu com 28</p>
 
     <p>
       O endereço <code>10.10.2.x</code> é privado e não vale fora da VPC que o contém. A
@@ -1601,7 +2357,7 @@ saiu com 28, que é o código do tempo esgotado.</p>
       e ele se perde. Nem o filtro de entrada do nó A chegou a ser consultado.
     </p>
 
-    <h3>7.2 Do nó E para o nó A, pelo IPv6</h3>
+    <h3>4.2 Do nó E para o nó A, pelo IPv6</h3>
     <p>
       Agora a tentativa que interessa. Quem pergunta continua sendo o nó E, quem deveria
       responder continua sendo o serviço do nó A, e desta vez <strong>o endereço existe e é
@@ -1611,18 +2367,33 @@ saiu com 28, que é o código do tempo esgotado.</p>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
+        <span class="onde">janela 4, no seu computador</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>source ~/sd-pratica03.env
-aws ec2 describe-security-groups --group-ids $SG_NOS \
-  --query 'SecurityGroups[0].IpPermissions[].[IpProtocol,FromPort,Ipv6Ranges[0].CidrIpv6]' \
-  --output text</pre>
+      <pre>aws ec2 describe-security-groups --profile sd-sandbox --output text --group-ids <span class="var" data-var="SG_NOS">SG-DOS-NOS</span> --query "SecurityGroups[0].IpPermissions[].[IpProtocol,FromPort,Ipv6Ranges[0].CidrIpv6]"</pre>
     </div>
-    <p class="saida">A colher no piloto. Quatro linhas. As de tcp 22 e tcp 8080 e a de
-icmpv6 têm ::/0 na terceira coluna, o que quer dizer que o filtro deixa
-entrar qualquer IPv6.</p>
+    <p class="saida">tcp     8080    ::/0
+tcp     22      ::/0
+icmpv6  -1      ::/0
+icmp    -1      None
+
+As tres primeiras linhas trazem ::/0, entao o filtro deixa entrar qualquer
+IPv6 nas portas 22 e 8080 e no ICMPv6. A quarta e do ICMP do IPv4, que nao
+tem faixa IPv6 e por isso mostra None.</p>
+
+    <p>
+      Na janela 2, observe a interface do nó A durante a tentativa. Inicie a captura abaixo e,
+      antes de doze segundos, rode o comando seguinte na janela 3.
+    </p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo timeout 12 tcpdump -ni any "ip6 and tcp port 8080"</pre>
+    </div>
 
     <div class="cmd">
       <div class="cmd-head">
@@ -1633,22 +2404,30 @@ entrar qualquer IPv6.</p>
       <pre>ping -6 -c 3 -W 2 <span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>
 curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/" ; echo "saiu com $?"</pre>
     </div>
-    <p class="saida">A colher no piloto. Espere 3 packets transmitted, 0 received e
-100% packet loss no ping, e outra vez saiu com 28 no curl.</p>
+    <p class="saida">--- 2600:1f18:6c43:3d01:f679:ccfa:ac91:4d19 ping statistics ---
+3 packets transmitted, 0 received, 100% packet loss, time 2099ms
+
+saiu com 28</p>
+
+    <p class="saida">tcpdump: listening on any, link-type LINUX_SLL2
+
+0 packets captured
+0 packets received by filter</p>
 
     <p>
       Este é o resultado que a prática existe para explicar. O endereço existe, é único no
-      mundo, o filtro de entrada deixa passar, e a conexão não se completa assim mesmo. O
-      pacote de ida chega ao nó A. É a <strong>resposta</strong> que não volta, porque a
-      tabela de rotas da <code>sd-privada-a</code> manda tudo que é <code>::/0</code> para o
-      gateway somente de saída, e ele recusa conversa que não tenha começado de dentro.
+      mundo, o filtro de entrada deixa passar, e a conexão não se completa assim mesmo. A
+      captura mostra que a tentativa nem chega à interface do nó A. A tabela de rotas da
+      <code>sd-privada-a</code> manda <code>::/0</code> para o gateway somente de saída, e esse
+      dispositivo impede que um recurso externo inicie a conexão. Endereço global e filtro
+      aberto não substituem um caminho que aceite tráfego iniciado de fora.
     </p>
 
     <figure class="figura-diagrama">
       <div class="diagrama-rolagem">
         <svg id="diagrama-pratica-03-saidas" class="fig-pratica-03-saidas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 520" role="img" aria-labelledby="pratica-03-saidas-titulo pratica-03-saidas-desc">
 <title id="pratica-03-saidas-titulo">Os dois caminhos de saída do nó A</title>
-<desc id="pratica-03-saidas-desc">O nó A, dentro da sub-rede privada sd-privada-a, com dois caminhos de saída desenhados. O caminho de cima é o IPv4: sai do nó A com o endereço de origem 10.10.2.15, passa pelo NAT gateway, que reescreve a origem para o endereço público do próprio NAT, segue pelo gateway de internet e chega à internet com esse endereço trocado. O caminho de baixo é o IPv6: sai do nó A com o endereço de origem global, passa pelo gateway somente de saída e chega à internet com o mesmo endereço, sem tradução nenhuma. Uma terceira seta, tracejada, vem da internet em direção ao nó A e para antes de chegar, marcada com um xis, porque nenhum dos dois dispositivos deixa passar conexão iniciada de fora.</desc>
+<desc id="pratica-03-saidas-desc">O nó A, dentro da sub-rede privada sd-privada-a, com dois caminhos de saída desenhados. O caminho de cima é o IPv4: sai do nó A com o endereço de origem 10.10.2.15, passa pelo NAT gateway, que reescreve a origem para o endereço público do próprio NAT, segue pelo gateway de internet e chega à Internet com esse endereço trocado. O caminho de baixo é o IPv6: sai do nó A com o endereço de origem global, passa pelo gateway somente de saída e chega à Internet com o mesmo endereço, sem nenhuma tradução. Uma terceira seta, tracejada, vem da Internet em direção ao nó A e para antes de chegar, marcada com um xis, porque nenhum dos dois dispositivos deixa passar conexão iniciada de fora.</desc>
 <style>
   .fig-pratica-03-saidas{--diag-fundo:var(--color-bg-elevated,#ffffff);
        --diag-texto:var(--color-text,#16202e);
@@ -1760,7 +2539,7 @@ curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>
       </figcaption>
     </figure>
 
-    <h3>7.3 Do nó A para fora, pelos dois protocolos</h3>
+    <h3>4.3 Do nó A para fora, pelos dois protocolos</h3>
     <p>
       Falta a direção contrária. Quem pergunta agora é o nó A, e quem responde é o ponto final
       do serviço de armazenamento da própria região, que atende nos dois protocolos e é o
@@ -1781,8 +2560,8 @@ curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>
 done</pre>
     </div>
     <p class="saida">A colher no piloto. Duas linhas com codigo 307 ou 403, uma com um
-endereço IPv6 na coluna origem e outra com um IPv4. O código não é 200
-porque a chamada não traz credencial, e não é isso que está sendo medido.</p>
+endereco IPv6 na coluna origem e outra com um IPv4. O codigo nao e 200
+porque a chamada nao traz credencial, e nao e isso que esta sendo medido.</p>
 
     <p>
       Repare que a chamada precisou de <code>-6</code> e de <code>-4</code> escritos à mão.
@@ -1796,10 +2575,11 @@ porque a chamada não traz credencial, e não é isso que está sendo medido.</p
     <div class="callout">
       <p class="callout-title">💡 A conclusão do experimento 1, com as suas palavras</p>
       <p>
-        Escreva, antes de seguir, a diferença entre o que aconteceu em 7.1 e o que aconteceu
-        em 7.2. As duas tentativas falharam do mesmo jeito na tela, com silêncio e tempo
-        esgotado, e falharam por motivos completamente diferentes. Em 7.1 <strong>não havia
-        endereço</strong>. Em 7.2 <strong>havia endereço e faltava caminho de volta</strong>.
+        Escreva, antes de seguir, a diferença entre o que aconteceu em 4.1 e o que aconteceu
+        em 4.2. As duas tentativas falharam do mesmo jeito na tela, com silêncio e tempo
+        esgotado, e falharam por motivos completamente diferentes. Em 4.1 <strong>não havia
+        endereço</strong>. Em 4.2 <strong>havia endereço, mas o caminho recusava conexões
+        iniciadas de fora</strong>.
         No IPv4 essas duas situações quase sempre andam juntas, porque endereço público é
         recurso escasso, e é por isso que elas são fáceis de confundir. Só no IPv6, em que
         endereço sobra, dá para ver a segunda isolada da primeira.
@@ -1807,18 +2587,18 @@ porque a chamada não traz credencial, e não é isso que está sendo medido.</p
     </div>
 
     <div class="check">
-      <input type="checkbox" id="p03-c7">
-      <label for="p03-c7"><strong>Checkpoint 7.</strong> As três janelas estão abertas, as
+      <input type="checkbox" id="p03-c4">
+      <label for="p03-c4"><strong>Checkpoint 4.</strong> As quatro janelas estão abertas, as
         duas tentativas de fora falharam, as duas saídas do nó A funcionaram e eu escrevi a
         diferença entre os dois tipos de falha.</label>
     </div>
   </section>
 
   <!-- ============================================================
-       Passo 8
+       Passo 5
        ============================================================ -->
-  <section class="lab-step" id="passo-8">
-    <h2><span class="step-num">8</span><span>Experimento 2: a tabela de rotas como objeto vivo</span><span class="step-time">14 min</span></h2>
+  <section class="lab-step" id="passo-5">
+    <h2><span class="step-num">5</span><span>Experimento 2: a tabela de rotas como objeto vivo</span><span class="step-time">14 min</span></h2>
 
     <p>
       Quatro movimentos na <code>rt-privada</code>, com uma verificação depois de cada um. As
@@ -1844,20 +2624,19 @@ porque a chamada não traz credencial, e não é isso que está sendo medido.</p
       </table>
     </div>
 
-    <h3>8.1 Movimento 1: apagar a rota de saída IPv6</h3>
+    <h3>5.1 Movimento 1: apagar a rota de saída IPv6</h3>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
+        <span class="onde">janela 4, no seu computador</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>source ~/sd-pratica03.env
-aws ec2 delete-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0</pre>
+      <pre>aws ec2 delete-route --profile sd-sandbox --route-table-id <span class="var" data-var="RT_PRIV">RT-PRIVADA</span> --destination-ipv6-cidr-block ::/0</pre>
     </div>
 
     <p>
-      Sem saída nenhuma. Quem pergunta é o nó A, e a primeira chamada não tem mais por onde
+      Nenhuma saída. Quem pergunta é o nó A, e a primeira chamada não tem mais por onde
       sair. A segunda tem, porque o IPv4 continua com a rota dele.
     </p>
 
@@ -1871,9 +2650,11 @@ aws ec2 delete-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/
 curl -6 -s -m 6 -o /dev/null -w "IPv6 codigo %{http_code}\n" $ALVO
 curl -4 -s -m 6 -o /dev/null -w "IPv4 codigo %{http_code}\n" $ALVO</pre>
     </div>
-    <p class="saida">A colher no piloto. A linha do IPv6 traz codigo 000, que é o curl
-dizendo que não chegou a receber resposta. A do IPv4 traz o mesmo código
-do passo 7.</p>
+    <p class="saida">IPv6 codigo 000
+IPv4 codigo 307
+
+O 000 e o curl dizendo que nao chegou a receber nenhuma resposta. A linha do
+IPv4 traz o mesmo codigo do passo 4, porque a rota dele nao foi tocada.</p>
 
     <p>
       Confirme também que o nó P continua alcançando o nó A por IPv6. Quem pergunta é o nó P.
@@ -1887,7 +2668,7 @@ do passo 7.</p>
       </div>
       <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/"</pre>
     </div>
-    <p class="saida">A colher no piloto. As quatro linhas do serviço, com o nó A dizendo
+    <p class="saida">A colher no piloto. As quatro linhas do servico, com o no A dizendo
 que respondeu e que o pedido veio por IPv6.</p>
 
     <p>
@@ -1898,20 +2679,19 @@ que respondeu e que o pedido veio por IPv6.</p>
       tabela dele.
     </p>
 
-    <h3>8.2 Movimento 2: recriar a rota apontando para o gateway de internet</h3>
+    <h3>5.2 Movimento 2: recriar a rota apontando para o gateway de internet</h3>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
+        <span class="onde">janela 4, no seu computador</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>aws ec2 create-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 \
-  --gateway-id $IGW --output text</pre>
+      <pre>aws ec2 create-route --profile sd-sandbox --output text --route-table-id <span class="var" data-var="RT_PRIV">RT-PRIVADA</span> --destination-ipv6-cidr-block ::/0 --gateway-id <span class="var" data-var="IGW">IGW-DA-SD-VPC</span></pre>
     </div>
 
     <p>
-      Agora repita, sem mudar uma vírgula, a tentativa que falhou em 7.2. Quem pergunta é o nó
+      Agora repita, sem mudar uma vírgula, a tentativa que falhou em 4.2. Quem pergunta é o nó
       E e quem responde é o serviço do nó A.
     </p>
 
@@ -1923,18 +2703,21 @@ que respondeu e que o pedido veio por IPv6.</p>
       </div>
       <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/"</pre>
     </div>
-    <p class="saida">A colher no piloto. As quatro linhas do serviço do nó A, com o
-endereço IPv6 do nó E na linha de quem perguntou.</p>
+    <p class="saida">quem respondeu : no A (i-09b5852d5868fcafa)
+zona           : us-east-1a
+quem perguntou : 2600:1f18:fb:8000:d151:3267:fc87:cd74
+protocolo      : IPv6</p>
 
     <p>
       Este é o momento central da prática, e vale parar nele. <strong>A sub-rede não
-      mudou</strong>, a máquina não foi reiniciada, o endereço IPv6 do nó A é o mesmo desde o
-      passo 6 e o filtro de entrada também não mudou. Uma linha de tabela mudou, e com ela a
+      mudou</strong>, a máquina não foi reiniciada, o endereço IPv6 do nó A é o mesmo desde que
+      o script criou a instância e o filtro de entrada também não mudou. Uma linha de tabela
+      mudou, e com ela a
       <code>sd-privada-a</code> deixou de ser privada. Foi só isso, e foi só isso o tempo
       todo.
     </p>
 
-    <h3>8.3 Movimento 3: tentar fazer o mesmo pelo IPv4</h3>
+    <h3>5.3 Movimento 3: tentar fazer o mesmo pelo IPv4</h3>
     <p>
       Se uma linha de tabela tornou o nó A alcançável por IPv6, a pergunta natural é qual
       linha o tornaria alcançável por IPv4. Tente. O comando abaixo troca o próximo salto do
@@ -1944,12 +2727,11 @@ endereço IPv6 do nó E na linha de quem perguntou.</p>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
+        <span class="onde">janela 4, no seu computador</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>aws ec2 replace-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 \
-  --gateway-id $IGW</pre>
+      <pre>aws ec2 replace-route --profile sd-sandbox --route-table-id <span class="var" data-var="RT_PRIV">RT-PRIVADA</span> --destination-cidr-block 0.0.0.0/0 --gateway-id <span class="var" data-var="IGW">IGW-DA-SD-VPC</span></pre>
     </div>
 
     <div class="cmd">
@@ -1960,8 +2742,8 @@ endereço IPv6 do nó E na linha de quem perguntou.</p>
       </div>
       <pre>curl -4 -s -m 5 http://<span class="var" data-var="IP_PRIV_A">IP-PRIVADO-A</span>:8080/ ; echo "saiu com $?"</pre>
     </div>
-    <p class="saida">A colher no piloto. Outra vez cinco segundos de silêncio e
-saiu com 28.</p>
+    <p class="saida">(cinco segundos de silencio)
+saiu com 28</p>
 
     <p>
       Confira agora o estrago do outro lado. Quem pergunta é o nó A, que acabou de perder a
@@ -1977,8 +2759,10 @@ saiu com 28.</p>
       <pre>ALVO=https://s3.dualstack.us-east-1.amazonaws.com
 curl -4 -s -m 6 -o /dev/null -w "IPv4 codigo %{http_code}\n" $ALVO</pre>
     </div>
-    <p class="saida">A colher no piloto. codigo 000, porque agora a rota IPv4 aponta para
-um gateway que só atende quem tem endereço público, e o nó A não tem.</p>
+    <p class="saida">IPv4 codigo 000
+
+Zero porque a rota IPv4 agora aponta para um gateway que so atende quem tem
+endereco publico, e o no A nao tem.</p>
 
     <p>
       Este é o movimento que amarra a prática ao Tópico 3. <strong>Não existe linha de tabela
@@ -1990,24 +2774,22 @@ um gateway que só atende quem tem endereço público, e o nó A não tem.</p>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
+        <span class="onde">janela 4, no seu computador</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>aws ec2 replace-route --route-table-id $RT_PRIV --destination-cidr-block 0.0.0.0/0 \
-  --nat-gateway-id $NAT</pre>
+      <pre>aws ec2 replace-route --profile sd-sandbox --route-table-id <span class="var" data-var="RT_PRIV">RT-PRIVADA</span> --destination-cidr-block 0.0.0.0/0 --nat-gateway-id <span class="var" data-var="NAT">NAT-GATEWAY</span></pre>
     </div>
 
-    <h3>8.4 Movimento 4: devolver a rota ao gateway somente de saída</h3>
+    <h3>5.4 Movimento 4: devolver a rota ao gateway somente de saída</h3>
 
     <div class="cmd">
       <div class="cmd-head">
-        <span class="onde">CloudShell</span>
+        <span class="onde">janela 4, no seu computador</span>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>aws ec2 replace-route --route-table-id $RT_PRIV --destination-ipv6-cidr-block ::/0 \
-  --egress-only-internet-gateway-id $EIGW</pre>
+      <pre>aws ec2 replace-route --profile sd-sandbox --route-table-id <span class="var" data-var="RT_PRIV">RT-PRIVADA</span> --destination-ipv6-cidr-block ::/0 --egress-only-internet-gateway-id <span class="var" data-var="EIGW">GATEWAY-SO-SAIDA</span></pre>
     </div>
 
     <div class="cmd">
@@ -2018,17 +2800,19 @@ um gateway que só atende quem tem endereço público, e o nó A não tem.</p>
       </div>
       <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/" ; echo "saiu com $?"</pre>
     </div>
-    <p class="saida">A colher no piloto. De volta ao silêncio e ao saiu com 28.</p>
+    <p class="saida">(cinco segundos de silencio)
+saiu com 28</p>
 
     <p>
-      A rede voltou ao estado do passo 6, que é o estado em que o experimento 3 precisa dela.
+      A rede voltou ao estado em que o script a deixou, que é o estado em que o experimento 3
+      precisa dela.
       Quatro movimentos depois, a <code>sd-privada-a</code> foi privada, foi pública e voltou a
       ser privada, sem que nada além de linhas de tabela mudasse.
     </p>
 
     <div class="check">
-      <input type="checkbox" id="p03-c8">
-      <label for="p03-c8"><strong>Checkpoint 8.</strong> Fiz os quatro movimentos, vi o nó A
+      <input type="checkbox" id="p03-c5">
+      <label for="p03-c5"><strong>Checkpoint 5.</strong> Fiz os quatro movimentos, vi o nó A
         ficar alcançável no movimento 2 e voltar a não ser no 4, e a
         <code>rt-privada</code> está de volta com <code>0.0.0.0/0</code> no NAT gateway e
         <code>::/0</code> no gateway somente de saída.</label>
@@ -2036,35 +2820,54 @@ um gateway que só atende quem tem endereço público, e o nó A não tem.</p>
   </section>
 
   <!-- ============================================================
-       Passo 9
+       Passo 6
        ============================================================ -->
-  <section class="lab-step" id="passo-9">
-    <h2><span class="step-num">9</span><span>Experimento 3: o preço do caminho</span><span class="step-time">12 min</span></h2>
+  <section class="lab-step" id="passo-6">
+    <h2><span class="step-num">6</span><span>Experimento 3: o preço do caminho</span><span class="step-time">12 min</span></h2>
 
     <div class="callout is-warn">
-      <p class="callout-title">⚠ Anote sempre a segunda execução</p>
+      <p class="callout-title">⚠ Repita somente as medidas 4 e 5</p>
       <p>
-        A primeira chamada a qualquer destino sai mais lenta que as seguintes, às vezes o
-        triplo, porque ela paga a resolução de nome, a descoberta de caminho e o que mais
-        estiver frio no meio. <strong>Rode cada comando duas vezes e anote a segunda.</strong>
+        As medidas 4 e 5 usam resolução de nome e conexão TCP, que podem sair mais lentas na
+        primeira chamada. Rode esse par duas vezes e anote a segunda execução. As medidas 1 a
+        3 já calculam a média de dez pacotes e seguem outra regra, explicada em 6.1.
       </p>
     </div>
 
     <p>
-      As quatro medidas formam <strong>dois pares</strong>, e cada par se compara consigo
-      mesmo. As medidas 1 e 4 usam o mesmo instrumento contra máquinas suas, uma dentro da VPC
-      e outra fora dela. As medidas 2 e 3 vão para o mesmo serviço, na mesma região, pelos
-      dois protocolos, que é a única forma de a diferença ser atribuível ao caminho. Comparar
-      uma medida do primeiro par com uma do segundo não diz nada, porque o instrumento é
-      outro.
+      São <strong>cinco medidas em dois grupos</strong>, e cada grupo se compara consigo mesmo.
+      As três primeiras usam o mesmo instrumento contra máquinas suas, mudando uma coisa de cada
+      vez, e servem para descobrir o que a rede cobra caro. As duas últimas vão para o mesmo
+      serviço, na mesma região, pelos dois protocolos, e servem para comparar os dois caminhos de
+      saída. Comparar uma medida de um grupo com uma do outro não diz nada, porque o instrumento
+      é outro.
     </p>
 
-    <h3>9.1 Medidas 1 e 4: dentro da VPC e fora dela</h3>
+    <h3>6.1 Medidas 1, 2 e 3: o que muda quando o destino muda de lugar</h3>
     <p>
-      Quem pergunta nas duas é o nó A. Na primeira ele fala com o nó P, que mora na sub-rede
-      vizinha da mesma VPC, e o pacote não passa por gateway nenhum, porque a rota
-      <code>local</code> dá conta. Na segunda ele fala com o nó E, que mora em outra VPC, e o
-      pacote sai da rede, atravessa a internet da região e entra em outra rede.
+      Quem pergunta nas três é o nó A, e o instrumento é o mesmo. O que muda é onde mora quem
+      responde, e muda <strong>uma coisa de cada vez</strong>, que é o que torna a comparação
+      honesta. O avg de uma única rodada de dez pacotes é o valor a anotar. Se o max ficar
+      muito acima do avg, descarte a rodada como atípica e repita o conjunto, sem escolher por
+      rotina a segunda execução.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+        <thead>
+          <tr><th>Medida</th><th>Quem responde</th><th>O que muda em relação à anterior</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Nó P, na sub-rede vizinha</td><td>Nada, é a referência. Mesma VPC, mesma zona, e o pacote não passa por nenhum gateway, porque a rota <code>local</code> dá conta</td></tr>
+          <tr><td>2</td><td>Nó B, na <code>sd-privada-b</code></td><td>Só a <strong>zona de disponibilidade</strong>. Continua na mesma VPC e continua pela rota <code>local</code></td></tr>
+          <tr><td>3</td><td>Nó E, na VPC padrão</td><td>Só a <strong>VPC</strong>. Volta para a zona de origem, e o pacote sai pelo gateway somente de saída e entra pelo gateway de internet da outra rede</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      Antes de rodar, escreva num canto qual das três você espera que saia mais cara. A pergunta
+      não é retórica, e a resposta costuma contrariar a intuição.
     </p>
 
     <div class="cmd">
@@ -2073,18 +2876,48 @@ um gateway que só atende quem tem endereço público, e o nó A não tem.</p>
         <span class="espaco"></span>
         <button type="button" class="btn-copiar" data-copiar>copiar</button>
       </div>
-      <pre>ping -6 -c 5 <span class="var" data-var="IPV6_P">IPV6-DO-NO-P</span> | tail -2
-ping -6 -c 5 <span class="var" data-var="IPV6_E">IPV6-DO-NO-E</span> | tail -2</pre>
+      <pre>ping -6 -c 10 -i 0.3 <span class="var" data-var="IPV6_P">IPV6-DO-NO-P</span> | tail -1
+ping -6 -c 10 -i 0.3 <span class="var" data-var="IPV6_B">IPV6-DO-NO-B</span> | tail -1
+ping -6 -c 10 -i 0.3 <span class="var" data-var="IPV6_E">IPV6-DO-NO-E</span> | tail -1</pre>
     </div>
-    <p class="saida">A colher no piloto. Duas linhas por comando, a última com
-rtt min/avg/max/mdev em milissegundos. Anote o avg.</p>
+    <p class="saida">rtt min/avg/max/mdev = 0.309/0.347/0.383/0.025 ms
+rtt min/avg/max/mdev = 0.891/0.984/1.556/0.192 ms
+rtt min/avg/max/mdev = 0.284/0.395/0.899/0.197 ms
 
-    <h3>9.2 Medidas 2 e 3: o mesmo destino pelos dois caminhos de saída</h3>
+A do meio e a do no B. Anote o avg das tres.</p>
+
+    <div class="callout">
+      <p class="callout-title">💡 O que cobra é a distância, não a fronteira</p>
+      <p>
+        A medida 3 atravessa a fronteira de duas redes virtuais, passa por dois dispositivos de
+        borda e sai pelo endereço público, e custa <strong>o mesmo</strong> que ficar dentro de
+        casa. A medida 2 não sai da VPC, não passa por nenhum gateway e custa quase três vezes
+        mais. A única coisa que ela muda é a zona de disponibilidade.
+      </p>
+      <p>
+        A explicação é física. Uma VPC é um desenho em software, e atravessar a borda dela
+        custa o trabalho de consultar uma tabela. Uma zona de disponibilidade é
+        <strong>outro conjunto de prédios</strong>, a quilômetros de distância, e atravessar
+        essa borda custa o tempo que a luz leva para ir e voltar pela fibra. Nenhum software
+        negocia com a velocidade da luz. É a mesma grandeza que a
+        <button type="button" class="nota-termo" data-nota="camadas-fisicas-latencia">latência
+        entre camadas físicas</button> da prática 02 mediu, agora com o caminho explícito.
+      </p>
+      <p>
+        Guarde a consequência de projeto, porque ela vale para o resto da disciplina. Espalhar
+        réplicas por zonas diferentes é o que dá tolerância a falhas, e o preço disso aparece em
+        cada mensagem trocada entre elas. Quem projeta sistema distribuído decide esse par o
+        tempo todo, e agora você tem o número.
+      </p>
+    </div>
+
+    <h3>6.2 Medidas 4 e 5: o mesmo destino pelos dois caminhos de saída</h3>
     <p>
-      Quem pergunta continua sendo o nó A, e quem responde é o ponto final do armazenamento na
-      região. O que muda entre as duas linhas é uma letra, e essa letra troca o dispositivo de
-      borda por onde o pacote sai. O campo medido é o tempo até a conexão se completar, que
-      isola a ida e a volta pela rede.
+      Quem pergunta continua sendo o nó A, e o nome do serviço permanece o mesmo. A opção
+      <code>-6</code> ou <code>-4</code> escolhe uma família, o que pode mudar tanto o endereço
+      do ponto final quanto o dispositivo de borda do caminho. A comparação cobre os dois
+      caminhos completos, sem atribuir a diferença a um único equipamento. O campo medido é o
+      tempo até a conexão se completar, que isola a ida e a volta pela rede.
     </p>
 
     <div class="cmd">
@@ -2100,8 +2933,11 @@ rtt min/avg/max/mdev em milissegundos. Anote o avg.</p>
     https://s3.dualstack.us-east-1.amazonaws.com
 done</pre>
     </div>
-    <p class="saida">A colher no piloto. Duas linhas com três tempos cada. O custo da rede
-é a conexão menos o nome, e é esse número que vai para a tabela.</p>
+    <p class="saida">-6  nome 0.003659s   conexao 0.005506s   total 0.020401s
+-4  nome 0.001270s   conexao 0.003285s   total 0.017424s
+
+O custo da rede e a conexao menos o nome, e e esse numero que vai para a
+tabela. Aqui deu 1,85 ms pelo IPv6 e 2,02 ms pelo IPv4.</p>
 
     <p>
       O campo <code>time_connect</code> conta desde o começo da chamada até o aperto de mão do
@@ -2112,7 +2948,7 @@ done</pre>
       curl</button> explica os outros campos que o comando poderia imprimir.
     </p>
 
-    <h3>9.3 A forma do caminho, que o tempo não mostra</h3>
+    <h3>6.3 A forma do caminho, que o tempo não mostra</h3>
     <p>
       O tempo diz quanto custou e não diz por onde foi. Quem pergunta é o nó A, e o comando
       abaixo lista os saltos até o destino pelos dois protocolos.
@@ -2127,38 +2963,56 @@ done</pre>
       <pre>traceroute -6 -n -m 8 -w 1 s3.dualstack.us-east-1.amazonaws.com
 traceroute -4 -n -m 8 -w 1 s3.dualstack.us-east-1.amazonaws.com</pre>
     </div>
-    <p class="saida">A colher no piloto. Poucos saltos em cada um, muitos deles marcados
-com asteriscos, porque a rede da Amazon não responde a esse tipo de sonda
-em todo salto.</p>
+    <p class="saida">traceroute to s3.dualstack.us-east-1.amazonaws.com (2600:1f60:8060:1::100f:ffe2)
+ 1  * * *
+ 2  * * *
+ ... e assim ate o oitavo
 
-    <div class="callout is-warn">
-      <p class="callout-title">⚠ Não procure o NAT gateway na lista</p>
+traceroute to s3.dualstack.us-east-1.amazonaws.com (54.231.165.248)
+ 1  10.10.1.103    0.239 ms  0.219 ms  0.203 ms
+ 2  244.5.0.3      4.805 ms  5.949 ms  9.322 ms
+ 3  240.3.16.97    1.245 ms  1.492 ms  1.316 ms
+ 4  240.3.16.125   0.987 ms  1.414 ms  1.403 ms
+ 5  240.3.16.23    1.128 ms  1.050 ms  1.374 ms
+ 6  242.7.118.179  3.539 ms  3.473 ms  3.422 ms
+ 7  54.231.165.248 0.891 ms  0.970 ms  1.149 ms</p>
+
+    <div class="callout">
+      <p class="callout-title">💡 Os dois comandos mostram coisas opostas, e é esse o achado</p>
       <p>
-        Ele não aparece, e a ausência dele não é defeito do comando. Um NAT gateway não é um
-        roteador comum do ponto de vista do campo que o <code>traceroute</code> manipula, e
-        por isso não se anuncia como salto. O que você consegue ver é o efeito dele, e esse
-        efeito está na extensão <em>Quem eu sou visto de fora</em>, no fim da página.
+        O <code>traceroute -6</code> não devolve nenhum salto, só asteriscos, porque o gateway
+        somente de saída não se anuncia como salto. Ele encaminha e não se apresenta. Já o
+        <code>traceroute -4</code> devolve o caminho inteiro, e o <strong>primeiro salto é o
+        NAT gateway</strong>. Confira, porque o endereço dele está na sub-rede pública, e não
+        é o do nó P. Você pode conferir com
+        <code>aws ec2 describe-nat-gateways</code>, que traz o endereço privado da interface
+        dele.
+      </p>
+      <p>
+        A comparação vale mais que qualquer um dos dois sozinho. O caminho que <em>traduz</em>
+        endereço tem uma máquina no meio, e ela aparece. O caminho que não traduz nada não tem
+        o que mostrar. É a mesma diferença que o experimento 1 mediu, agora vista de outro
+        ângulo, e o efeito dela sobre o endereço de origem está na extensão
+        <em>Quem eu sou visto de fora</em>, no fim da página.
       </p>
     </div>
 
     <p>
-      A conclusão do experimento 3 é sobre a <strong>forma</strong> do caminho, e não sobre
-      ganho de desempenho. A diferença entre a medida 2 e a medida 3 é pequena, na casa de
-      frações de milissegundo, e seria irresponsável escolher um protocolo por causa dela. O
-      que a comparação mostra é que os dois caminhos existem, que passam por dispositivos
-      diferentes e que um deles faz um trabalho a mais, que é traduzir o endereço de cada
-      pacote.
-      A
-      <button type="button" class="nota-termo" data-nota="camadas-fisicas-latencia">latência
-      entre camadas físicas</button> da prática 02 é a mesma grandeza medida aqui, agora com o
-      caminho explícito.
+      O experimento 3 termina com duas conclusões que não se misturam. A primeira é a conclusão
+      mais surpreendente das medidas 1 a 3, porque <strong>o que a rede
+      cobra é a distância física e não a fronteira lógica</strong>. A segunda é a das medidas 4
+      e 5, e é sobre a <strong>forma</strong> do caminho, não sobre desempenho, já que a
+      diferença entre os dois protocolos ficou em fração de milissegundo e escolher um por causa
+      dela seria irresponsável. O que essa comparação mostra é que os dois caminhos existem, que
+      passam por dispositivos diferentes e que um deles faz um trabalho a mais, que é traduzir o
+      endereço de cada pacote.
     </p>
 
     <div class="check">
-      <input type="checkbox" id="p03-c9">
-      <label for="p03-c9"><strong>Checkpoint 9.</strong> Tenho os quatro tempos anotados, os
-        dois <code>traceroute</code> rodaram e entendi por que o NAT gateway não aparece na
-        lista de saltos.</label>
+      <input type="checkbox" id="p03-c6">
+      <label for="p03-c6"><strong>Checkpoint 6.</strong> Tenho as cinco medidas anotadas, sei
+        dizer qual dos três destinos saiu mais caro e por quê, os dois <code>traceroute</code>
+        rodaram e entendi por que um deles não mostra nenhum salto.</label>
     </div>
   </section>
 
@@ -2171,7 +3025,7 @@ em todo salto.</p>
     <p>
       O tópico apresenta a interligação em rede como o problema de fazer redes diferentes
       parecerem uma só, e apresenta o esgotamento do IPv4 com as três respostas que
-      convivem até hoje. Você passou pelas duas coisas em cem minutos, com três máquinas e
+      convivem até hoje. Você passou pelas duas coisas em pouco mais de uma hora, com quatro máquinas e
       duas redes.
     </p>
 
@@ -2183,14 +3037,15 @@ em todo salto.</p>
         <tbody>
           <tr>
             <td><strong>Tabela de roteamento e próximo salto</strong></td>
-            <td>Você leu as tabelas das três redes prontas no passo 2 e escreveu duas no passo
-              5. Toda linha tem um destino e um próximo salto, e a única que ninguém escreve é
-              a <code>local</code>.</td>
+            <td>No passo 3 você leu as tabelas das três redes prontas. No passo 5 você alterou
+              duas linhas da tabela privada e observou o efeito. Toda linha tem um destino e
+              um próximo salto, e a única que ninguém escreve é a <code>local</code>.</td>
           </tr>
           <tr>
             <td><strong>Roteamento entre domínios sem classes (CIDR)</strong></td>
-            <td>O bloco /56 da VPC virou três /64 no passo 3, trocando o par hexadecimal
-              final. O mesmo raciocínio recortou o /16 em três /24. A máscara é que diz onde
+            <td>Antes do passo 3, o script recortou o bloco /56 da VPC em três /64, trocando o
+              par hexadecimal final. Você inspecionou o resultado no diagrama e nas tabelas. O
+              mesmo raciocínio recortou o /16 em três /24. A máscara é que diz onde
               termina a rede e começa o host, e ela cai em qualquer ponto do endereço.</td>
           </tr>
           <tr>
@@ -2223,13 +3078,13 @@ em todo salto.</p>
           <tr>
             <td><strong>Encapsulamento e saltos</strong></td>
             <td>O <button type="button" class="nota-termo" data-nota="encapsulamento">traceroute</button>
-              do passo 9 mostrou o caminho salto a salto, e mostrou também que nem todo
+              do passo 6 mostrou o caminho salto a salto, e mostrou também que nem todo
               equipamento no meio se deixa ver. O NAT gateway é um deles.</td>
           </tr>
           <tr>
             <td><strong>Filtro e roteamento são coisas diferentes</strong></td>
             <td>Os grupos de segurança ficaram abertos para os dois protocolos o tempo todo, e
-              você conferiu isso antes de concluir qualquer coisa no passo 7. Toda falha que
+              você conferiu isso antes de concluir qualquer coisa no passo 4. Toda falha que
               você viu foi de caminho, nenhuma foi de filtro.</td>
           </tr>
         </tbody>
@@ -2251,12 +3106,12 @@ em todo salto.</p>
   </section>
 
   <!-- ============================================================
-       Passo 10
+       Passo 7
        ============================================================ -->
-  <section class="lab-step" id="passo-10">
-    <h2><span class="step-num">10</span><span>Anotar os resultados, encerrar e limpar</span><span class="step-time">7 min</span></h2>
+  <section class="lab-step" id="passo-7">
+    <h2><span class="step-num">7</span><span>Anotar os resultados, encerrar e limpar</span><span class="step-time">10 min</span></h2>
 
-    <h3>10.1 Anotar</h3>
+    <h3>7.1 Anotar</h3>
     <p>
       Cada linha diz de onde tirar o dado. <strong>Não existe resposta certa aqui, porque o
       valor é o seu.</strong> A coluna de referência é só uma checagem de sanidade. Ficar
@@ -2281,50 +3136,68 @@ em todo salto.</p>
         </thead>
         <tbody>
           <tr>
-            <td>Medida 1, do nó A ao nó P por IPv6, dentro da VPC<br>
-              <span class="ref">passo 9.1 · o <code>avg</code> do primeiro ping</span></td>
-            <td><input type="text" data-res="m1_local" data-rotulo="medida 1, A para P dentro da VPC (ms)" placeholder="ms"></td>
-            <td class="ref">a medir no piloto</td>
+            <td>Medida 1, do nó A ao nó P, mesma VPC e mesma zona<br>
+              <span class="ref">passo 6.1 · o <code>avg</code> da primeira linha</span></td>
+            <td><input type="text" data-res="m1_mesma_zona" data-rotulo="medida 1, A para P na mesma zona (ms)" placeholder="ms"></td>
+            <td class="ref">perto de 0,35 ms</td>
           </tr>
           <tr>
-            <td>Medida 4, do nó A ao nó E por IPv6, entre VPCs<br>
-              <span class="ref">passo 9.1 · o <code>avg</code> do segundo ping</span></td>
-            <td><input type="text" data-res="m4_entre_vpcs" data-rotulo="medida 4, A para E entre VPCs (ms)" placeholder="ms"></td>
-            <td class="ref">a medir no piloto</td>
+            <td>Medida 2, do nó A ao nó B, mesma VPC e <strong>outra zona</strong><br>
+              <span class="ref">passo 6.1 · o <code>avg</code> da segunda linha</span></td>
+            <td><input type="text" data-res="m2_outra_zona" data-rotulo="medida 2, A para B em outra zona (ms)" placeholder="ms"></td>
+            <td class="ref">perto de 0,9 ms</td>
           </tr>
           <tr>
-            <td>Medida 2, saída IPv6 pelo gateway somente de saída<br>
-              <span class="ref">passo 9.2 · <code>conexao</code> menos <code>nome</code>, na linha do -6</span></td>
-            <td><input type="text" data-res="m2_ipv6" data-rotulo="medida 2, saida IPv6 (s)" placeholder="s"></td>
-            <td class="ref">a medir no piloto</td>
+            <td>Medida 3, do nó A ao nó E, <strong>outra VPC</strong> e mesma zona<br>
+              <span class="ref">passo 6.1 · o <code>avg</code> da terceira linha</span></td>
+            <td><input type="text" data-res="m3_outra_vpc" data-rotulo="medida 3, A para E em outra VPC (ms)" placeholder="ms"></td>
+            <td class="ref">perto de 0,35 ms, igual à medida 1</td>
           </tr>
           <tr>
-            <td>Medida 3, saída IPv4 pelo NAT gateway<br>
-              <span class="ref">passo 9.2 · a mesma conta, na linha do -4</span></td>
-            <td><input type="text" data-res="m3_ipv4" data-rotulo="medida 3, saida IPv4 pelo NAT (s)" placeholder="s"></td>
-            <td class="ref">a medir no piloto</td>
+            <td>Quantas vezes a medida 2 é maior que a medida 1<br>
+              <span class="ref">conta sua · divida a medida 2 pela medida 1</span></td>
+            <td><input type="text" data-res="razao_zona" data-rotulo="razao entre a medida 2 e a medida 1" placeholder="vezes"></td>
+            <td class="ref">perto de 3 vezes</td>
           </tr>
           <tr>
-            <td>Quantas vezes a medida 4 é maior que a medida 1<br>
-              <span class="ref">conta sua · divida a medida 4 pela medida 1</span></td>
-            <td><input type="text" data-res="razao_saida" data-rotulo="razao entre a medida 4 e a medida 1" placeholder="vezes"></td>
-            <td class="ref">a medir no piloto</td>
+            <td>Quantas vezes a medida 3 é maior que a medida 1<br>
+              <span class="ref">conta sua · divida a medida 3 pela medida 1</span></td>
+            <td><input type="text" data-res="razao_vpc" data-rotulo="razao entre a medida 3 e a medida 1" placeholder="vezes"></td>
+            <td class="ref">perto de 1 vez, ou seja, nenhuma diferença</td>
           </tr>
           <tr>
-            <td>Quantos saltos o <code>traceroute -6</code> mostrou até responder<br>
-              <span class="ref">passo 9.3 · conte as linhas com endereço, ignorando as de asterisco</span></td>
+            <td>Medida 4, saída IPv6 pelo gateway somente de saída<br>
+              <span class="ref">passo 6.2 · <code>conexao</code> menos <code>nome</code>, na linha do -6</span></td>
+            <td><input type="text" data-res="m4_ipv6" data-rotulo="medida 4, saida IPv6 (s)" placeholder="s"></td>
+            <td class="ref">perto de 0,0018 s</td>
+          </tr>
+          <tr>
+            <td>Medida 5, saída IPv4 pelo NAT gateway<br>
+              <span class="ref">passo 6.2 · a mesma conta, na linha do -4</span></td>
+            <td><input type="text" data-res="m5_ipv4" data-rotulo="medida 5, saida IPv4 pelo NAT (s)" placeholder="s"></td>
+            <td class="ref">perto de 0,0020 s</td>
+          </tr>
+          <tr>
+            <td>Quantos saltos o <code>traceroute -6</code> mostrou<br>
+              <span class="ref">passo 6.3 · conte as linhas com endereço, ignorando as de asterisco</span></td>
             <td><input type="text" data-res="saltos_ipv6" data-rotulo="saltos visiveis no traceroute IPv6" placeholder="saltos"></td>
-            <td class="ref">a medir no piloto</td>
+            <td class="ref">nenhum</td>
+          </tr>
+          <tr>
+            <td>Quem é o primeiro salto do <code>traceroute -4</code><br>
+              <span class="ref">passo 6.3 · o endereço da linha 1</span></td>
+            <td><input type="text" data-res="primeiro_salto_ipv4" data-rotulo="primeiro salto do traceroute IPv4" placeholder="endereco"></td>
+            <td class="ref">o NAT gateway, na sub-rede 10.10.1.0/24</td>
           </tr>
           <tr>
             <td>No movimento 2, o que mudou na máquina, no endereço ou no filtro<br>
-              <span class="ref">passo 8.2 · escreva a resposta em uma palavra</span></td>
+              <span class="ref">passo 5.2 · escreva a resposta em uma palavra</span></td>
             <td><input type="text" data-res="mudou_no_mov2" data-rotulo="o que mudou na maquina no movimento 2" placeholder="uma palavra"></td>
             <td class="ref">nada</td>
           </tr>
           <tr>
             <td>No movimento 3, o que aconteceu com a saída IPv4 do nó A<br>
-              <span class="ref">passo 8.3 · o código que o <code>curl</code> devolveu</span></td>
+              <span class="ref">passo 5.3 · o código que o <code>curl</code> devolveu</span></td>
             <td><input type="text" data-res="mov3_saida_ipv4" data-rotulo="codigo do curl IPv4 no movimento 3" placeholder="codigo"></td>
             <td class="ref">000, porque ele perdeu a saída</td>
           </tr>
@@ -2341,25 +3214,49 @@ em todo salto.</p>
 site ou trocar de computador. Cole os seus numeros em algum lugar seu antes de
 encerrar o laboratorio.</p>
 
-    <h3>10.2 Encerrar e limpar</h3>
+    <h3>7.2 Encerrar e limpar</h3>
     <p>
-      Esta prática cria mais coisas que as anteriores, e algumas delas precisam sair na ordem
-      inversa da criação, porque uma segura a outra. O script de recuperação também sabe
-      apagar, e é o caminho mais curto.
+      O mesmo script do passo 2 também sabe desmontar, e é o caminho mais curto. Ele apaga na
+      ordem inversa da criação, porque algumas coisas seguram outras, e a última que ele apaga
+      é a credencial deste computador.
     </p>
 
-    <div class="cmd">
-      <div class="cmd-head">
-        <span class="onde">CloudShell</span>
-        <span class="espaco"></span>
-        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 4, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd $env:USERPROFILE\Downloads
+powershell -ExecutionPolicy Bypass -File .\preparar-ambiente.ps1 -Apagar</pre>
       </div>
-      <pre>curl -sfO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03/recriar-rede.sh
-bash recriar-rede.sh --apagar</pre>
     </div>
-    <p class="saida">A colher no piloto. O script encerra as instâncias, espera o NAT
-gateway sumir, solta o endereço elástico e apaga a VPC. Ele leva perto de
-quatro minutos, quase todo esse tempo esperando o NAT gateway.</p>
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 4, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd ~/Downloads
+bash preparar-ambiente.sh --apagar</pre>
+      </div>
+    </div>
+    <p class="saida">O script encerra as quatro instancias, espera o NAT gateway sumir, solta o
+endereco elastico, apaga a VPC e por fim limpa o perfil sd-sandbox. Ele leva
+perto de quatro minutos, quase todo esse tempo esperando o NAT gateway.</p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ A credencial sai junto, e isso é o mais importante daqui</p>
+      <p>
+        A sessão do laboratório vai expirar a credencial de qualquer jeito, então apagá-la
+        parece dispensável. Não é, e o motivo aparece no computador do laboratório do campus,
+        onde a próxima pessoa a sentar naquela máquina teria acesso ao que sobrou. O hábito
+        vale mais que o caso, porque numa conta de verdade a credencial esquecida não expira em
+        quatro horas.
+      </p>
+    </div>
 
     <p>
       Depois disso, apague o <code>labsuser.pem</code> desta sessão, porque ele não vai servir
@@ -2378,8 +3275,8 @@ quatro minutos, quase todo esse tempo esperando o NAT gateway.</p>
     </div>
 
     <div class="check">
-      <input type="checkbox" id="p03-c10">
-      <label for="p03-c10"><strong>Checkpoint 10.</strong> A tabela está preenchida, eu
+      <input type="checkbox" id="p03-c7">
+      <label for="p03-c7"><strong>Checkpoint 7.</strong> A tabela está preenchida, eu
         guardei uma cópia dos meus números, a VPC e as instâncias foram apagadas e o
         laboratório foi encerrado.</label>
     </div>
@@ -2404,27 +3301,42 @@ quatro minutos, quase todo esse tempo esperando o NAT gateway.</p>
     <h2><span class="step-num is-accent">!</span><span>Se der errado</span></h2>
 
     <div class="callout">
-      <p class="callout-title">💡 O comando que refaz a rede inteira</p>
+      <p class="callout-title">💡 O comando que refaz o ambiente inteiro</p>
       <p>
         Se a sessão do Sandbox cair no meio da prática, ou se a rede ficar num estado que você
-        não consegue mais explicar, o script abaixo refaz tudo do passo 2 ao passo 6 em um
-        comando. Ele não substitui os passos, que são o conteúdo. Ele existe para você voltar
-        ao experimento em que estava.
+        não consegue mais explicar, as duas linhas abaixo desmontam o que sobrou e montam tudo
+        de novo. É o mesmo script do passo 2, nos dois modos.
       </p>
-      <div class="cmd">
-        <div class="cmd-head">
-          <span class="onde">CloudShell</span>
-          <span class="espaco"></span>
-          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      <div class="so-win">
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="onde">janela 4, no seu computador</span>
+            <span class="espaco"></span>
+            <button type="button" class="btn-copiar" data-copiar>copiar</button>
+          </div>
+          <pre>cd $env:USERPROFILE\Downloads
+powershell -ExecutionPolicy Bypass -File .\preparar-ambiente.ps1 -Apagar
+powershell -ExecutionPolicy Bypass -File .\preparar-ambiente.ps1</pre>
         </div>
-        <pre>curl -sfO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-03/recriar-rede.sh
-bash recriar-rede.sh --apagar
-bash recriar-rede.sh</pre>
+      </div>
+      <div class="so-unix">
+        <div class="cmd">
+          <div class="cmd-head">
+            <span class="onde">janela 4, no seu computador</span>
+            <span class="espaco"></span>
+            <button type="button" class="btn-copiar" data-copiar>copiar</button>
+          </div>
+          <pre>cd ~/Downloads
+bash preparar-ambiente.sh --apagar
+bash preparar-ambiente.sh</pre>
+        </div>
       </div>
       <p>
         A primeira linha limpa o que sobrou, porque o script se recusa a criar uma segunda
-        <code>sd-vpc</code>. No fim ele imprime os seis endereços da ficha e os guarda em
-        <code>~/sd-pratica03.env</code>.
+        <code>sd-vpc</code>. Se a sessão caiu de verdade, a credencial também morreu, então ele
+        vai pedir os três valores outra vez. No fim ele imprime o bloco novo da ficha, e os
+        endereços <strong>mudam</strong>, então cole o bloco de novo antes de voltar ao
+        experimento.
       </p>
     </div>
 
@@ -2445,7 +3357,7 @@ bash recriar-rede.sh</pre>
             <td>Baixe o PEM de novo nesta sessão. O usuário é <code>ec2-user</code>.</td>
           </tr>
           <tr>
-            <td>O <code>ssh -J</code> da janela 2 não entra, e a janela 1 entra</td>
+            <td>A janela 2 não entra, e a janela 1 entra</td>
             <td>O salto por P funciona e o segundo trecho não, quase sempre porque o endereço
               do nó A na ficha é o público de outra máquina</td>
             <td>Confira que o endereço da janela 2 é o <strong>privado</strong> do nó A, que
@@ -2453,11 +3365,19 @@ bash recriar-rede.sh</pre>
               Manager, na linha abaixo desta tabela.</td>
           </tr>
           <tr>
+            <td>A janela 2 devolve <code>Permission denied (publickey)</code> nomeando o
+              endereço do <strong>nó P</strong></td>
+            <td>O comando trocou o <code>ProxyCommand</code> pelo atalho <code>-J</code>, que
+              não repassa a chave ao primeiro salto</td>
+            <td>Use o comando desta página como ele está. As duas metades precisam nomear o
+              <code>labsuser.pem</code>, uma para o trecho até P e outra para o trecho de P
+              até A.</td>
+          </tr>
+          <tr>
             <td>Nenhum <code>ssh</code> entra, nem o da janela 1</td>
-            <td>Cliente SSH do Windows antigo, sem a opção <code>-J</code>, ou chave com
-              permissão errada</td>
+            <td>Cliente SSH do Windows muito antigo ou chave com permissão errada</td>
             <td>Em <strong>EC2 &gt; Instances</strong>, marque a instância e clique em
-              <strong>Connect</strong>, aba <strong>Session Manager</strong>. Os três nós
+              <strong>Connect</strong>, aba <strong>Session Manager</strong>. Os quatro nós
               sobem com o perfil <code>LabInstanceProfile</code>, que é o que faz essa aba
               funcionar. No nó A ela só passa a valer depois de existir rota de saída, o que
               é coerente com o que a prática ensina.</td>
@@ -2471,35 +3391,47 @@ bash recriar-rede.sh</pre>
               instância subiu antes de o NAT gateway ficar disponível.</td>
           </tr>
           <tr>
-            <td>O <code>curl</code> da CloudShell não baixa o <code>setup.sh</code></td>
-            <td>O endereço publicado está fora do ar</td>
-            <td>Salve o arquivo pelo botão <strong>baixar</strong> do passo 6 e envie-o à
-              CloudShell pelo menu <strong>Actions</strong>, opção <em>Upload file</em>.</td>
+            <td><code>ExpiredToken</code> ou <code>InvalidClientTokenId</code> em qualquer
+              comando <code>aws</code></td>
+            <td>A credencial do laboratório expirou, e ela expira junto com a sessão</td>
+            <td>Na aba do laboratório, clique em <strong>Start Lab</strong> outra vez, abra
+              <strong>Details &gt; Show</strong> e rode o script do passo 2 de novo. Ele
+              pergunta os três valores e regrava o perfil.</td>
           </tr>
           <tr>
-            <td><code>InvalidParameterValue</code> ao criar a sub-rede, falando do bloco
-              IPv6</td>
-            <td>A variável <code>RAIZ</code> não foi montada, quase sempre porque a VPC ainda
-              não tinha recebido o /56 quando o <code>describe-vpcs</code> rodou</td>
-            <td>Repita o bloco do passo 3 que define <code>PREFIXO</code> e <code>RAIZ</code>,
-              e confira com <code>echo $RAIZ</code> que ele termina em dois-pontos e não em
-              <code>None</code>.</td>
+            <td>No Windows, <code>não pode ser carregado porque a execução de scripts foi
+              desabilitada</code></td>
+            <td>A política de execução do PowerShell, que recusa script baixado da Internet</td>
+            <td>Use a linha completa do passo 2, com
+              <code>powershell -ExecutionPolicy Bypass -File</code>. Se nem assim funcionar, a
+              política vem de uma diretiva do campus, use a CloudShell do console. Baixe e rode
+              nela o <code>preparar-ambiente.sh</code>, que cria o mesmo perfil
+              <code>sd-sandbox</code>. A partir daí, execute na CloudShell os comandos da janela
+              4 e mantenha as sessões SSH nas janelas do seu computador.</td>
+          </tr>
+          <tr>
+            <td>O script não baixa o <code>setup.sh</code> e para na hora de subir os nós</td>
+            <td>O endereço publicado está fora do ar</td>
+            <td>Salve o arquivo pelo botão <strong>baixar</strong> do passo 2, na seção que
+              mostra o que cada nó executa, e ponha-o na pasta <code>sd-pratica03</code> antes
+              de rodar o script de novo.</td>
           </tr>
           <tr>
             <td>A saída IPv6 do nó A não funciona, e a rota <code>::/0</code> está no lugar</td>
-            <td>Falta a regra de saída <code>::/0</code> no grupo de segurança</td>
-            <td>Rode <code>aws ec2 describe-security-groups --group-ids $SG_NOS --query
-              'SecurityGroups[0].IpPermissionsEgress'</code> e confira que existem
-              <strong>duas</strong> entradas, uma com <code>IpRanges</code> e outra com
-              <code>Ipv6Ranges</code>. Se faltar a segunda, refaça o
-              <code>authorize-security-group-egress</code> do passo 6.</td>
+            <td>A regra de saída do grupo de segurança não alcança o IPv6</td>
+            <td>Rode <code>aws ec2 describe-security-groups --profile sd-sandbox --group-ids
+              SG-DOS-NOS --query 'SecurityGroups[0].IpPermissionsEgress'</code> e confira que a
+              regra de saída nomeia <code>Ipv6Ranges</code> com <code>::/0</code>, além do
+              <code>IpRanges</code> com <code>0.0.0.0/0</code>. Numa VPC de pilha dupla ela já
+              nasce assim.</td>
           </tr>
           <tr>
             <td>O nó E não alcança o nó A no movimento 2, e a rota está no gateway de
               internet</td>
             <td>Falta o bloco IPv6 na VPC padrão, ou a rota <code>::/0</code> dela</td>
-            <td>Refaça o passo 2.1. Confira com <code>sd-rede</code>, na janela 3, que o nó E
-              tem mesmo um endereço IPv6 na terceira linha.</td>
+            <td>Confira com <code>sd-rede</code>, na janela 3, que o nó E tem mesmo um
+              endereço IPv6 na terceira linha. Se não tiver, refaça o ambiente pelo comando do
+              começo desta seção.</td>
           </tr>
           <tr>
             <td><code>RouteAlreadyExists</code></td>
@@ -2511,15 +3443,16 @@ bash recriar-rede.sh</pre>
             <td><code>DependencyViolation</code> ao apagar a VPC</td>
             <td>Sobrou algo dentro dela, quase sempre o NAT gateway ou uma interface de rede
               de instância recém-encerrada</td>
-            <td>Rode <code>bash recriar-rede.sh --apagar</code>, que respeita a ordem e espera
-              o que precisa ser esperado.</td>
+            <td>Espere trinta segundos e leia a lista de interfaces, sub-redes e tabelas que o
+              script imprimiu. Apague no console o recurso ainda ligado à VPC. Só depois rode a
+              limpeza outra vez para confirmar que nada sobrou.</td>
           </tr>
           <tr>
             <td>A sessão do laboratório expirou no meio</td>
             <td>É o comportamento normal do Sandbox</td>
-            <td>Inicie de novo, baixe o PEM outra vez e rode
-              <code>bash recriar-rede.sh</code>. Leva cerca de seis minutos, e os endereços da
-              ficha mudam.</td>
+            <td>Inicie de novo, baixe o PEM outra vez, copie a credencial nova e rode o
+              script do passo 2. Leva cerca de cinco minutos, e <strong>todos</strong> os
+              valores da ficha mudam.</td>
           </tr>
         </tbody>
       </table>
@@ -2534,12 +3467,13 @@ bash recriar-rede.sh</pre>
 
     <h3>Quem eu sou visto de fora</h3>
     <p>
-      O serviço que roda nos três nós diz de que endereço o pedido chegou. Do nó A, chame o
+      O serviço que roda nos quatro nós diz de que endereço o pedido chegou. Do nó A, chame o
       serviço do nó E pelos dois protocolos e compare a linha <code>quem perguntou</code> com
       o que o <code>sd-rede</code> do nó A mostra. Pelo IPv6 os dois endereços são o mesmo, e
       pelo IPv4 o endereço visto pelo nó E é o do NAT gateway, que não pertence a nenhuma das
-      máquinas. É a tradução acontecendo na sua frente, e é a única forma de vê-la, já que o
-      <code>traceroute</code> não mostra o NAT gateway.
+      máquinas. É a tradução acontecendo na sua frente, e é o outro lado do que o
+      <code>traceroute -4</code> do passo 6.3 mostrou, onde aquele mesmo dispositivo apareceu
+      como primeiro salto.
     </p>
     <div class="cmd">
       <div class="cmd-head">
@@ -2552,31 +3486,72 @@ curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_E">IPV6-DO-NO-E</span>
 curl -4 -s -m 5 http://<span class="var" data-var="IP_PUB_E">IP-PUBLICO-E</span>:8080/</pre>
     </div>
 
-    <h3>Um nó na sub-rede que ficou vazia</h3>
+    <h3>O que o nó B enxerga, e por onde ele sai</h3>
     <p>
-      Suba uma quarta instância na <code>sd-privada-b</code>, que está na outra zona de
-      disponibilidade e nunca recebeu configuração nenhuma além da associação à tabela. Ela
-      vai sair para a internet pelos mesmos dois dispositivos, sem que você escreva uma linha
-      de rota a mais. Depois repita o movimento 1 do experimento 2 e confira que os dois nós
-      privados perdem a saída IPv6 ao mesmo tempo. Uma tabela, duas sub-redes, duas zonas.
+      O nó B nasceu na <code>sd-privada-b</code> e nunca recebeu nenhuma configuração além da
+      associação à tabela de rotas. Entre nele saltando pelo nó P, do mesmo jeito que você
+      entra no nó A, e confira com <code>sd-rede</code> que ele tem endereço IPv6 e não tem
+      IPv4 público. Depois repita o movimento 1 do experimento 2 e observe que os
+      <strong>dois</strong> nós privados perdem a saída IPv6 ao mesmo tempo, apesar de estarem
+      em zonas diferentes. Uma tabela, duas sub-redes, duas zonas, e uma linha só decidindo
+      pelas duas.
     </p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">Windows, no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -i $env:USERPROFILE\Downloads\labsuser.pem -o "ProxyCommand=ssh -i $env:USERPROFILE\Downloads\labsuser.pem -W %h:%p ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span>" ec2-user@<span class="var" data-var="IP_PRIV_B">IP-PRIVADO-B</span></pre>
+    </div>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">macOS ou Linux, no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>ssh -i ~/Downloads/labsuser.pem -o "ProxyCommand=ssh -i ~/Downloads/labsuser.pem -W %h:%p ec2-user@<span class="var" data-var="IP_PUB_P">IP-PUBLICO-P</span>" ec2-user@<span class="var" data-var="IP_PRIV_B">IP-PRIVADO-B</span></pre>
+    </div>
+
+    <h3>O endereço que o mundo vê, e o que ele revela do NAT</h3>
+    <p>
+      Do nó A, pergunte a um serviço de eco qual endereço ele está vendo, pelos dois
+      protocolos, e compare com o que a placa do próprio nó tem. Pelo IPv6 os dois são o mesmo
+      endereço, porque nada foi traduzido no caminho. Pelo IPv4 o mundo vê o endereço elástico
+      do NAT gateway, que não pertence a nenhuma máquina sua.
+    </p>
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>echo -n "IPv4, visto de fora  : "; curl -4 -s -m 6 https://checkip.amazonaws.com
+echo -n "IPv6, visto de fora  : "; curl -6 -s -m 6 https://ipv6.icanhazip.com
+echo -n "IPv6 da propria placa: "; ip -o -6 addr show scope global | awk '{print $4}'</pre>
+    </div>
+    <p class="saida">IPv4, visto de fora  : 44.213.55.113
+IPv6, visto de fora  : 2600:1f18:6c43:3d01:f679:ccfa:ac91:4d19
+IPv6 da propria placa: 2600:1f18:6c43:3d01:f679:ccfa:ac91:4d19/128</p>
 
     <h3>Se o seu computador tiver IPv6</h3>
     <p>
-      Se o teste do passo 1.1 respondeu <code>200</code>, refaça o movimento 2 do experimento
-      2 e tente alcançar o nó A <strong>direto da sua casa</strong>, com
+      Descubra primeiro se você tem, com
+      <code>curl -6 -s -m 6 -o /dev/null -w "%{http_code}" https://ipv6.google.com</code> no
+      seu computador. Se responder <code>200</code>, refaça o movimento 2 do experimento 2 e
+      tente alcançar o nó A <strong>direto da sua casa</strong>, com
       <code>curl -6 "http://[endereço-do-nó-A]:8080/"</code>. Você vai conversar com uma
-      máquina que não tem endereço IPv4 público nenhum, sem intermediário, sem
-      redirecionamento de porta e sem túnel. Desfaça o movimento depois, com o passo 8.4.
+      máquina que não tem nenhum endereço IPv4 público, sem intermediário, sem
+      redirecionamento de porta e sem túnel. Desfaça o movimento depois, com o passo 5.4.
     </p>
 
     <h3>Com um colega, se houver oportunidade</h3>
     <p>
       Comparem os prefixos /56 que a Amazon entregou às VPCs de vocês. Os dois começam igual e
       divergem em algum ponto, e o ponto onde divergem diz quanto do endereço a Amazon usa
-      para identificar a região e o cliente. Comparem também a medida 1, que é a rota
-      <code>local</code> dentro da VPC. Ela deve dar quase o mesmo número nas duas contas,
-      porque não é a sua rede que a define, é a distância física dentro do centro de dados.
+      para identificar a região e o cliente. Comparem também as medidas 1 e 2 do experimento 3.
+      As duas devem dar quase o mesmo número nas duas contas, porque não é a rede de vocês que
+      as define, e sim a distância física entre os prédios.
     </p>
   </section>
 

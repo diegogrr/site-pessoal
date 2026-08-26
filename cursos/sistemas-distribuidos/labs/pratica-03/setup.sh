@@ -1,13 +1,13 @@
 #!/bin/bash
 # ============================================================
 # Pratica 03 (Topico 3) - Sistemas Distribuidos - IFSP Salto
-# Script de inicializacao dos tres nos (campo "User data" do EC2).
+# Script de inicializacao dos quatro nos (campo "User data" do EC2).
 # Roda uma unica vez, no primeiro boot da instancia.
 #
-# O MESMO texto sobe nos tres nos. O papel (P, A ou E) nao vem
+# O MESMO texto sobe nos quatro nos. O papel (P, A, B ou E) nao vem
 # escrito aqui: ele e lido da etiqueta Name da propria instancia,
-# pelo servico de metadados, porque os tres nascem com
-# InstanceMetadataTags=enabled. Assim nao existem tres versoes
+# pelo servico de metadados, porque os quatro nascem com
+# InstanceMetadataTags=enabled. Assim nao existem quatro versoes
 # deste arquivo para manter em acordo.
 #
 # Sem acentos de proposito: o user data executa antes do locale
@@ -20,8 +20,8 @@ mkdir -p /opt/sd
 
 # ---- Identidade do no, lida do servico de metadados da instancia ----
 # 169.254.169.254 e um endereco de link local: responde apenas dentro
-# da propria instancia, e nao consome rota nenhuma da VPC. E por isso
-# que ele funciona no no A antes mesmo de existir saida para a internet.
+# da propria instancia, e nao consome nenhuma rota da VPC. E por isso
+# que ele funciona no no A antes mesmo de existir saida para a Internet.
 TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
   -H "X-aws-ec2-metadata-token-ttl-seconds: 600")
 MD="http://169.254.169.254/latest/meta-data"
