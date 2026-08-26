@@ -188,8 +188,8 @@
             <td><strong>User data</strong></td>
             <td>Um script que a instância executa sozinha no primeiro boot. É como as três
               máquinas vão nascer configuradas, sem você digitar nada dentro delas. O campo
-              aceita no máximo 16 KB, e por isso o que você vai colar nele é um carregador
-              curto, que baixa o script completo desta página.</td>
+              aceita no máximo 16 KB, e por isso o que você vai colar nele é o script do
+              User data, curto, que baixa o script completo desta página.</td>
           </tr>
         </tbody>
       </table>
@@ -583,7 +583,7 @@ chmod 400 labsuser.pem</pre>
         </ul>
       </li>
       <li>Abra <strong>Advanced details</strong>, role até o fim e cole o
-        <strong>carregador</strong> no campo <strong>User data</strong> (botão na seção 3.3,
+        <strong>script do User data</strong> no campo de mesmo nome (botão na seção 3.3,
         logo abaixo). São poucas linhas, e o motivo de não ser o script inteiro está
         explicado lá.</li>
       <li>No painel <em>Summary</em>, à direita, mude <strong>Number of instances</strong>
@@ -626,12 +626,12 @@ chmod 400 labsuser.pem</pre>
       <pre id="user-data">#!/bin/bash
 # ============================================================
 # Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto
-# Carregador do script de inicializacao (campo "User data" do EC2).
+# Script do campo "User data" do EC2, que busca o de inicializacao.
 #
 # O campo "User data" aceita no maximo 16 KB, e o setup.sh da
 # pratica passa disso. Entao o que voce cola no console e apenas
-# este carregador. Ele baixa o setup.sh publicado no roteiro e o
-# executa. O conteudo baixado esta inteiro na pagina, para leitura
+# este script do User data. Ele baixa o setup.sh publicado no roteiro
+# e o executa. O conteudo baixado esta inteiro na pagina, para leitura
 # antes da execucao.
 #
 # Sem acentos de proposito: o user data executa antes do locale
@@ -660,7 +660,7 @@ bash "$DESTINO"</pre>
     </div>
 
     <p>
-      <button type="button" class="btn" data-copiar="user-data">⧉ Copiar o carregador</button>
+      <button type="button" class="btn" data-copiar="user-data">⧉ Copiar o script do User data</button>
     </p>
 
     <div class="callout">
@@ -678,13 +678,13 @@ bash "$DESTINO"</pre>
     <details class="dobra">
       <summary>Ver o script de inicialização antes de executá-lo (recomendado)</summary>
       <p>
-        É este o arquivo que o carregador baixa. Ele não instala nada de fora. Escreve quatro
+        É este o arquivo que o script do User data baixa. Ele não instala nada de fora. Escreve quatro
         programas Python que usam só a biblioteca padrão, cria o catálogo em SQLite e sobe
         dois serviços. Ler o que você vai executar é um hábito, não um exagero.
       </p>
       <div class="cmd">
         <div class="cmd-head">
-          <span class="onde">baixado pelo carregador em /opt/sd-setup.sh</span>
+          <span class="onde">baixado pelo script do User data em /opt/sd-setup.sh</span>
           <span class="espaco"></span>
           <button type="button" class="btn-copiar" data-baixar="setup-sh"
             data-arquivo="setup.sh">baixar</button>
@@ -696,8 +696,8 @@ bash "$DESTINO"</pre>
 # Script de inicializacao dos tres nos.
 # Roda uma unica vez, no primeiro boot da instancia. Ele nao vai
 # colado no campo "User data", que aceita no maximo 16 KB e nao
-# comporta este arquivo. Quem vai colado la e o user-data.sh, um
-# carregador de poucas linhas que baixa este script e o executa.
+# comporta este arquivo. Quem vai colado la e o user-data.sh, o
+# script do User data, que em poucas linhas baixa este e o executa.
 #
 # Os tres nos recebem o MESMO script e sobem os MESMOS dois
 # servicos: camada de dados na 8081 e camada de aplicacao na 8080.
@@ -709,8 +709,8 @@ bash "$DESTINO"</pre>
 # estar definido. Testado em Amazon Linux 2023 (python3 da base).
 # ============================================================
 set -x
-# Acrescenta ao log em vez de truncar: o carregador ja escreveu ali
-# a linha do download, e ela e a primeira coisa util no diagnostico.
+# Acrescenta ao log em vez de truncar: o script do User data ja escreveu
+# ali a linha do download, a primeira coisa util no diagnostico.
 exec &gt;&gt; /var/log/sd-setup.log 2&gt;&amp;1
 
 mkdir -p /opt/sd
@@ -2853,7 +2853,7 @@ encerrar o laboratorio.</p>
               <code>sudo tail -30 /var/log/sd-setup.log</code> mostra
               <code>FALHA: nao consegui baixar</code></td>
             <td>A instância subiu sem alcançar a internet, ou o endereço do script está fora
-              do ar. O carregador rodou, o download é que não veio</td>
+              do ar. O script do User data rodou, o download é que não veio</td>
             <td>Salve o <code>setup.sh</code> pelo botão <strong>baixar</strong> da seção 3.3,
               mande o arquivo para a instância com
               <code>scp -i labsuser.pem setup.sh ec2-user@<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span>:~</code>
@@ -2862,7 +2862,7 @@ encerrar o laboratorio.</p>
           </tr>
           <tr>
             <td><code>sd: command not found</code> e o log está vazio ou nem existe</td>
-            <td>O carregador não foi colado no campo <em>user data</em>, ou foi colado com
+            <td>O script do User data não foi colado no campo, ou foi colado com
               algum caractere a mais</td>
             <td>Confira <code>sudo tail -30 /var/log/sd-setup.log</code>. Em último caso,
               aplique o mesmo remédio da linha acima.</td>

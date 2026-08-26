@@ -4,8 +4,8 @@
 # Script de inicializacao dos tres nos.
 # Roda uma unica vez, no primeiro boot da instancia. Ele nao vai
 # colado no campo "User data", que aceita no maximo 16 KB e nao
-# comporta este arquivo. Quem vai colado la e o user-data.sh, um
-# carregador de poucas linhas que baixa este script e o executa.
+# comporta este arquivo. Quem vai colado la e o user-data.sh, o
+# script do User data, que em poucas linhas baixa este e o executa.
 #
 # Os tres nos recebem o MESMO script e sobem os MESMOS dois
 # servicos: camada de dados na 8081 e camada de aplicacao na 8080.
@@ -17,8 +17,8 @@
 # estar definido. Testado em Amazon Linux 2023 (python3 da base).
 # ============================================================
 set -x
-# Acrescenta ao log em vez de truncar: o carregador ja escreveu ali
-# a linha do download, e ela e a primeira coisa util no diagnostico.
+# Acrescenta ao log em vez de truncar: o script do User data ja escreveu
+# ali a linha do download, a primeira coisa util no diagnostico.
 exec >> /var/log/sd-setup.log 2>&1
 
 mkdir -p /opt/sd

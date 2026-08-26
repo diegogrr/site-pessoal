@@ -1,12 +1,12 @@
 #!/bin/bash
 # ============================================================
 # Pratica 02 (Topico 2) - Sistemas Distribuidos - IFSP Salto
-# Carregador do script de inicializacao (campo "User data" do EC2).
+# Script do campo "User data" do EC2, que busca o de inicializacao.
 #
 # O campo "User data" aceita no maximo 16 KB, e o setup.sh da
 # pratica passa disso. Entao o que voce cola no console e apenas
-# este carregador. Ele baixa o setup.sh publicado no roteiro e o
-# executa. O conteudo baixado esta inteiro na pagina, para leitura
+# este script do User data. Ele baixa o setup.sh publicado no roteiro
+# e o executa. O conteudo baixado esta inteiro na pagina, para leitura
 # antes da execucao.
 #
 # Sem acentos de proposito: o user data executa antes do locale
