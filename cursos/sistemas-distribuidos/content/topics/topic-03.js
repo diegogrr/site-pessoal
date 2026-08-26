@@ -19,21 +19,22 @@ SD.content["03"] = {
       html:
         "<p>Todo sistema distribuído se apoia em um <strong>subsistema de " +
         "comunicação</strong>, que é o conjunto de hardware e de software encarregado " +
-        "de levar mensagens de um nó a outro. Do lado do hardware estão os cabos, as " +
-        "fibras, o rádio, os roteadores, os comutadores e as interfaces de rede, e do " +
-        "lado do software estão as pilhas de protocolo e os drivers de cada uma " +
-        "dessas peças.</p>" +
-        "<p>Duas palavras vão se repetir no restante do tópico, e vale separá-las " +
-        "desde já. Um <strong>host</strong> é o computador que usa a rede para " +
-        "executar as suas aplicações. Um <strong>nó</strong> é qualquer equipamento " +
-        "ligado a ela, o que inclui os roteadores e os comutadores, que não executam " +
-        "aplicação nenhuma e existem apenas para encaminhar o tráfego dos outros.</p>" +
+        "de levar mensagens de um nó a outro. Os meios de transmissão incluem cabos " +
+        "de cobre, fibras ópticas e rádio. Os equipamentos incluem roteadores, " +
+        "comutadores (switches) e interfaces de rede. O software inclui as pilhas de " +
+        "protocolo e os drivers desses componentes.</p>" +
+        "<p>Dois <strong>termos</strong> vão se repetir no restante do tópico. " +
+        "<strong>Nó</strong> é qualquer equipamento ligado à rede. Alguns nós são " +
+        "<strong>hosts</strong>, ou seja, computadores e dispositivos que usam a rede " +
+        "para executar as suas aplicações, portanto todo host é um nó. Roteadores e " +
+        "comutadores também são nós, mas sua função principal é encaminhar o tráfego, " +
+        "e não executar a aplicação distribuída.</p>" +
         "<p>A rede não é um detalhe de implementação que o projetista possa ignorar, " +
-        "porque cada propriedade dela reaparece como restrição no sistema que roda em " +
-        "cima. O desempenho determina quanto custa cada invocação remota. A " +
-        "confiabilidade determina de que falhas o sistema precisa se defender. A " +
-        "escalabilidade limita o tamanho que ele pode alcançar, e a mobilidade decide " +
-        "se um nó consegue mudar de lugar sem perder a identidade.</p>" +
+        "porque cada propriedade dela reaparece como restrição no sistema executado " +
+        "sobre ela. Pelo desempenho, o projetista estima o custo de uma invocação " +
+        "remota; pela confiabilidade, identifica as falhas contra as quais precisa se " +
+        "defender. A escalabilidade limita o tamanho alcançável; a mobilidade " +
+        "determina se um nó consegue mudar de lugar sem perder a identidade.</p>" +
         "<h3>Desempenho, medido por dois números</h3>" +
         "<p>Duas grandezas descrevem o desempenho de uma rede, e confundir uma com a " +
         "outra leva a decisões erradas de projeto. A <strong>latência</strong> é o " +
@@ -66,36 +67,31 @@ SD.content["03"] = {
         "<td>De 5 a 500 milissegundos, tipicamente entre 20 e 200.</td>" +
         "<td>Dezenas a centenas de vezes mais lento que a rede local.</td></tr>" +
         "</table></div>" +
-        "<p>A tabela desfaz de passagem uma intuição comum. Já que a rede local é " +
-        "mil vezes mais lenta que a memória, seria natural supor que ela também " +
-        "perde para o disco, e não é o que acontece. Um servidor de arquivos com um " +
-        "bom cache responde mais rápido que o disco rígido da própria máquina, porque " +
-        "a resposta dele sai da memória e não de um prato girando.</p>" +
+        "<p>A comparação com armazenamento depende da tecnologia, pois no cenário " +
+        "medido pela fonte um servidor de arquivos com bom cache podia responder antes de " +
+        "um disco magnético local, porque a resposta saía da memória. Com um " +
+        "dispositivo de estado sólido local, essa comparação costuma se inverter e a " +
+        "leitura local volta a ter menor latência.</p>" +
         "<h3>Os outros requisitos</h3>" +
         "<p>Desempenho é o requisito mais discutido, mas não é o único que a rede " +
         "impõe ao sistema distribuído. Outros seis aparecem com frequência.</p>" +
-        "<ul>" +
-        "<li>A <strong>escalabilidade</strong> obrigou a rever o endereçamento e o " +
-        "roteamento, porque a Internet caminha para bilhões de nós e nenhum dos dois " +
-        "esquemas originais foi projetado para essa ordem de grandeza.</li>" +
-        "<li>A <strong>confiabilidade</strong> quase nunca é limitada pela mídia " +
-        "física, que é muito confiável. Quando algo se perde, a causa costuma estar " +
-        "no software das pontas, seja um estouro de buffer, seja um host que não " +
-        "aceita o pacote. É o argumento fim-a-fim do Tópico 2 aparecendo de novo, e " +
-        "ele recomenda deixar a detecção e a correção de erros com a aplicação.</li>" +
-        "<li>A <strong>segurança</strong> começa pelo firewall no gateway da " +
-        "organização, que é a defesa de perímetro. Proteção mais fina exige " +
-        "criptografia fim-a-fim e redes privadas virtuais (VPN), assunto da seção 3." +
-        "</li>" +
-        "<li>A <strong>mobilidade</strong> desafia o endereçamento. Os dispositivos " +
-        "trocam de ponto de conexão o tempo todo, e os esquemas de endereço da " +
-        "Internet nasceram antes disso, o que exigiu adaptações como o MobileIP.</li>" +
-        "<li>A <strong>qualidade de serviço</strong> (QoS) é a garantia de banda e de " +
-        "latência máxima que a multimídia em tempo real precisa receber da rede.</li>" +
-        "<li>O <strong>multicasting</strong> entrega a mesma mensagem a muitos " +
-        "destinatários sem que o remetente repita um envio ponto a ponto para cada " +
-        "um deles.</li>" +
-        "</ul>" +
+        "<p><strong>Escalabilidade.</strong> O crescimento da Internet exigiu rever " +
+        "o endereçamento e o roteamento, pois os esquemas originais não foram " +
+        "projetados para bilhões de nós.</p>" +
+        "<p><strong>Confiabilidade.</strong> A mídia física costuma ser confiável, mas " +
+        "buffers podem estourar tanto nas filas dos roteadores congestionados quanto " +
+        "no host de destino. O argumento fim-a-fim do Tópico 2 recomenda que a " +
+        "aplicação verifique e corrija os erros que importam para ela.</p>" +
+        "<p><strong>Segurança.</strong> O firewall no gateway fornece a defesa de " +
+        "perímetro, enquanto a proteção mais fina usa criptografia fim-a-fim e uma " +
+        "<strong>rede privada virtual (VPN)</strong>, assunto da seção 3.</p>" +
+        "<p><strong>Mobilidade.</strong> Um dispositivo pode trocar de ponto de " +
+        "conexão, enquanto o endereçamento IP associa o endereço à sub-rede; uma das " +
+        "adaptações para esse conflito é o <strong>IP móvel (MobileIP)</strong>.</p>" +
+        "<p><strong>Qualidade de serviço (QoS).</strong> Aplicações multimídia em " +
+        "tempo real podem exigir largura de banda garantida e latência limitada.</p>" +
+        "<p><strong>Multicast.</strong> O remetente envia uma mensagem a um grupo sem " +
+        "repetir um envio ponto a ponto para cada destinatário.</p>" +
         "<h3>Tipos de rede</h3>" +
         "<p>As redes se classificam pelo alcance, e o nome de cada tipo já diz qual " +
         "é. Nas variantes sem fio, a inicial W do nome vem do inglês " +
@@ -112,15 +108,18 @@ SD.content["03"] = {
         "<td>De 1 a 2 quilômetros, o que cobre um prédio ou um campus.</td>" +
         "<td>Tem banda alta, de 10 Mbps a 10 Gbps, e latência baixa. A Ethernet " +
         "domina esse território.</td>" +
-        "<td>A rede local sem fio (WLAN), do WiFi, de 11 a 108 Mbps.</td></tr>" +
+        "<td>A rede local sem fio (WLAN), do WiFi. As taxas nominais vão das " +
+        "dezenas de Mbps no 802.11a/g às centenas de Mbps e aos gigabits por " +
+        "segundo nas gerações n, ac e ax.</td></tr>" +
         "<tr><td>Rede metropolitana (MAN)</td>" +
         "<td>De 2 a 50 quilômetros, o que cobre uma cidade.</td>" +
-        "<td>Chega ao assinante pela linha digital (DSL) ou pelo modem a cabo.</td>" +
+        "<td>Chega ao assinante pela linha digital do assinante (DSL) ou pelo modem " +
+        "a cabo.</td>" +
         "<td>A rede metropolitana sem fio (WMAN), do WiMAX.</td></tr>" +
         "<tr><td>Rede de longa distância (WAN)</td>" +
         "<td>Mundial.</td>" +
-        "<td>Atravessa roteadores, e por isso a latência sobe para a faixa de 100 a " +
-        "500 milissegundos.</td>" +
+        "<td>A distância de propagação e as filas dos roteadores elevam a latência, " +
+        "que pode ir de poucos a centenas de milissegundos.</td>" +
         "<td>A rede de longa distância sem fio (WWAN), da telefonia celular 3G e " +
         "4G.</td></tr>" +
         "<tr><td>Inter-rede</td>" +
@@ -130,10 +129,14 @@ SD.content["03"] = {
         "máximo.</td>" +
         "<td>Não se aplica.</td></tr>" +
         "</table></div>" +
+        "<p>As quatro primeiras linhas formam uma escala de alcance, mas a inter-rede " +
+        "não é um quinto tamanho, mas uma rede virtual construída sobre redes dos " +
+        "tipos anteriores. À medida que o alcance cresce, aumentam a distância de " +
+        "propagação e a quantidade de filas intermediárias.</p>" +
         "<p>Uma observação vale para todos esses tipos. Pacotes se perdem em qualquer " +
-        "rede, e quase nunca por corrupção do sinal na mídia física. A causa comum é " +
-        "o atraso de processamento ou o estouro de buffer no destino, ou seja, o " +
-        "problema nasce no software das pontas.</p>" +
+        "rede, e raramente por corrupção do sinal na mídia física. A causa comum é " +
+        "o estouro de buffer, seja nas filas dos roteadores quando há congestionamento, " +
+        "seja no host de destino quando ele não acompanha o ritmo.</p>" +
         "<p>Nas redes de longa distância há dois efeitos a mais, e os dois vêm de " +
         "decisões de projeto que este tópico ainda vai detalhar. Como cada pacote é " +
         "roteado individualmente, eles podem chegar fora de ordem. E como a suspeita " +
@@ -141,17 +144,17 @@ SD.content["03"] = {
         "justamente o fenômeno da demonstração do Tópico 1.</p>",
       slides: [
         {
-          title: "A rede molda o sistema que roda em cima",
+          title: "A rede molda o sistema executado sobre ela",
           html:
             "<ul>" +
             "<li>O <strong>subsistema de comunicação</strong> é o hardware e o " +
             "software que levam a mensagem de um nó a outro</li>" +
-            "<li><strong>Host</strong> é o computador que executa aplicação. " +
-            "<strong>Nó</strong> é qualquer equipamento ligado à rede, roteador " +
-            "incluído</li>" +
-            "<li>Cada propriedade da rede vira restrição lá em cima. O desempenho " +
-            "precifica a invocação remota, a confiabilidade define de que falhas se " +
-            "defender e a escalabilidade limita o tamanho possível</li>" +
+            "<li><strong>Nó</strong> é qualquer equipamento ligado à rede. Todo " +
+            "<strong>host</strong> é um nó, mas nem todo nó executa a aplicação " +
+            "distribuída</li>" +
+            "<li>O desempenho permite estimar a invocação remota; a confiabilidade " +
+            "mostra as falhas relevantes; a escalabilidade limita o tamanho " +
+            "possível</li>" +
             "</ul>"
         },
         {
@@ -177,15 +180,14 @@ SD.content["03"] = {
           title: "Os outros requisitos da rede",
           html:
             "<ul>" +
-            "<li>A <strong>escalabilidade</strong> obrigou a rever endereçamento e " +
-            "roteamento, porque a Internet vai a bilhões de nós</li>" +
-            "<li>A <strong>confiabilidade</strong> raramente falha na mídia. O erro " +
-            "nasce no software das pontas, e o argumento fim-a-fim manda tratá-lo na " +
-            "aplicação</li>" +
+            "<li>O crescimento da Internet exigiu rever endereçamento e roteamento " +
+            "para bilhões de nós</li>" +
+            "<li>Buffers estouram em roteadores congestionados e no host de destino. " +
+            "O argumento fim-a-fim deixa a verificação final com a aplicação</li>" +
             "<li>A <strong>segurança</strong> começa no firewall do gateway, e " +
             "aprofunda com criptografia fim-a-fim e VPN</li>" +
-            "<li>A <strong>mobilidade</strong> desafia o endereçamento, que nasceu " +
-            "antes dela</li>" +
+            "<li>Na <strong>mobilidade</strong>, o nó muda de sub-rede sem querer " +
+            "perder sua identidade</li>" +
             "<li>A <strong>qualidade de serviço</strong> garante banda e latência " +
             "máxima, e o <strong>multicasting</strong> entrega a muitos sem repetir " +
             "o envio</li>" +
@@ -207,7 +209,7 @@ SD.content["03"] = {
         "mantinha ocioso durante os silêncios.</p>" +
         "<p>Antes de transmitir, cada mensagem é dividida em pacotes de comprimento " +
         "limitado, por duas razões que vale separar. A primeira é que o limite " +
-        "permite aos nós alocarem buffers de tamanho conhecido. A segunda é que ele " +
+        "permite que os nós aloquem buffers de tamanho conhecido; a segunda é que ele " +
         "impede uma mensagem longa de monopolizar o canal enquanto as outras esperam. " +
         "O tamanho máximo do campo de dados chama-se unidade máxima de transmissão " +
         "(MTU), e na Ethernet ela é de 1.500 bytes.</p>" +
@@ -218,7 +220,7 @@ SD.content["03"] = {
         '<table class="tabela-conteudo" id="tab-comutacao">' +
         "<tr><th>Esquema</th><th>Como funciona</th><th>Onde aparece</th></tr>" +
         "<tr><td>Difusão (broadcast)</td>" +
-        "<td>Não há comutação. Tudo é transmitido a todos os nós, e cada um recolhe " +
+        "<td>Não há comutação, pois tudo é transmitido a todos os nós e cada um recolhe " +
         "o que está endereçado a ele.</td>" +
         "<td>Ethernet e redes sem fio.</td></tr>" +
         "<tr><td>Comutação de circuitos</td>" +
@@ -233,16 +235,23 @@ SD.content["03"] = {
         "<td>É o meio-termo. Quadros pequenos são comutados ainda em trânsito, com o " +
         "nó examinando só os primeiros bits, o que derruba a latência para a casa dos " +
         "microssegundos.</td>" +
-        "<td>O modo de transferência assíncrona (ATM).</td></tr>" +
+        "<td>O frame relay das antigas WANs corporativas e o modo de transferência " +
+        "assíncrona (ATM), tecnologias distintas que hoje estão em desuso.</td></tr>" +
         "</table></div>" +
+        "<p>Os quatro esquemas trocam recursos diferentes. Circuitos reservam o " +
+        "caminho antes do envio. Pacotes compartilham enlaces e aceitam filas. Frame " +
+        "relay e ATM reduzem o trabalho de comutação, enquanto o broadcast dispensa " +
+        "a escolha de uma saída.</p>" +
         "<h3>Protocolos em camadas</h3>" +
         "<p>Um <strong>protocolo</strong> é um conjunto conhecido de regras e formatos " +
         "com duas partes. A primeira é a sequência das mensagens que precisam ser " +
-        "trocadas, e a segunda é o formato dos dados dentro de cada uma delas. Sem " +
+        "trocadas; a segunda é o formato dos dados dentro de cada uma delas. Sem " +
         "acordo nas duas partes, as pontas não conversam.</p>" +
         "<p>O software de rede se organiza em camadas, e cada camada oferece um " +
         "serviço à camada de cima usando o serviço da camada de baixo. O mecanismo " +
-        "que faz isso funcionar é o <strong>encapsulamento</strong>. No remetente, " +
+        "que faz isso funcionar é o <strong>encapsulamento</strong>. A figura a " +
+        "seguir usa as quatro camadas da pilha TCP/IP simplificada, da aplicação ao " +
+        "enlace. No remetente, " +
         "cada camada envolve os dados que recebeu de cima com o seu próprio " +
         "cabeçalho, e no destino o processo se inverte, camada por camada, até " +
         "restar o que a aplicação enviou.</p>" +
@@ -282,9 +291,10 @@ SD.content["03"] = {
         "caminho, então o pacote que trafega no enlace carrega três cabeçalhos além " +
         "dos dados. É essa acumulação que explica o custo do empilhamento.</figcaption>" +
         "</figure>" +
-        "<p>O modelo de referência para interconexão de sistemas abertos (OSI) define " +
-        "sete camadas, que são a física, a de enlace, a de rede, a de transporte, a " +
-        "de sessão, a de apresentação e a de aplicação. A Internet não implementa " +
+        "<p>O modelo de referência para interconexão de sistemas abertos (OSI) " +
+        "organiza sete camadas. A física transmite bits; a de enlace forma quadros; " +
+        "a de rede encaminha pacotes; a de transporte atende aos processos. Sessão, " +
+        "apresentação e aplicação completam a pilha. A Internet não implementa " +
         "sessão e apresentação como camadas separadas, e as duas acabam absorvidas " +
         "pela aplicação ou pelo middleware.</p>" +
         "<p>O empilhamento simplifica o projeto, mas cobra por isso. Transmitir " +
@@ -295,11 +305,11 @@ SD.content["03"] = {
         "e sim a <strong>portas</strong>, que são pontos de destino ligados a " +
         "processos. Um endereço de transporte completo soma o endereço de rede do " +
         "host ao número da porta, e os serviços mais conhecidos usam portas " +
-        "registradas, como a porta 80 do HTTP.</p>" +
+        "bem conhecidas, como a porta 80 do HTTP.</p>" +
         "<p>Na camada de rede há duas estratégias de entrega, e a diferença entre " +
         "elas é o que se decide antes de o primeiro dado partir. Na entrega por " +
         "<strong>datagramas</strong>, cada pacote é roteado de forma independente e " +
-        "não há configuração prévia nenhuma, que é como funcionam o IP e a Ethernet. " +
+        "não há nenhuma configuração prévia, que é como funcionam o IP e a Ethernet. " +
         "Nos <strong>circuitos virtuais</strong>, um caminho é montado antes e os " +
         "pacotes passam a carregar apenas o número do circuito, que é a estratégia " +
         "do ATM.</p>" +
@@ -308,14 +318,15 @@ SD.content["03"] = {
         "coletiva dos roteadores, que o passam adiante em saltos sucessivos. Um " +
         "algoritmo de roteamento tem duas partes com ritmos bem diferentes. A " +
         "primeira decide o próximo salto de cada pacote e precisa ser rápida, porque " +
-        "roda na chegada. A segunda mantém o conhecimento da topologia da rede e " +
+        "roda na chegada; a segunda mantém o conhecimento da topologia da rede e " +
         "trabalha em segundo plano.</p>" +
         "<p>O algoritmo de <strong>vetor de distância</strong>, de Bellman e Ford, é " +
         "a base do protocolo de informação de roteamento (RIP). Cada roteador guarda " +
         "uma tabela que associa cada destino a um enlace de saída e a um custo em " +
-        "saltos, e periodicamente troca essa tabela com os vizinhos, adotando as " +
+        "saltos.</p>" +
+        "<p>Periodicamente, o roteador troca a tabela com os vizinhos e adota as " +
         "rotas melhores que descobrir. Um enlace defeituoso recebe custo infinito, e " +
-        "a notícia se propaga de vizinho em vizinho.</p>" +
+        "a notícia da falha se propaga de vizinho em vizinho.</p>" +
         "<p>Propagar de vizinho em vizinho é justamente o problema, porque a " +
         "convergência fica lenta. Foi essa lentidão que motivou os algoritmos de " +
         "<strong>estado de enlace</strong>, como o OSPF (Open Shortest Path First), " +
@@ -326,23 +337,25 @@ SD.content["03"] = {
         "padrão</strong>, uma saída única por onde segue todo pacote cujo destino o " +
         "roteador não reconhece.</p>" +
         "<p>Há ainda um limite que nenhum algoritmo de roteamento resolve, que é o " +
-        "<strong>congestionamento</strong>. Quando a carga passa de cerca de 80% da " +
-        "capacidade, as filas estouram e os pacotes começam a ser descartados, e as " +
-        "retransmissões que se seguem desperdiçam ainda mais recursos. Em redes de " +
-        "datagramas o controle é fim-a-fim, ou seja, o remetente reduz o ritmo ao " +
-        "perceber perdas ou avisos. É daí que vem o nome do TCP, o controle de " +
-        "transmissão.</p>" +
+        "<strong>congestionamento</strong>. Quando a carga se aproxima da capacidade, " +
+        "as filas crescem, os buffers podem estourar e os pacotes começam a ser " +
+        "descartados. As retransmissões resultantes consomem mais recursos e podem " +
+        "agravar o problema.</p>" +
+        "<p>Em redes de datagramas, o controle de congestionamento é fim-a-fim. O " +
+        "remetente reduz o ritmo ao inferir congestionamento por perdas, atrasos ou " +
+        "marcações da rede. Esse mecanismo é diferente do controle de fluxo, que " +
+        "protege o destinatário e será apresentado na seção seguinte.</p>" +
         "<h3>Interligando redes heterogêneas</h3>" +
-        "<p>Unir sub-redes de tecnologias diferentes exige três coisas ao mesmo " +
-        "tempo, que são um esquema de endereçamento unificado, um protocolo comum de " +
-        "pacotes e componentes que façam a interconexão. Na Internet, esses três " +
-        "papéis cabem respectivamente aos endereços IP, ao protocolo IP e aos " +
-        "roteadores.</p>" +
+        "<p>Unir sub-redes de tecnologias diferentes exige três elementos. O esquema " +
+        "de endereçamento unificado é o endereço IP; o formato comum de pacotes vem " +
+        "do protocolo IP; os roteadores fazem a interconexão e encaminham cada pacote " +
+        "para a rede seguinte.</p>" +
         "<p>No caminho aparecem outros equipamentos, e a diferença entre eles está no " +
-        "quanto cada um entende do que repassa. O <strong>hub</strong> apenas estende " +
-        "um segmento local, repetindo tudo para todos. O <strong>switch</strong> " +
-        "comuta os quadros apenas para a rede local de destino. A <strong>ponte</strong> " +
-        "liga redes de tipos diferentes.</p>" +
+        "quanto cada um entende do que repassa. O <strong>hub</strong> repete sinais " +
+        "sem ler o quadro. O <strong>comutador</strong> lê endereços de controle de " +
+        "acesso ao meio (MAC) e envia o " +
+        "quadro apenas pela saída apropriada. A <strong>ponte</strong> também opera " +
+        "na camada de enlace e conecta redes locais, inclusive de tipos diferentes.</p>" +
         "<p>Falta ainda o caso em que a rede do meio não fala o mesmo protocolo das " +
         "pontas. A solução é o <strong>tunelamento</strong>, que transporta um " +
         "protocolo encapsulado dentro de outro.</p>" +
@@ -467,19 +480,21 @@ SD.content["03"] = {
             "<li><strong>Estado de enlace</strong> (OSPF) dá a cada nó o mapa da rede " +
             "e calcula a rota ótima com Dijkstra</li>" +
             "<li>A <strong>rota padrão</strong> cobre o que a tabela não conhece</li>" +
-            "<li>Acima de ~80% da capacidade as filas estouram. O controle é " +
-            "fim-a-fim, e daí vem o nome do TCP</li>" +
+            "<li>Quando a carga se aproxima da capacidade, as filas crescem e os " +
+            "buffers podem descartar pacotes</li>" +
+            "<li>O controle de congestionamento reduz o ritmo na origem. O controle " +
+            "de fluxo protege o destinatário</li>" +
             "</ul>"
         },
         {
           title: "Interligar redes de tecnologias diferentes",
           html:
             "<ul>" +
-            "<li>Exige três coisas juntas, que na Internet são o endereço IP, o " +
-            "protocolo IP e o roteador</li>" +
-            "<li>O <strong>hub</strong> repete tudo a todos, o <strong>switch</strong> " +
-            "comuta só para o destino e a <strong>ponte</strong> liga redes de tipos " +
-            "diferentes</li>" +
+            "<li>O endereço IP identifica, o protocolo IP padroniza o pacote e o " +
+            "roteador encaminha entre redes</li>" +
+            "<li>O <strong>hub</strong> repete sinais, o <strong>comutador</strong> lê " +
+            "endereços MAC e a <strong>ponte</strong> conecta redes na camada de " +
+            "enlace</li>" +
             "<li>O <strong>tunelamento</strong> resolve o caso em que a rede do meio " +
             "não fala o protocolo das pontas</li>" +
             "</ul>"
@@ -498,7 +513,8 @@ SD.content["03"] = {
         "distribuídos. O segredo dela " +
         "é a independência em relação à tecnologia de transmissão. A aplicação " +
         "enxerga uma única rede IP virtual, e por baixo os datagramas IP viajam " +
-        "encapsulados nos quadros de qualquer rede real, seja Ethernet, WiFi, ATM ou " +
+        "encapsulados nos quadros de qualquer rede real, seja Ethernet, WiFi, modo de " +
+        "transferência assíncrona (ATM) ou " +
         "uma linha serial com o PPP (Point-to-Point Protocol).</p>" +
         "<p>Essa independência é o mesmo encapsulamento da seção anterior aplicado " +
         "em escala planetária. Trocar a rede física de um trecho do caminho não " +
@@ -511,16 +527,18 @@ SD.content["03"] = {
         "retardado ou entregue fora de ordem, e nada no protocolo avisa quando isso " +
         "acontece.</p>" +
         "<p>A soma de verificação do IP cobre apenas o cabeçalho, e não os dados. " +
-        "Validar o conteúdo fica por conta do TCP e do UDP, o que é o princípio " +
+        "Validar o conteúdo fica por conta do protocolo de controle de transmissão " +
+        "(TCP) e do protocolo de datagrama de usuário (UDP). Essa divisão aplica o princípio " +
         "fim-a-fim do Tópico 2 em forma de decisão de engenharia. Verificar os dados " +
         "em cada salto custaria caro e ainda assim não dispensaria a verificação nas " +
         "pontas.</p>" +
-        "<p>Quando um datagrama é maior que a MTU da rede que ele precisa " +
-        "atravessar, o IP o fragmenta, e os fragmentos são remontados no destino. Já " +
-        "na fronteira com a rede física aparece outro problema, que é traduzir o " +
-        "endereço IP para o endereço físico da placa. Disso cuida o protocolo de " +
-        "resolução de endereços (ARP), que pergunta em difusão na rede local quem " +
-        "tem determinado IP e guarda as respostas em cache.</p>" +
+        "<p>No IPv4, quando um datagrama é maior que a MTU da rede que ele precisa " +
+        "atravessar, ele pode ser fragmentado. Os fragmentos são remontados no " +
+        "destino.</p>" +
+        "<p>Na fronteira com a rede física, o protocolo de resolução de endereços " +
+        "(ARP) traduz o endereço IP para o endereço físico da interface. Para isso, " +
+        "ele pergunta em difusão na rede local quem tem determinado IP e guarda as " +
+        "respostas em cache.</p>" +
         "<p>Um alerta fecha o assunto. O endereço de origem de um datagrama não é " +
         "confiável, porque nada impede quem envia de escrever ali o endereço de " +
         "outro. Essa falsificação, o <strong>spoofing</strong> de IP, já alimentou " +
@@ -553,23 +571,27 @@ SD.content["03"] = {
         "<td>Funciona muito bem para clientes. Expor um servidor interno exige " +
         "configuração manual, porque de fora não há como iniciar a conversa.</td></tr>" +
         "<tr><td>IPv6</td>" +
-        "<td>Endereços de 128 bits, o que dá cerca de 3 × 10³⁸ endereços. Traz ainda " +
-        "roteamento mais rápido, classe de tráfego e rótulo de fluxo para tempo real, " +
-        "difusão anycast e segurança no nível IP.</td>" +
+        "<td>Endereços de 128 bits, o que dá cerca de 3 × 10³⁸ endereços. A classe de " +
+        "tráfego permite distinguir prioridades, e o rótulo de fluxo identifica " +
+        "pacotes que pedem o mesmo tratamento. O multicast entrega a um grupo. O " +
+        "anycast entrega a um só membro do grupo, escolhido pela métrica de " +
+        "roteamento. O protocolo também admite segurança no nível IP.</td>" +
         "<td>Resolve o problema de vez, mas a migração tem sido lenta justamente " +
         "porque as duas medidas anteriores aliviaram a pressão.</td></tr>" +
         "</table></div>" +
         "<p>Para dar a dimensão do número, mesmo nas estimativas pessimistas o IPv6 " +
         "oferece mil endereços por metro quadrado da superfície do planeta. A " +
         "migração foi planejada por túneis sobre IPv4, exatamente como a figura da " +
-        "seção anterior mostra, e a explosão de dispositivos móveis acabou tornando-a " +
-        "inevitável.</p>" +
+        "seção anterior mostra. O aumento do número de dispositivos móveis tornou a " +
+        "migração inevitável.</p>" +
         "<p>Um problema aparentado é o do computador que se move sem querer trocar de " +
         "endereço. O <strong>MobileIP</strong> resolve com dois agentes. Um agente " +
         "doméstico, na rede de origem, recebe os datagramas destinados ao host e os " +
-        "entrega por túnel ao agente estrangeiro da rede onde ele está agora, que lhe " +
-        "deu um endereço aos cuidados de. A solução é eficaz, embora pouco eficiente, " +
-        "e vale notar que a telefonia celular faz o equivalente de forma nativa.</p>" +
+        "entrega por túnel ao agente estrangeiro da rede onde ele está agora. Esse " +
+        "agente fornece um <strong>\"endereço aos cuidados de\"</strong>, que localiza " +
+        "temporariamente o host. A solução mantém o endereço de origem, mas cria um " +
+        "caminho triangular e pode aumentar a latência. A telefonia celular resolve " +
+        "um problema equivalente de forma nativa.</p>" +
         "<h3>TCP e UDP, os dois transportes</h3>" +
         "<p>Enquanto o IP liga computadores, o TCP e o protocolo de datagrama de " +
         "usuário (UDP) ligam processos, por meio das portas. Os dois ocupam a mesma " +
@@ -579,13 +601,16 @@ SD.content["03"] = {
         "<tr><th>Dimensão</th><th>UDP</th><th>TCP</th></tr>" +
         "<tr><td>Conexão</td><td>Não existe. Cada datagrama viaja sozinho.</td>" +
         "<td>É orientado a conexão e entrega um fluxo de bytes.</td></tr>" +
-        "<tr><td>Ordem</td><td>Não há garantia nenhuma.</td>" +
+        "<tr><td>Ordem</td><td>Não há nenhuma garantia.</td>" +
         "<td>Os segmentos são numerados e entregues à aplicação na ordem certa.</td></tr>" +
         "<tr><td>Perdas</td><td>Não há confirmação nem retransmissão.</td>" +
         "<td>O segmento não confirmado dentro do prazo é reenviado.</td></tr>" +
-        "<tr><td>Ritmo</td><td>Não há controle de fluxo.</td>" +
+        "<tr><td>Controle de fluxo</td><td>Não há janela anunciada pelo receptor.</td>" +
         "<td>Cada confirmação carrega uma janela, que diz quanto o remetente pode " +
-        "enviar antes da próxima, o que protege destinos e nós lentos.</td></tr>" +
+        "enviar antes da próxima. Esse mecanismo protege o receptor.</td></tr>" +
+        "<tr><td>Congestionamento</td><td>Não há controle incorporado.</td>" +
+        "<td>O remetente ajusta o ritmo quando infere congestionamento por perdas, " +
+        "atrasos ou marcações da rede. Esse mecanismo protege o caminho.</td></tr>" +
         "<tr><td>Verificação</td><td>A soma de verificação é opcional.</td>" +
         "<td>A soma de verificação cobre o cabeçalho e os dados.</td></tr>" +
         "<tr><td>Para quem serve</td><td>Para quem tolera perdas e quer o custo " +
@@ -598,8 +623,9 @@ SD.content["03"] = {
         "<h3>DNS, nomes em vez de números</h3>" +
         "<p>Pessoas usam nomes de domínio hierárquicos, como www.ifsp.edu.br, e a " +
         "comunicação exige endereços IP. O DNS faz essa conversão com servidores de " +
-        "nomes distribuídos, cada um responsável pela sua parte da hierarquia, que " +
-        "resolvem as consultas recursivamente.</p>" +
+        "nomes distribuídos, cada um responsável pela sua parte da hierarquia. Na " +
+        "navegação iterativa, cada servidor responde o que sabe ou indica o próximo " +
+        "servidor, enquanto o resolvedor percorre a cadeia.</p>" +
         "<p>O detalhe que sustenta o serviço inteiro é o cache. Cada servidor guarda " +
         "as respostas que obteve, e sem isso os servidores-raiz seriam o gargalo de " +
         "toda a Internet, já que qualquer consulta começaria neles.</p>" +
@@ -608,6 +634,9 @@ SD.content["03"] = {
         "esperar que não haja não é uma estratégia. O <strong>firewall</strong> " +
         "parte dessa constatação e monitora toda a comunicação que entra e sai, " +
         "aplicando a política de segurança da organização em até três níveis.</p>" +
+        "<p>A filtragem de datagramas examina endereços, portas e o tipo de serviço. " +
+        "O gateway TCP valida a conexão e os segmentos. O gateway de aplicação usa " +
+        "um proxy para examinar o conteúdo compreendido por uma aplicação.</p>" +
         '<figure class="figura" id="fig-firewall">' +
         '<svg viewBox="0 0 640 190" role="img" aria-labelledby="fig-firewall-titulo">' +
         '<title id="fig-firewall-titulo">Três níveis de firewall em sequência entre a ' +
@@ -642,9 +671,9 @@ SD.content["03"] = {
         '<text class="rotulo-secundario" x="320" y="174" text-anchor="middle" font-size="13">' +
         "Da esquerda para a direita, cada nível olha mais fundo no pacote.</text>" +
         "</svg>" +
-        "<figcaption>Os três níveis são cumulativos e correspondem às camadas da " +
-        "figura de encapsulamento. Quanto mais fundo o firewall precisa olhar, mais " +
-        "trabalho ele tem por pacote.</figcaption>" +
+        "<figcaption>Os três níveis podem ser combinados e correspondem a camadas " +
+        "cada vez mais altas da pilha. Quanto mais fundo o firewall precisa olhar, " +
+        "mais trabalho ele tem por pacote.</figcaption>" +
         "</figure>" +
         "<p>Os processos do gateway de aplicação costumam rodar em um computador " +
         "dedicado, chamado de <strong>bastião</strong>. Os servidores públicos da " +
@@ -653,7 +682,8 @@ SD.content["03"] = {
         "filtros.</p>" +
         "<p>O firewall defende um perímetro, e a VPN faz o oposto, estendendo esse " +
         "perímetro através da Internet pública. Canais cifrados no nível IP, pelo " +
-        "IPSec, ligam usuários remotos e filiais como se todos estivessem dentro da " +
+        "protocolo de segurança IP (IPsec), ligam usuários remotos e filiais como se " +
+        "todos estivessem dentro da " +
         "rede interna.</p>",
       slides: [
         {
@@ -673,7 +703,7 @@ SD.content["03"] = {
           html:
             "<ul>" +
             "<li>Ele tenta entregar, e só. O datagrama pode se perder, duplicar, " +
-            "atrasar ou chegar fora de ordem, sem aviso nenhum</li>" +
+            "atrasar ou chegar fora de ordem, sem qualquer aviso</li>" +
             "<li>A soma de verificação cobre <strong>só o cabeçalho</strong>. Os " +
             "dados ficam com TCP e UDP, que é o fim-a-fim virando engenharia</li>" +
             "<li>Maior que a MTU, o datagrama é fragmentado e remontado no destino" +
@@ -711,7 +741,8 @@ SD.content["03"] = {
           html:
             "<ul>" +
             "<li>Servidores de nomes distribuídos, cada um dono da sua parte da " +
-            "hierarquia, resolvem as consultas recursivamente</li>" +
+            "hierarquia. O resolvedor percorre a cadeia, e cada servidor responde o " +
+            "que sabe ou indica o próximo</li>" +
             "<li>Cada um guarda em <strong>cache</strong> o que já resolveu</li>" +
             "<li>Sem o cache, toda consulta começaria na raiz, e os servidores-raiz " +
             "seriam o gargalo da Internet inteira</li>" +
@@ -733,7 +764,7 @@ SD.content["03"] = {
             "<ul>" +
             "<li>O firewall defende um perímetro. A <strong>VPN</strong> estende esse " +
             "perímetro através da Internet pública</li>" +
-            "<li>Canais cifrados no nível IP, pelo <strong>IPSec</strong>, ligam " +
+            "<li>Canais cifrados no nível IP, pelo <strong>IPsec</strong>, ligam " +
             "usuários remotos e filiais como se estivessem na rede interna</li>" +
             "<li>Servidores públicos, como o da Web, ficam fora da zona protegida, às " +
             "vezes em uma sub-rede entre dois filtros</li>" +
@@ -744,10 +775,14 @@ SD.content["03"] = {
     {
       title: "Estudos de caso: Ethernet, WiFi e Bluetooth",
       html:
-        "<p>Os padrões de rede local do comitê IEEE 802 dominam a borda da Internet. " +
-        "Os três desta seção são o 802.3, da Ethernet, o 802.11, do WiFi, e o " +
-        "802.15.1, do Bluetooth, e a família ainda inclui o 802.15.4, do ZigBee para " +
-        "sensores, e o 802.16, do WiMAX.</p>" +
+        "<p>Os padrões de rede local do Instituto de Engenheiros Eletricistas e " +
+        "Eletrônicos (IEEE) dominam a borda da Internet. A seção compara três " +
+        "famílias. O IEEE 802.3 especifica a Ethernet. O IEEE 802.11 especifica o " +
+        "WiFi. O IEEE 802.15.1 documentou o Bluetooth.</p>" +
+        "<p>A família IEEE 802 inclui ainda outros padrões, e o IEEE 802.15.4 atende " +
+        "redes de baixa taxa usadas por tecnologias como ZigBee. O IEEE 802.16 foi " +
+        "associado ao WiMAX. Esses dois exemplos situam a família, mas não serão " +
+        "desenvolvidos nesta seção.</p>" +
         "<p>Os três casos foram escolhidos porque partem do mesmo problema e chegam a " +
         "compromissos de projeto bem diferentes. O problema é sempre o mesmo, ou seja, " +
         "várias estações querem falar por um meio que só comporta uma de cada vez.</p>" +
@@ -765,12 +800,12 @@ SD.content["03"] = {
         "<li>A <strong>detecção de portadora</strong> impede que uma estação comece a " +
         "transmitir enquanto ouve outra transmissão em curso.</li>" +
         "<li>A <strong>detecção de colisão</strong> compara o que a estação transmite " +
-        "com o que ela ouve no meio. Quando os dois divergem, houve colisão, e ela " +
+        "com o que ela ouve no meio; quando os dois divergem, houve colisão, e ela " +
         "para de transmitir e emite um sinal de reforço, o jamming, para que todos " +
         "percebam.</li>" +
         "<li>O <strong>back-off</strong> faz cada estação envolvida esperar um tempo " +
         "aleatório antes de tentar de novo, dobrando o limite desse sorteio a cada " +
-        "nova colisão. É o que evita que as duas voltem a colidir na mesma hora.</li>" +
+        "nova colisão, o que evita que as duas voltem a colidir na mesma hora.</li>" +
         "</ul>" +
         "<p>O quadro mínimo de 64 bytes existe por causa desse método. Ele garante que " +
         "a transmissão dure o suficiente para que a colisão seja percebida mesmo entre " +
@@ -781,53 +816,59 @@ SD.content["03"] = {
         "serve a aplicações de tempo real.</p>" +
         '<div class="callout">' +
         '<p class="callout-title">💡 Por que a Ethernet comutada mudou o jogo</p>' +
-        "<p>Com switches no lugar dos hubs, cada host passa a ter o seu próprio " +
-        "segmento e só recebe os quadros endereçados a ele. Sem disputa pelo meio não " +
-        "há colisão, a eficiência se aproxima de 100% e a latência fica constante. Foi " +
-        "assim que a Ethernet passou a atender também ao tempo real e aposentou " +
-        "concorrentes como o token ring.</p>" +
+        "<p>Com comutadores no lugar dos hubs, cada host passa a ter o seu próprio " +
+        "segmento e só recebe os quadros endereçados a ele; sem disputa pelo meio, " +
+        "some a espera imprevisível do back-off e a eficiência sobe muito. A latência " +
+        "deixa de depender da sorte no acesso ao meio, mas continua variando com as " +
+        "filas do comutador. Essa mudança aproximou a Ethernet das aplicações de " +
+        "tempo real e ajudou a substituir concorrentes como o token ring.</p>" +
         "</div>" +
         "<h3>WiFi, quando não dá para detectar a colisão</h3>" +
-        "<p>O WiFi leva o princípio da Ethernet para o rádio, nas faixas de 2,4 e 5 " +
-        "GHz, com até 54 Mbps e alcance da ordem de 150 metros. Ele funciona em duas " +
-        "configurações. Na de infraestrutura, uma estação-base serve de ponto de " +
-        "acesso à rede cabeada. Na ad hoc, os dispositivos se detectam e formam a rede " +
-        "na hora, sem intermediário.</p>" +
-        "<p>A mudança de meio quebra a peça central do método da Ethernet. No rádio, a " +
+        "<p>O WiFi leva o princípio da Ethernet para o rádio. O estudo histórico da " +
+        "fonte usa a geração IEEE 802.11g, que opera em 2,4 GHz e anuncia até 54 Mbps. " +
+        "Gerações posteriores passaram a usar também 5 e 6 GHz e elevaram as taxas " +
+        "nominais para centenas de megabits ou alguns gigabits por segundo. O alcance " +
+        "real depende da faixa, dos obstáculos e da potência.</p>" +
+        "<p>O WiFi funciona em duas configurações. Na de infraestrutura, uma " +
+        "estação-base serve de ponto de acesso à rede cabeada. Na ad hoc, os " +
+        "dispositivos se detectam e formam a rede sem intermediário.</p>" +
+        "<p>A mudança de meio quebra o componente central do método da Ethernet, pois no rádio a " +
         "intensidade do sinal varia muito pelo espaço, e a detecção de colisão falha " +
         "por três motivos independentes.</p>" +
         "<ul>" +
         "<li>Nas <strong>estações ocultas</strong>, um obstáculo esconde de uma " +
-        "estação um transmissor que está ativo, e ela conclui que o meio está livre " +
+        "estação o transmissor ativo, fazendo-a concluir que o meio está livre " +
         "quando não está.</li>" +
         "<li>No <strong>desvanecimento</strong>, o sinal enfraquece com o quadrado da " +
         "distância, e a estação distante simplesmente não é ouvida.</li>" +
         "<li>No <strong>mascaramento</strong>, o próprio sinal da estação, muito mais " +
-        "forte, abafa o sinal remoto. O transmissor nunca ouve a colisão que ele " +
+        "forte, abafa o sinal remoto, e o transmissor nunca ouve a colisão que ele " +
         "mesmo causou.</li>" +
         "</ul>" +
-        "<p>Como detectar não funciona, a resposta é prevenir. No CSMA/CA, em que as " +
+        "<p>Como detectar não funciona, a resposta é prevenir pelo CSMA/CA, em que as " +
         "duas últimas letras vêm de evitar a colisão (CA), a estação reserva um " +
         "intervalo antes de transmitir. Ela troca com o destino dois quadros curtos, " +
         "um de pedido para transmitir (RTS) e outro de liberação para transmitir " +
         "(CTS), e quem ouvir qualquer um dos dois fica calado pelo período anunciado. " +
         "A recepção passa a ser confirmada quadro a quadro.</p>" +
         "<p>A segurança do WiFi nasceu mal. O esquema original, a privacidade " +
-        "equivalente à do cabo (WEP), tinha falhas de projeto e acabou substituído.</p>" +
+        "equivalente à do cabo (WEP), tinha falhas de projeto. O Wi-Fi Protected " +
+        "Access 2 (WPA2) e o Wi-Fi Protected Access 3 (WPA3) assumiram a proteção das " +
+        "redes atuais.</p>" +
         "<h3>Bluetooth, a rede que cabe no bolso</h3>" +
         "<p>O Bluetooth foi projetado para ligar fones, telefones e acessórios com " +
         "hardware de custo mínimo, com a meta declarada de 5 dólares por dispositivo, " +
-        "e com consumo baixíssimo. Ele opera a cerca de 1 mW, o que lhe dá alcance de " +
+        "e com consumo baixíssimo; ele opera a cerca de 1 mW, o que lhe dá alcance de " +
         "10 metros.</p>" +
-        "<p>Os nós se associam dinamicamente em <strong>piconets</strong>. Cada " +
-        "piconet tem um mestre e até sete escravos ativos, além de até 255 " +
-        "dispositivos estacionados em modo de baixa energia. Quando um nó participa de " +
-        "duas piconets, ele funciona como ponte entre elas, e o conjunto passa a se " +
-        "chamar <strong>scatternet</strong>.</p>" +
+        "<p>Os nós se associam dinamicamente em <strong>piconets</strong>. Na " +
+        "terminologia atual, cada piconet tem um dispositivo central e até sete " +
+        "periféricos ativos, além de dispositivos estacionados em modo de baixa " +
+        "energia. Quando um nó participa de duas piconets, ele funciona como ponte " +
+        "entre elas e forma uma <strong>scatternet</strong>.</p>" +
         '<figure class="figura" id="fig-piconet">' +
         '<svg viewBox="0 0 640 250" role="img" aria-labelledby="fig-piconet-titulo">' +
-        '<title id="fig-piconet-titulo">Duas piconets, cada uma com um mestre e três ' +
-        "escravos, ligadas entre si por um nó-ponte que participa das duas e forma " +
+        '<title id="fig-piconet-titulo">Duas piconets, cada uma com um dispositivo central e três ' +
+        "periféricos, ligadas entre si por um nó-ponte que participa das duas e forma " +
         "uma scatternet.</title>" +
         '<path class="traco" d="M135 120 L45 55"/>' +
         '<path class="traco" d="M135 120 L45 185"/>' +
@@ -838,27 +879,27 @@ SD.content["03"] = {
         '<path class="traco" d="M505 120 L595 185"/>' +
         '<path class="traco" d="M505 120 L490 40"/>' +
         '<circle class="caixa" cx="45" cy="55" r="24"/>' +
-        '<text class="rotulo-secundario" x="45" y="59" text-anchor="middle" font-size="11">escravo</text>' +
+        '<text class="rotulo-secundario" x="45" y="59" text-anchor="middle" font-size="11">periférico</text>' +
         '<circle class="caixa" cx="45" cy="185" r="24"/>' +
-        '<text class="rotulo-secundario" x="45" y="189" text-anchor="middle" font-size="11">escravo</text>' +
+        '<text class="rotulo-secundario" x="45" y="189" text-anchor="middle" font-size="11">periférico</text>' +
         '<circle class="caixa" cx="150" cy="40" r="24"/>' +
-        '<text class="rotulo-secundario" x="150" y="44" text-anchor="middle" font-size="11">escravo</text>' +
+        '<text class="rotulo-secundario" x="150" y="44" text-anchor="middle" font-size="11">periférico</text>' +
         '<circle class="caixa-destaque" cx="135" cy="120" r="30"/>' +
-        '<text x="135" y="125" text-anchor="middle" font-size="13">mestre</text>' +
+        '<text x="135" y="125" text-anchor="middle" font-size="13">central</text>' +
         '<circle class="caixa" cx="595" cy="55" r="24"/>' +
-        '<text class="rotulo-secundario" x="595" y="59" text-anchor="middle" font-size="11">escravo</text>' +
+        '<text class="rotulo-secundario" x="595" y="59" text-anchor="middle" font-size="11">periférico</text>' +
         '<circle class="caixa" cx="595" cy="185" r="24"/>' +
-        '<text class="rotulo-secundario" x="595" y="189" text-anchor="middle" font-size="11">escravo</text>' +
+        '<text class="rotulo-secundario" x="595" y="189" text-anchor="middle" font-size="11">periférico</text>' +
         '<circle class="caixa" cx="490" cy="40" r="24"/>' +
-        '<text class="rotulo-secundario" x="490" y="44" text-anchor="middle" font-size="11">escravo</text>' +
+        '<text class="rotulo-secundario" x="490" y="44" text-anchor="middle" font-size="11">periférico</text>' +
         '<circle class="caixa-destaque" cx="505" cy="120" r="30"/>' +
-        '<text x="505" y="125" text-anchor="middle" font-size="13">mestre</text>' +
+        '<text x="505" y="125" text-anchor="middle" font-size="13">central</text>' +
         '<circle class="caixa" cx="320" cy="120" r="27"/>' +
         '<text x="320" y="125" text-anchor="middle" font-size="12">ponte</text>' +
         '<text class="rotulo-secundario" x="135" y="228" text-anchor="middle" font-size="13">piconet</text>' +
         '<text class="rotulo-secundario" x="505" y="228" text-anchor="middle" font-size="13">piconet</text>' +
         "</svg>" +
-        "<figcaption>Cada piconet tem um mestre só. O nó do meio pertence às duas ao " +
+        "<figcaption>Cada piconet tem um dispositivo central. O nó do meio pertence às duas ao " +
         "mesmo tempo, e é essa participação dupla que costura as piconets em uma " +
         "scatternet.</figcaption>" +
         "</figure>" +
@@ -866,9 +907,10 @@ SD.content["03"] = {
         "orientado a conexão (SCO) serve à voz em tempo real, e cada bit é transmitido " +
         "em triplicata sem nenhuma retransmissão, pela razão de que dado atrasado é " +
         "dado inútil numa conversa. O enlace assíncrono sem conexão (ACL) serve aos " +
-        "dados, onde a ordem de prioridade se inverte.</p>" +
-        "<p>A versão 1.1 alcança 1 Mbps por piconet, e a 2.0 chega a 3 Mbps. O " +
-        "calcanhar de aquiles está na entrada, porque associar um dispositivo novo " +
+        "dados, nos quais a integridade e a retransmissão têm prioridade sobre a " +
+        "entrega imediata.</p>" +
+        "<p>A versão 1.1 alcança 1 Mbps por piconet, e a 2.0 chega a 3 Mbps; o " +
+        "calcanhar de Aquiles está na entrada, porque associar um dispositivo novo " +
         "pode levar até 10 segundos, o que inviabiliza usos como pagar pedágio em " +
         "movimento.</p>" +
         "<h3>Os três lado a lado</h3>" +
@@ -879,18 +921,26 @@ SD.content["03"] = {
         "<tr><th>Dimensão</th><th>Ethernet (IEEE 802.3)</th><th>WiFi (IEEE 802.11)</th>" +
         "<th>Bluetooth (IEEE 802.15.1)</th></tr>" +
         "<tr><td>Alcance</td><td>Um segmento de rede local.</td>" +
-        "<td>Cerca de 150 metros.</td><td>Cerca de 10 metros.</td></tr>" +
-        "<tr><td>Taxa</td><td>De 10 Mbps a 10 Gbps.</td><td>Até 54 Mbps.</td>" +
+        "<td>Depende da faixa, dos obstáculos e da potência.</td><td>Cerca de 10 metros " +
+        "no cenário histórico estudado.</td></tr>" +
+        "<tr><td>Exemplo histórico de taxa na fonte</td><td>De 10 Mbps a 10 Gbps.</td>" +
+        "<td>Até 54 Mbps no IEEE 802.11g.</td>" +
         "<td>1 Mbps na versão 1.1 e 3 Mbps na 2.0.</td></tr>" +
         "<tr><td>Acesso ao meio</td>" +
         "<td>CSMA/CD, que percebe a colisão depois que ela acontece.</td>" +
         "<td>CSMA/CA, que reserva o meio antes de transmitir.</td>" +
-        "<td>Associação em piconet, com um mestre e até sete escravos ativos.</td></tr>" +
+        "<td>Associação em piconet, com um central e até sete periféricos ativos.</td></tr>" +
         "<tr><td>O que o projeto priorizou</td>" +
         "<td>A eficiência no meio compartilhado, que fica entre 80% e 95%.</td>" +
         "<td>Funcionar sem fio, aceitando não conseguir detectar a colisão.</td>" +
-        "<td>O custo mínimo, com meta de 5 dólares, e o consumo baixíssimo.</td></tr>" +
-        "</table></div>",
+        "<td>O custo mínimo, com meta histórica de 5 dólares, e o consumo " +
+        "baixíssimo.</td></tr>" +
+        "</table></div>" +
+        "<p>Para um sistema distribuído, a escolha do enlace aparece como latência, " +
+        "taxa útil, perdas, consumo de energia e alcance. O protocolo da aplicação " +
+        "precisa tolerar as propriedades do meio escolhido. Ethernet, WiFi e " +
+        "Bluetooth não são apenas formas de conectar máquinas, pois impõem " +
+        "compromissos diferentes ao software.</p>",
       slides: [
         {
           title: "Três padrões, três compromissos",
@@ -923,11 +973,11 @@ SD.content["03"] = {
           title: "Por que a Ethernet comutada mudou o jogo",
           html:
             "<ul>" +
-            "<li>Com switch no lugar do hub, cada host ganha o <strong>seu " +
+            "<li>Com comutador no lugar do hub, cada host ganha o <strong>seu " +
             "segmento</strong> e só recebe o que é dele</li>" +
-            "<li>Sem disputa não há colisão. A eficiência vai perto de 100% e a " +
-            "latência fica constante</li>" +
-            "<li>Foi assim que a Ethernet passou a servir ao tempo real e aposentou o " +
+            "<li>Sem disputa, some a espera imprevisível do back-off. As filas do " +
+            "comutador ainda fazem a latência variar</li>" +
+            "<li>Foi assim que a Ethernet se aproximou do tempo real e ajudou a aposentar o " +
             "token ring</li>" +
             "</ul>"
         },
@@ -952,7 +1002,7 @@ SD.content["03"] = {
           html:
             "<ul>" +
             "<li>Meta de 5 dólares por dispositivo, 1 mW e 10 metros</li>" +
-            "<li>Um mestre, até 7 escravos ativos e 255 estacionados</li>" +
+            "<li>Um dispositivo central e até 7 periféricos ativos</li>" +
             "</ul>"
         },
         {
@@ -961,10 +1011,11 @@ SD.content["03"] = {
             "<ul>" +
             "<li>O <strong>SCO</strong> é síncrono e serve à voz. Cada bit vai em " +
             "triplicata e não há retransmissão, porque dado atrasado é dado inútil</li>" +
-            "<li>O <strong>ACL</strong> é assíncrono e serve aos dados, onde a " +
-            "prioridade se inverte</li>" +
+            "<li>O <strong>ACL</strong> é assíncrono e serve aos dados. Nele, a " +
+            "integridade e a retransmissão ganham prioridade sobre a entrega " +
+            "imediata</li>" +
             "<li>1 Mbps na versão 1.1 e 3 Mbps na 2.0</li>" +
-            "<li>O calcanhar de aquiles é a entrada. Associar um dispositivo novo leva " +
+            "<li>O calcanhar de Aquiles é a entrada. Associar um dispositivo novo leva " +
             "até <strong>10 segundos</strong></li>" +
             "</ul>"
         },
@@ -980,11 +1031,13 @@ SD.content["03"] = {
     href: "labs/pratica-03/index.html",
     title: "Quem consegue iniciar a conversa",
     summary:
-      "Construa uma rede de pilha dupla na AWS, com sub-redes pública e privadas, NAT " +
-      "gateway e gateway somente de saída. Depois descubra por que uma máquina com " +
-      "endereço IPv6 único no mundo e filtro aberto continua inalcançável, e o que muda " +
-      "quando você apaga e recria uma linha da tabela de rotas com tudo ligado.",
-    duration: "100 min",
+      "Um script monta uma rede de pilha dupla na AWS, com sub-redes pública e privadas, " +
+      "NAT gateway e gateway somente de saída, e o seu trabalho começa onde ele para. " +
+      "Descubra por que uma máquina com endereço IPv6 único no mundo e filtro aberto " +
+      "continua inalcançável, o que muda quando você apaga e recria uma linha da tabela de " +
+      "rotas com tudo ligado, e o que a rede cobra mais caro, atravessar a fronteira de " +
+      "uma VPC ou trocar de zona de disponibilidade.",
+    duration: "75 min",
     environment: "AWS Academy Sandbox"
   },
 
@@ -995,15 +1048,15 @@ SD.content["03"] = {
       options: [
         "A largura de banda total do sistema.",
         "A latência.",
-        "O MTU da rede subjacente.",
+        "A MTU da rede subjacente.",
         "O número de hosts conectados."
       ],
       answer: 1,
       explanation:
         "Tempo de transmissão = latência + tamanho ÷ taxa de transferência. Quando " +
         "as mensagens são pequenas, o termo do tamanho encolhe e quem passa a " +
-        "dominar o tempo total é a latência, que soma as sobrecargas de software, os " +
-        "atrasos de roteamento e a disputa pelo canal."
+        "dominar o tempo total é a latência. Ela representa o atraso que já existe " +
+        "antes que o tamanho da mensagem passe a pesar."
     },
     {
       question:
@@ -1023,17 +1076,17 @@ SD.content["03"] = {
     },
     {
       question:
-        "O IP oferece uma semântica de entrega descrita como 'de melhor esforço' (best effort). O que isso significa?",
+        "O IP oferece uma semântica de entrega de melhor esforço (best effort). O que isso significa?",
       options: [
-        "Não há garantia nenhuma, e o datagrama pode se perder, duplicar, atrasar ou chegar fora de ordem.",
+        "Não há nenhuma garantia, e o datagrama pode se perder, duplicar, atrasar ou chegar fora de ordem.",
         "Os datagramas são sempre entregues, mas possivelmente fora de ordem.",
         "O IP retransmite cada datagrama perdido até três vezes antes de desistir.",
         "As perdas só ocorrem em redes sem fio; nas cabeadas a entrega é garantida."
       ],
       answer: 0,
       explanation:
-        "O IP não garante nada sobre a entrega, e nem valida os dados (a soma de " +
-        "verificação cobre só o cabeçalho). Confiabilidade, quando necessária, é " +
+        "O IP não oferece garantia de entrega. A soma de verificação do IPv4 cobre " +
+        "apenas o cabeçalho, e não os dados. Confiabilidade, quando necessária, é " +
         "acrescentada pelo transporte (TCP) ou pela aplicação, seguindo o princípio " +
         "fim-a-fim."
     },
@@ -1055,7 +1108,7 @@ SD.content["03"] = {
     },
     {
       question:
-        "Qual mecanismo do TCP impede que um remetente rápido sobrecarregue um destinatário (ou nós intermediários) mais lento?",
+        "Qual mecanismo do TCP impede que um remetente rápido sobrecarregue um destinatário mais lento?",
       options: [
         "A soma de verificação, que cobre o cabeçalho e também os dados do segmento.",
         "O controle de fluxo, em que a confirmação anuncia a janela que o outro aceita.",
@@ -1106,7 +1159,7 @@ SD.content["03"] = {
         "transferência."
     },
     {
-      term: "MTU (Maximum Transfer Unit)",
+      term: "MTU (Maximum Transmission Unit)",
       definition:
         "Comprimento máximo do campo de dados de um pacote em uma tecnologia de " +
         "rede. Na Ethernet é de 1.500 bytes, e mensagens maiores precisam ser " +
@@ -1131,8 +1184,8 @@ SD.content["03"] = {
       definition:
         "Modo de entrega em que um caminho é configurado antes da transmissão, com " +
         "entradas de tabela nos nós intermediários. Os pacotes passam a carregar " +
-        "apenas o número do circuito, e não os endereços, como acontece nas redes " +
-        "ATM."
+        "apenas o número do circuito, e não os endereços, como acontece nas redes de " +
+        "modo de transferência assíncrona (ATM)."
     },
     {
       term: "Vetor de distância",
@@ -1170,7 +1223,8 @@ SD.content["03"] = {
         "Conjunto de processos em um gateway que monitora e filtra toda a " +
         "comunicação entre uma intranet e a Internet, aplicando a política de " +
         "segurança da organização em três níveis, que são a filtragem de " +
-        "datagramas IP, o gateway TCP e o proxy de aplicação."
+        "datagramas IP, o gateway TCP e o gateway de aplicação, em que um proxy " +
+        "examina o conteúdo."
     },
     {
       term: "CSMA/CD",
