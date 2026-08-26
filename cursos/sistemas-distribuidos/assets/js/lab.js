@@ -163,6 +163,45 @@ SD.lab = (function () {
     });
   }
 
+  /* ---------- Ficha: colar de uma vez o bloco NOME=valor ----------
+     Onde a ficha tem uma dúzia de campos, digitar um a um é o passo em
+     que o aluno erra. O script de preparação já imprime o bloco pronto,
+     então aqui ele entra inteiro. Degrada em silêncio na prática que não
+     tiver a caixa. */
+  function ligarColagem() {
+    var caixa = document.querySelector("[data-ficha-colar]");
+    var botao = document.querySelector("[data-ficha-aplicar]");
+    var aviso = document.querySelector("[data-ficha-resultado]");
+    if (!caixa || !botao) return;
+
+    botao.addEventListener("click", function () {
+      var linhas = caixa.value.replace(/^﻿/, "").split(/\r?\n/);
+      var preenchidos = 0;
+      var ignorados = [];
+      linhas.forEach(function (linha) {
+        var achado = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$/.exec(linha);
+        if (!achado) return;
+        var nome = achado[1];
+        var campo = document.querySelector('[data-ficha="' + nome + '"]');
+        if (!campo) { ignorados.push(nome); return; }
+        campo.value = achado[2];
+        estado.vars[nome] = achado[2];
+        aplicarVariavel(nome, achado[2]);
+        preenchidos += 1;
+      });
+      salvar();
+      if (!aviso) return;
+      if (!preenchidos) {
+        aviso.textContent = "Nenhuma linha no formato NOME=valor foi encontrada.";
+      } else if (ignorados.length) {
+        aviso.textContent = preenchidos + " campos preenchidos. Sem campo na ficha: "
+          + ignorados.join(", ") + ".";
+      } else {
+        aviso.textContent = preenchidos + " campos preenchidos.";
+      }
+    });
+  }
+
   /* ---------- Abas de sistema operacional ---------- */
   function aplicarOS(os) {
     document.body.setAttribute("data-os", os);
@@ -350,6 +389,7 @@ SD.lab = (function () {
     ligarBotoesCopiar();
     ligarBotoesBaixar();
     ligarFicha();
+    ligarColagem();
     ligarOS();
     ligarNotas();
     ligarCheckpoints();

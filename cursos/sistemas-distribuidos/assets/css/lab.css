@@ -277,6 +277,56 @@
   outline: none;
 }
 
+/* Caixa de colagem: o bloco que o script de preparacao imprime entra
+   inteiro aqui, em vez de campo a campo. */
+.ficha-colar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background-color: var(--color-bg-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-4) 0;
+}
+
+.ficha-colar label {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.ficha-colar textarea {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-bg-sunken);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem;
+  width: 100%;
+  resize: vertical;
+}
+
+.ficha-colar textarea:focus {
+  border-color: var(--color-brand);
+  outline: none;
+}
+
+.ficha-colar-acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ficha-colar-aviso {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 /* ---------- Abas de sistema operacional ---------- */
 .os-switch {
   display: inline-flex;
