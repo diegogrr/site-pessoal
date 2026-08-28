@@ -41,7 +41,7 @@
     </p>
 
     <div class="lab-chips">
-      <span class="chip">◷ 75 min</span>
+      <span class="chip">◷ 77 min</span>
       <span class="chip">▲ dificuldade 3 de 5</span>
       <span class="chip">☁ AWS Academy Sandbox</span>
       <span class="chip">▤ 4 instâncias t3.micro</span>
@@ -668,7 +668,7 @@ Os numeros mudam. O que importa e a linha comecar com aws-cli/2.</p>
        Passo 2
        ============================================================ -->
   <section class="lab-step" id="passo-2">
-    <h2><span class="step-num">2</span><span>Rodar o script que monta o ambiente</span><span class="step-time">6 min</span></h2>
+    <h2><span class="step-num">2</span><span>Rodar o script que monta o ambiente</span><span class="step-time">8 min</span></h2>
 
     <p>
       Um script constrói a rede inteira e sobe os quatro nós. Ele não esconde nada, porque
@@ -2193,12 +2193,15 @@ do no B e a unica com a zona us-east-1b, que e o que o experimento 3 mede.</p>
       </div>
       <pre>aws ec2 describe-security-groups --profile sd-sandbox --output table --group-ids <span class="var" data-var="SG_NOS">SG-DOS-NOS</span> --query "SecurityGroups[0].IpPermissionsEgress[].[IpProtocol,IpRanges[0].CidrIp,Ipv6Ranges[0].CidrIpv6]"</pre>
     </div>
-    <p class="saida">--------------------------------
-|    DescribeSecurityGroups    |
-+------+-------------+---------+
-|  -1  |  0.0.0.0/0  |  None   |
-|  -1  |  None       |  ::/0   |
-+------+-------------+---------+</p>
+    <p class="saida">-----------------------------
+|  DescribeSecurityGroups   |
++----+-------------+--------+
+|  -1|  0.0.0.0/0  |  ::/0  |
++----+-------------+--------+
+
+Uma linha so, com as duas faixas na mesma regra. O -1 e o protocolo, e
+quer dizer todos. A regra de fabrica cobre o IPv6 porque esta VPC tem
+bloco IPv6, e numa VPC sem bloco IPv6 ela nomearia so o 0.0.0.0/0.</p>
 
     <p>
       Confira também no console, porque ele é mais fácil de ler que qualquer saída de terminal.
@@ -2563,9 +2566,12 @@ saiu com 28</p>
     https://s3.dualstack.us-east-1.amazonaws.com
 done</pre>
     </div>
-    <p class="saida">A colher no piloto. Duas linhas com codigo 307 ou 403, uma com um
-endereco IPv6 na coluna origem e outra com um IPv4. O codigo nao e 200
-porque a chamada nao traz credencial, e nao e isso que esta sendo medido.</p>
+    <p class="saida">-6  codigo 307   origem 2600:1f60:80c0:1::100f:d6d6
+-4  codigo 307   origem 16.15.230.115
+
+As duas chamadas funcionaram, e cada uma saiu pela familia que voce pediu,
+o que a coluna origem comprova. O codigo nao e 200 porque a chamada nao
+traz credencial, e nao e isso que esta sendo medido aqui.</p>
 
     <p>
       Repare que a chamada precisou de <code>-6</code> e de <code>-4</code> escritos à mão.
@@ -2672,8 +2678,13 @@ IPv4 traz o mesmo codigo do passo 4, porque a rota dele nao foi tocada.</p>
       </div>
       <pre>curl -6 -s -m 5 "http://[<span class="var" data-var="IPV6_A">IPV6-DO-NO-A</span>]:8080/"</pre>
     </div>
-    <p class="saida">A colher no piloto. As quatro linhas do servico, com o no A dizendo
-que respondeu e que o pedido veio por IPv6.</p>
+    <p class="saida">quem respondeu : no A (i-0ff9b4473e3a48201)
+zona           : us-east-1a
+quem perguntou : 2600:1f18:e19:4c00:9ce:7c74:5110:3f1d
+protocolo      : IPv6
+
+O endereco de quem perguntou e o IPv6 do no P, e e ele que fecha a licao do
+movimento, porque a rota local nao esta nas maos de quem edita a tabela.</p>
 
     <p>
       Duas lições em um movimento só. A primeira é que <strong>IPv4 e IPv6 são dois planos de
@@ -2889,6 +2900,41 @@ rtt min/avg/max/mdev = 0.891/0.984/1.556/0.192 ms
 rtt min/avg/max/mdev = 0.284/0.395/0.899/0.197 ms
 
 A do meio e a do no B. Anote o avg das tres.</p>
+
+    <div class="callout">
+      <p class="callout-title">⚠ O seu número vai ser outro, e o motivo é conteúdo</p>
+      <p>
+        A medida 2 acima veio de uma sessão real, e outra sessão real mediu 0,598 ms para a
+        mesma coisa. As duas estão certas. <strong>O nome da zona não diz qual zona física você
+        recebeu</strong>, porque a AWS sorteia essa correspondência por conta, e o Sandbox de
+        cada pessoa é uma conta diferente. O seu <code>us-east-1b</code> pode ser um prédio
+        vizinho ao do seu <code>us-east-1a</code>, ou pode estar bem mais longe.
+      </p>
+      <p>
+        O que a prática cobra é a <strong>relação</strong>, não o valor. A medida 2 tem que ser
+        a única das três que destoa, e a medida 3 tem que empatar com a medida 1. Se as três
+        saírem quase iguais, veja qual zona física está por trás de cada nome antes de concluir
+        qualquer coisa.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 4, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>aws ec2 describe-availability-zones --profile sd-sandbox --output table --query "AvailabilityZones[?ZoneName=='us-east-1a' || ZoneName=='us-east-1b'].{Nome:ZoneName,IdFisico:ZoneId}"</pre>
+      </div>
+      <p class="saida">|  use1-az2 |  us-east-1a  |
+|  use1-az4 |  us-east-1b  |
+
+O da esquerda e o identificador da zona fisica, igual para todas as contas.
+O da direita e o apelido que a sua conta recebeu. Numa conta vizinha, o
+mesmo us-east-1a pode ser o use1-az5.</p>
+      <p>
+        Essa é a mesma lição do experimento, vista de outro ângulo. Quem decide o preço é onde a
+        máquina está, e não o nome que você escolheu no console.
+      </p>
+    </div>
 
     <div class="callout">
       <p class="callout-title">💡 O que cobra é a distância, não a fronteira</p>
@@ -3149,7 +3195,7 @@ traceroute to s3.dualstack.us-east-1.amazonaws.com (54.231.165.248)
             <td>Medida 2, do nó A ao nó B, mesma VPC e <strong>outra zona</strong><br>
               <span class="ref">passo 6.1 · o <code>avg</code> da segunda linha</span></td>
             <td><input type="text" data-res="m2_outra_zona" data-rotulo="medida 2, A para B em outra zona (ms)" placeholder="ms"></td>
-            <td class="ref">perto de 0,9 ms</td>
+            <td class="ref">maior que a medida 1, tipicamente de 0,5 a 1,0 ms</td>
           </tr>
           <tr>
             <td>Medida 3, do nó A ao nó E, <strong>outra VPC</strong> e mesma zona<br>
@@ -3161,7 +3207,7 @@ traceroute to s3.dualstack.us-east-1.amazonaws.com (54.231.165.248)
             <td>Quantas vezes a medida 2 é maior que a medida 1<br>
               <span class="ref">conta sua · divida a medida 2 pela medida 1</span></td>
             <td><input type="text" data-res="razao_zona" data-rotulo="razao entre a medida 2 e a medida 1" placeholder="vezes"></td>
-            <td class="ref">perto de 3 vezes</td>
+            <td class="ref">entre 1,5 e 3 vezes, e o número depende da sua conta</td>
           </tr>
           <tr>
             <td>Quantas vezes a medida 3 é maior que a medida 1<br>
