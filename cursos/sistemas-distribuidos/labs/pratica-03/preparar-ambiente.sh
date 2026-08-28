@@ -93,7 +93,9 @@ preparar_credencial() {
 
   CONTA=$(aws sts get-caller-identity --query Account --output text)
   ARN=$(aws sts get-caller-identity --query Arn --output text)
-  diz "identidade confirmada: $ARN"
+  # So o papel e o usuario. O ARN inteiro carrega o numero da conta, e a
+  # linha de baixo existe justamente para nao mostra-lo por extenso.
+  diz "identidade confirmada: ${ARN##*:}"
   diz "conta terminada em ${CONTA#????????}, regiao $REGIAO"
 }
 

@@ -110,7 +110,9 @@ function preparar-credencial {
 
   $conta = aws sts get-caller-identity --query Account --output text
   $arn = aws sts get-caller-identity --query Arn --output text
-  diz "identidade confirmada: $arn"
+  # So o papel e o usuario. O ARN inteiro carrega o numero da conta, e a
+  # linha de baixo existe justamente para nao mostra-lo por extenso.
+  diz "identidade confirmada: $($arn.Split(':')[-1])"
   diz "conta terminada em $($conta.Substring(8)), regiao $REGIAO"
 }
 
