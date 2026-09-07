@@ -978,10 +978,17 @@ SD.demos["camadas-rede"] = (function () {
 
     /* As durações de CSS passam pela MESMA escala do agendador, senão
        ?demo-fast dispara os saltos a cada 54 ms com transições de 450 ms e o
-       pacote fica para trás de si mesmo. */
+       pacote fica para trás de si mesmo.
+
+       Os 120 ms de arranque e o `t` que aponta para a CHEGADA do último salto
+       vêm de `animarSalto`, na etapa 3, e as duas funções precisam concordar
+       porque as esperas de 250 e de 200 abaixo contam a partir da chegada. O
+       arranque dá ao navegador um quadro com o pacote parado na origem, sem o
+       qual a camada nasce e troca de transform na mesma tarefa e a primeira
+       transição não chega a rodar. */
     function animarEntrega(rota, aoFim) {
       var duracao = duracaoDoSalto();
-      var t = 0;
+      var t = 120;
       rota.path.slice(1).forEach(function (no) {
         to(function () {
           moverPacote(no, duracao);
