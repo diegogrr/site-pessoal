@@ -162,7 +162,8 @@ SD.notas["chronyc-tracking"] = {
     "<p><strong>De quem a máquina tira a hora</strong></p>" +
     "<ul>" +
     "<li><code>Reference ID</code>: a fonte que ele está seguindo. <code>A9FEA97B</code> é o " +
-    "próprio endereço em hexadecimal (A9 = 169, FE = 254, A9 = 169, 7B = 123), ou seja, " +
+    "próprio endereço em hexadecimal (<code>A9</code> = 169, <code>FE</code> = 254, " +
+    "<code>A9</code> = 169, <code>7B</code> = 123), ou seja, " +
     "169.254.169.123, o serviço de tempo da AWS. É um endereço link-local, da mesma família " +
     "do 169.254.169.254 que você consultou no passo 4. A hora não vem da internet, e quem " +
     "responde é o próprio host.</li>" +
