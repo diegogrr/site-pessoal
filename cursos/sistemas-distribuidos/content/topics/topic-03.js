@@ -73,8 +73,12 @@ SD.content["03"] = {
         "dispositivo de estado sólido local, essa comparação costuma se inverter e a " +
         "leitura local volta a ter menor latência.</p>" +
         "<h3>Os outros requisitos</h3>" +
-        "<p>Desempenho é o requisito mais discutido, mas não é o único que a rede " +
-        "impõe ao sistema distribuído. Outros seis aparecem com frequência.</p>" +
+        "<p>Desempenho é o requisito mais discutido, mas não é o único que um " +
+        "sistema distribuído coloca sobre a rede em que roda. Outros seis aparecem " +
+        "com frequência, e vale reparar que eles não são todos da mesma natureza. " +
+        "Uns cobram da rede uma qualidade, como a escalabilidade e a " +
+        "confiabilidade, e outros pedem dela um recurso que nem toda rede oferece, " +
+        "como a qualidade de serviço e o multicast.</p>" +
         "<p><strong>Escalabilidade.</strong> O crescimento da Internet exigiu rever " +
         "o endereçamento e o roteamento, pois os esquemas originais não foram " +
         "projetados para bilhões de nós.</p>" +
@@ -219,7 +223,7 @@ SD.content["03"] = {
         '<div class="tabela-rolagem">' +
         '<table class="tabela-conteudo" id="tab-comutacao">' +
         "<tr><th>Esquema</th><th>Como funciona</th><th>Onde aparece</th></tr>" +
-        "<tr><td>Difusão (broadcast)</td>" +
+        "<tr><td>Broadcast</td>" +
         "<td>Não há comutação, pois tudo é transmitido a todos os nós e cada um recolhe " +
         "o que está endereçado a ele.</td>" +
         "<td>Ethernet e redes sem fio.</td></tr>" +
@@ -537,7 +541,7 @@ SD.content["03"] = {
         "destino.</p>" +
         "<p>Na fronteira com a rede física, o protocolo de resolução de endereços " +
         "(ARP) traduz o endereço IP para o endereço físico da interface. Para isso, " +
-        "ele pergunta em difusão na rede local quem tem determinado IP e guarda as " +
+        "ele pergunta em broadcast na rede local quem tem determinado IP e guarda as " +
         "respostas em cache.</p>" +
         "<p>Um alerta fecha o assunto. O endereço de origem de um datagrama não é " +
         "confiável, porque nada impede quem envia de escrever ali o endereço de " +
@@ -564,10 +568,8 @@ SD.content["03"] = {
         "endereços continua o mesmo.</td></tr>" +
         "<tr><td>Tradução de endereços de rede (NAT)</td>" +
         "<td>Uma rede inteira com endereços privados, distribuídos pelo protocolo de " +
-        "configuração dinâmica de hosts (DHCP), compartilha um único IP registrado. " +
-        "O roteador reescreve o endereço e a porta de origem de cada mensagem que " +
-        "sai e usa a porta de destino das respostas para achar, na sua tabela, o " +
-        "computador interno certo.</td>" +
+        "configuração dinâmica de hosts (DHCP), compartilha um único IP registrado, " +
+        "e o roteador cuida sozinho de manter as conversas separadas.</td>" +
         "<td>Funciona muito bem para clientes. Expor um servidor interno exige " +
         "configuração manual, porque de fora não há como iniciar a conversa.</td></tr>" +
         "<tr><td>IPv6</td>" +
@@ -579,11 +581,69 @@ SD.content["03"] = {
         "<td>Resolve o problema de vez, mas a migração tem sido lenta justamente " +
         "porque as duas medidas anteriores aliviaram a pressão.</td></tr>" +
         "</table></div>" +
-        "<p>Para dar a dimensão do número, mesmo nas estimativas pessimistas o IPv6 " +
-        "oferece mil endereços por metro quadrado da superfície do planeta. A " +
-        "migração foi planejada por túneis sobre IPv4, exatamente como a figura da " +
-        "seção anterior mostra. O aumento do número de dispositivos móveis tornou a " +
-        "migração inevitável.</p>" +
+        "<p>A tradução é a medida mais fácil de encontrar em funcionamento, porque " +
+        "está em praticamente todo roteador doméstico. O mecanismo cabe em uma " +
+        "ideia. Ao encaminhar para fora a mensagem de um computador interno, o " +
+        "roteador substitui o endereço e a porta de origem pelos seus próprios. A " +
+        "porta escolhida é a chave, porque fica anotada numa tabela ao lado do " +
+        "computador e da porta que a originaram.</p>" +
+        '<figure class="figura" id="fig-nat">' +
+        '<svg viewBox="0 0 640 268" role="img" aria-labelledby="fig-nat-titulo">' +
+        '<title id="fig-nat-titulo">Uma mensagem saindo de um computador interno ' +
+        "para um servidor na Internet e a resposta voltando, com o roteador NAT " +
+        "trocando o endereço e a porta de origem na saída e restaurando o destino " +
+        "na volta pela consulta à sua tabela de tradução.</title>" +
+        '<text class="rotulo-secundario" x="320" y="22" text-anchor="middle" font-size="13">' +
+        "Na saída, o roteador troca a origem</text>" +
+        '<text x="184" y="52" text-anchor="middle" font-size="12">origem 10.0.0.5 porta 5000</text>' +
+        '<text class="rotulo-secundario" x="184" y="68" text-anchor="middle" font-size="12">destino 198.51.100.9 porta 80</text>' +
+        '<text x="460" y="52" text-anchor="middle" font-size="12">origem 203.0.113.7 porta 40001</text>' +
+        '<text class="rotulo-secundario" x="460" y="68" text-anchor="middle" font-size="12">destino 198.51.100.9 porta 80</text>' +
+        '<rect class="caixa" x="8" y="88" width="112" height="64" rx="6"/>' +
+        '<text x="64" y="116" text-anchor="middle" font-size="13">Host interno</text>' +
+        '<text class="rotulo-secundario" x="64" y="132" text-anchor="middle" font-size="12">10.0.0.5</text>' +
+        '<rect class="caixa-destaque" x="248" y="88" width="152" height="64" rx="6"/>' +
+        '<text x="324" y="116" text-anchor="middle" font-size="13">Roteador NAT</text>' +
+        '<text class="rotulo-secundario" x="324" y="132" text-anchor="middle" font-size="12">203.0.113.7</text>' +
+        '<rect class="caixa" x="520" y="88" width="112" height="64" rx="6"/>' +
+        '<text x="576" y="116" text-anchor="middle" font-size="13">Servidor</text>' +
+        '<text class="rotulo-secundario" x="576" y="132" text-anchor="middle" font-size="12">198.51.100.9</text>' +
+        '<path class="traco" d="M120 104 H240"/>' +
+        '<path class="seta" d="M240 98 L248 104 L240 110 Z"/>' +
+        '<path class="traco" d="M400 104 H512"/>' +
+        '<path class="seta" d="M512 98 L520 104 L512 110 Z"/>' +
+        '<path class="traco" d="M248 136 H128"/>' +
+        '<path class="seta" d="M128 130 L120 136 L128 142 Z"/>' +
+        '<path class="traco" d="M520 136 H408"/>' +
+        '<path class="seta" d="M408 130 L400 136 L408 142 Z"/>' +
+        '<text x="184" y="172" text-anchor="middle" font-size="12">destino 10.0.0.5 porta 5000</text>' +
+        '<text class="rotulo-secundario" x="184" y="188" text-anchor="middle" font-size="12">origem 198.51.100.9 porta 80</text>' +
+        '<text x="460" y="172" text-anchor="middle" font-size="12">destino 203.0.113.7 porta 40001</text>' +
+        '<text class="rotulo-secundario" x="460" y="188" text-anchor="middle" font-size="12">origem 198.51.100.9 porta 80</text>' +
+        '<text class="rotulo-secundario" x="320" y="214" text-anchor="middle" font-size="13">' +
+        "Na volta, a porta de destino acha a linha da tabela</text>" +
+        '<rect class="caixa" x="178" y="228" width="118" height="30" rx="6"/>' +
+        '<text x="237" y="248" text-anchor="middle" font-size="12">porta 40001</text>' +
+        '<path class="traco" d="M296 243 H318"/>' +
+        '<path class="seta" d="M318 237 L326 243 L318 249 Z"/>' +
+        '<rect class="caixa-destaque" x="326" y="228" width="142" height="30" rx="6"/>' +
+        '<text x="397" y="248" text-anchor="middle" font-size="12">10.0.0.5 porta 5000</text>' +
+        "</svg>" +
+        "<figcaption>O endereço interno nunca aparece na Internet, e é a porta " +
+        "escolhida na saída que devolve o pacote ao computador certo. Uma porta por " +
+        "conversa é o que permite a rede inteira caber em um endereço.</figcaption>" +
+        "</figure>" +
+        "<p>A resposta que volta de fora traz essa porta como destino, e é por ela " +
+        "que o roteador encontra a linha certa da tabela e reescreve o endereço " +
+        "antes de entregar. As duas pontas nunca percebem a troca. É essa " +
+        "dependência da tabela que explica a limitação já registrada, porque a " +
+        "linha nasce quando a mensagem sai e não existe antes disso, de modo que " +
+        "ninguém de fora consegue iniciar a conversa.</p>" +
+        "<p>O IPv6 responde de outro modo, e o tamanho do número é difícil de " +
+        "imaginar. Mesmo nas estimativas pessimistas ele oferece mil endereços por " +
+        "metro quadrado da superfície do planeta. A migração foi planejada por " +
+        "túneis sobre IPv4, exatamente como a figura da seção anterior mostra. O " +
+        "aumento do número de dispositivos móveis tornou a migração inevitável.</p>" +
         "<p>Um problema aparentado é o do computador que se move sem querer trocar de " +
         "endereço. O <strong>MobileIP</strong> resolve com dois agentes. Um agente " +
         "doméstico, na rede de origem, recebe os datagramas destinados ao host e os " +
@@ -708,7 +768,7 @@ SD.content["03"] = {
             "dados ficam com TCP e UDP, que é o fim-a-fim virando engenharia</li>" +
             "<li>Maior que a MTU, o datagrama é fragmentado e remontado no destino" +
             "</li>" +
-            "<li>O <strong>ARP</strong> pergunta em difusão quem tem um IP e guarda a " +
+            "<li>O <strong>ARP</strong> pergunta em broadcast quem tem um IP e guarda a " +
             "resposta em cache</li>" +
             "<li>O endereço de origem não é confiável. O <strong>spoofing</strong> já " +
             "alimentou ataques de negação de serviço</li>" +
@@ -717,6 +777,10 @@ SD.content["03"] = {
         {
           title: "As três respostas ao esgotamento do IPv4",
           ref: "tab-esgotamento"
+        },
+        {
+          title: "O NAT, na saída e na volta",
+          ref: "fig-nat"
         },
         {
           title: "Endereços e mobilidade",
@@ -728,7 +792,8 @@ SD.content["03"] = {
             "inteiras. Por volta de 1990 o esgotamento tinha prazo</li>" +
             "<li>O <strong>MobileIP</strong> usa dois agentes. O doméstico recebe e " +
             "encaminha por túnel ao estrangeiro, onde o host está agora</li>" +
-            "<li>É eficaz e pouco eficiente. A telefonia celular resolve o mesmo " +
+            "<li>É eficaz e pouco eficiente, porque o caminho fica triangular. A " +
+            "telefonia celular resolve o mesmo " +
             "problema de forma nativa</li>" +
             "</ul>"
         },
@@ -845,12 +910,71 @@ SD.content["03"] = {
         "forte, abafa o sinal remoto, e o transmissor nunca ouve a colisão que ele " +
         "mesmo causou.</li>" +
         "</ul>" +
-        "<p>Como detectar não funciona, a resposta é prevenir pelo CSMA/CA, em que as " +
-        "duas últimas letras vêm de evitar a colisão (CA), a estação reserva um " +
-        "intervalo antes de transmitir. Ela troca com o destino dois quadros curtos, " +
-        "um de pedido para transmitir (RTS) e outro de liberação para transmitir " +
-        "(CTS), e quem ouvir qualquer um dos dois fica calado pelo período anunciado. " +
-        "A recepção passa a ser confirmada quadro a quadro.</p>" +
+        "<p>Como detectar não funciona, a resposta é prevenir, e o método passa a se " +
+        "chamar CSMA/CA, com as duas últimas letras vindas de evitar a colisão (CA). " +
+        "Em vez de escutar e torcer, a estação reserva o meio antes de transmitir. " +
+        "Ela troca com o destino dois quadros curtos, um de pedido para transmitir " +
+        "(RTS) e outro de liberação para transmitir (CTS). Quem ouvir qualquer um " +
+        "dos dois fica calado pelo período que o quadro anuncia.</p>" +
+        "<p>São dois quadros, e não um, por causa justamente da estação oculta. A " +
+        "figura acompanha uma reserva do começo ao fim, com duas outras estações " +
+        "ouvindo de posições diferentes.</p>" +
+        '<figure class="figura" id="fig-rts-cts">' +
+        '<svg viewBox="0 0 640 292" role="img" aria-labelledby="fig-rts-cts-titulo">' +
+        '<title id="fig-rts-cts-titulo">Diagrama de sequência com quatro linhas de ' +
+        "vida, de uma estação vizinha de A, da estação A, do destino B e de uma " +
+        "estação oculta de A. A envia o pedido para transmitir, que a vizinha " +
+        "também ouve, B responde a liberação, que a oculta ouve, as duas se calam " +
+        "pelo período anunciado, e só então A envia os dados e recebe a " +
+        "confirmação.</title>" +
+        '<rect class="caixa" x="13" y="8" width="130" height="34" rx="8"/>' +
+        '<text x="78" y="30" text-anchor="middle" font-size="14">Vizinha de A</text>' +
+        '<rect class="caixa-destaque" x="179" y="8" width="130" height="34" rx="8"/>' +
+        '<text x="244" y="30" text-anchor="middle" font-size="14">Estação A</text>' +
+        '<rect class="caixa" x="345" y="8" width="130" height="34" rx="8"/>' +
+        '<text x="410" y="30" text-anchor="middle" font-size="14">Destino B</text>' +
+        '<rect class="caixa" x="501" y="8" width="130" height="34" rx="8"/>' +
+        '<text x="566" y="30" text-anchor="middle" font-size="14">Oculta de A</text>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M78 46 L78 258"/>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M244 46 L244 258"/>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M410 46 L410 258"/>' +
+        '<path class="traco" stroke-dasharray="4 5" d="M566 46 L566 258"/>' +
+        '<text class="rotulo-secundario" x="327" y="66" text-anchor="middle" font-size="13">RTS</text>' +
+        '<path class="traco" d="M244 76 L398 76"/>' +
+        '<path class="seta" d="M398 70 L398 82 L410 76 Z"/>' +
+        '<text class="rotulo-secundario" x="161" y="66" text-anchor="middle" font-size="13">também ouve</text>' +
+        '<path class="traco" stroke-dasharray="3 4" d="M244 76 L90 76"/>' +
+        '<path class="seta" d="M90 70 L90 82 L78 76 Z"/>' +
+        '<text class="rotulo-secundario" x="327" y="108" text-anchor="middle" font-size="13">CTS</text>' +
+        '<path class="traco" d="M410 118 L256 118"/>' +
+        '<path class="seta" d="M256 112 L256 124 L244 118 Z"/>' +
+        '<text class="rotulo-secundario" x="488" y="108" text-anchor="middle" font-size="13">também ouve</text>' +
+        '<path class="traco" stroke-dasharray="3 4" d="M410 118 L554 118"/>' +
+        '<path class="seta" d="M554 112 L554 124 L566 118 Z"/>' +
+        '<rect class="caixa" x="38" y="88" width="80" height="162" rx="6"/>' +
+        '<text class="rotulo-secundario" x="78" y="173" text-anchor="middle" font-size="12">silêncio</text>' +
+        '<rect class="caixa" x="526" y="130" width="80" height="120" rx="6"/>' +
+        '<text class="rotulo-secundario" x="566" y="194" text-anchor="middle" font-size="12">silêncio</text>' +
+        '<text class="rotulo-secundario" x="327" y="170" text-anchor="middle" font-size="13">dados</text>' +
+        '<path class="traco" d="M244 180 L398 180"/>' +
+        '<path class="seta" d="M398 174 L398 186 L410 180 Z"/>' +
+        '<text class="rotulo-secundario" x="327" y="212" text-anchor="middle" font-size="13">confirmação</text>' +
+        '<path class="traco" d="M410 222 L256 222"/>' +
+        '<path class="seta" d="M256 216 L256 228 L244 222 Z"/>' +
+        '<text class="rotulo-secundario" x="320" y="278" text-anchor="middle" font-size="13">' +
+        "O tempo corre de cima para baixo.</text>" +
+        "</svg>" +
+        "<figcaption>O RTS cala quem está perto de quem transmite, e o CTS cala " +
+        "quem está perto de quem recebe. Uma estação oculta só é alcançada pelo " +
+        "segundo, e é isso que justifica haver dois.</figcaption>" +
+        "</figure>" +
+        "<p>A vizinha de A escuta o pedido e já se cala. A oculta de A não escuta " +
+        "coisa alguma vinda de A, que é o que a define, e precisaria de uma segunda " +
+        "mensagem para saber que o meio está reservado. O CTS é essa segunda " +
+        "mensagem, e quem a transmite é o destino, que alcança as duas. A recepção " +
+        "passa a " +
+        "ser confirmada quadro a quadro, porque sem detecção de colisão o remetente " +
+        "não tem outro jeito de saber que o quadro chegou.</p>" +
         "<p>A segurança do WiFi nasceu mal. O esquema original, a privacidade " +
         "equivalente à do cabo (WEP), tinha falhas de projeto. O Wi-Fi Protected " +
         "Access 2 (WPA2) e o Wi-Fi Protected Access 3 (WPA3) assumiram a proteção das " +
@@ -995,6 +1119,10 @@ SD.content["03"] = {
             "<li>A saída é prevenir. No <strong>CSMA/CA</strong> a estação reserva o " +
             "meio trocando RTS e CTS, e quem ouvir qualquer um dos dois se cala</li>" +
             "</ul>"
+        },
+        {
+          title: "Por que são dois quadros e não um",
+          ref: "fig-rts-cts"
         },
         {
           title: "Bluetooth, a rede que cabe no bolso",
@@ -1207,7 +1335,7 @@ SD.content["03"] = {
       term: "ARP (Address Resolution Protocol)",
       definition:
         "Protocolo que converte um endereço IP no endereço físico (MAC) " +
-        "correspondente dentro de uma rede local, perguntando em difusão e " +
+        "correspondente dentro de uma rede local, perguntando em broadcast e " +
         "guardando os pares descobertos em cache."
     },
     {
