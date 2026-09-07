@@ -22,6 +22,10 @@
    — a única aleatoriedade é o sorteio (etapa 5) de qual parte
    se perde e qual chega duplicado: ?demo-seed=<int> fixa o PRNG
    (mulberry32); ?demo-fast=1 acelera as animações.
+
+   O pacote das etapas 3 e 4 anda pelo desenho, e quem respeita
+   prefers-reduced-motion é o próprio módulo: o salto continua
+   acontecendo no tempo, só não desliza.
    Namespace: SD.demos["camadas-rede"]
    ============================================================ */
 
@@ -111,6 +115,7 @@ SD.demos["camadas-rede"] = (function () {
       /* etapa 3 */ roundIdx: 0, packetAt: null, delivered3: 0,
       /* etapa 4 */ linkDown: false, vectors: null, rounds: 0, converged: true,
                     deliveredAfterConv: false, testouNoCaos: false, leituras4: null,
+                    pacote4: null,
       /* etapa 5 */ lostPart: 0, dupPart: 0, mode: "udp", sentUdp: false,
                     sentTcp: false, tcpIntact: false, leituras: {}
     };
@@ -290,13 +295,36 @@ SD.demos["camadas-rede"] = (function () {
           '" r="13"></circle>' +
           '<text class="demo-cr-nodelabel" x="' + p[0] + '" y="' + (p[1] + 4) + '">' + n + "</text>";
       });
-      if (opts.at) {
-        var pp = NODE_POS[opts.at];
-        html += '<circle class="demo-cr-packet" data-at="' + opts.at + '" cx="' + pp[0] +
-          '" cy="' + (pp[1] - 20) + '" r="5"></circle>';
-      }
+      if (opts.at) html += camadaDoPacote(opts.at);
       html += "</svg>";
       return html;
+    }
+
+    /* Um salto por vez nas etapas 3 e 4. O descarte e a chegada ganham tempo
+       próprio porque cada um deles é um acontecimento, e não uma transição. */
+    var MS_SALTO = 450;
+    var MS_DESCARTE = 600;
+    var MS_CHEGADA = 700;
+
+    function movimentoDispensado() {
+      return !!(window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    }
+
+    /* Repouso do pacote 20 acima do nó, para não cobrir a letra dele. */
+    function posDoPacote(n) {
+      var p = NODE_POS[n];
+      return [p[0], p[1] - 20];
+    }
+
+    /* O pacote mora num <g> só dele porque é assim que ele consegue andar. A
+       transição vale sobre a propriedade CSS transform, que todo navegador
+       aplica a elemento de SVG; transição em cx e cy de <circle> é recente
+       demais para o material contar com ela. */
+    function camadaDoPacote(no) {
+      var p = posDoPacote(no);
+      return '<g class="demo-cr-packet-layer" style="transform: translate(' + p[0] +
+        "px, " + p[1] + 'px)"><circle class="demo-cr-packet" r="5"></circle></g>';
     }
 
     /* ============ Etapa 1 — Empacotar ============ */
@@ -458,7 +486,7 @@ SD.demos["camadas-rede"] = (function () {
             "o MAC de 10.1.0.7.",
           numeros: "Quadros no fio: " + total + " (" + arpFrames + " de ARP + 1 de dados)",
           porque: "o quadro Ethernet precisa de um endereço MAC de destino, e o cliente " +
-            "tinha só o IP. O ARP perguntou em difusão quem tem 10.1.0.7, todas as " +
+            "tinha só o IP. O ARP perguntou em broadcast quem tem 10.1.0.7, todas as " +
             "estações receberam a pergunta e só o dono respondeu.",
           olhe: "o placar logo abaixo das estações. Ele guarda o que este envio gastou, " +
             "para você comparar com o próximo sem precisar lembrar de nada."
@@ -471,7 +499,7 @@ SD.demos["camadas-rede"] = (function () {
           numeros: "Quadros de ARP: " + e1.arp + " → " + arpFrames + " · quadros no fio: " +
             (e1.arp + e1.dados) + " → " + total,
           porque: "o par (IP, MAC) descoberto no primeiro envio ficou guardado no cache " +
-            "ARP, e o cliente montou o quadro direto. A difusão só volta quando a entrada " +
+            "ARP, e o cliente montou o quadro direto. O broadcast só volta quando a entrada " +
             "expira ou quando o destino é outro.",
           olhe: "as duas linhas do placar, uma embaixo da outra. A diferença entre elas é " +
             "o cache, e a rede não ficou mais rápida, o que sumiu foi trabalho repetido."
@@ -497,7 +525,7 @@ SD.demos["camadas-rede"] = (function () {
     function sendLocal() {
       if (state.busy) return;
       var antes = tutor.retrato();
-      /* Dois quadros no fio quando o ARP roda, que são a pergunta em difusão e
+      /* Dois quadros no fio quando o ARP roda, que são a pergunta em broadcast e
          a resposta de quem se reconhece. Guardar o par no cache é escrita em
          memória local e não gasta quadro nenhum. */
       var arpFrames = state.arpCached ? 0 : 2;
@@ -512,7 +540,7 @@ SD.demos["camadas-rede"] = (function () {
             "broadcast</strong>: “quem tem 10.1.0.7?” (1º quadro no fio)");
           stationNote("10.1.0.5", "transmitiu a pergunta ARP", "is-target");
           STATIONS.slice(1).forEach(function (s) {
-            stationNote(s.ip, "recebeu a difusão ARP", "is-flash");
+            stationNote(s.ip, "recebeu o broadcast ARP", "is-flash");
           });
         }, (t += 200));
         to(function () {
@@ -597,7 +625,8 @@ SD.demos["camadas-rede"] = (function () {
         at + "</strong>. Consulte a tabela e escolha o enlace de saída.</p>" + renderTable(at, r.dest);
       var btns = NODE_LINKS[at].map(function (l) {
         return '<button type="button" class="btn btn-secondary demo-cr-linkbtn" data-choose="' + l +
-          '">enlace ' + l + " → " + viaLink(at, l) + "</button>";
+          '"' + (state.busy ? " disabled" : "") + ">enlace " + l + " → " + viaLink(at, l) +
+          "</button>";
       }).join("");
       els.controls.innerHTML = btns;
       els.controls.querySelectorAll(".demo-cr-linkbtn").forEach(function (b) {
@@ -661,13 +690,55 @@ SD.demos["camadas-rede"] = (function () {
       };
     }
 
+    /* O enlace que o aluno escolheu acende enquanto o pacote o atravessa. Na
+       etapa 4 isso não faz sentido, porque lá quem escolhe é a tabela; aqui a
+       linha que acende é a resposta ao clique. */
+    function animarSalto(o, aoFim) {
+      var linha = els.area.querySelector('.demo-cr-link[data-link="' + o.l + '"]');
+      if (linha) linha.classList.add("is-crossing");
+      to(function () { moverPacote(o.next, duracaoDoSalto()); }, 120);
+      var t = 120 + MS_SALTO;
+      if (!o.arrived) {
+        to(aoFim, t + 200);
+        return;
+      }
+      /* A chegada precisa de tempo só dela. O pacote seguinte é OUTRO pacote,
+         e sem esta pausa ele nasceria em cima da chegada do anterior. */
+      to(function () {
+        var bola = els.area.querySelector(".demo-cr-packet");
+        if (bola) bola.classList.add("is-arrived");
+      }, t + 100);
+      to(aoFim, t + 100 + MS_CHEGADA);
+    }
+
     function chooseLink(l) {
+      if (state.busy) return;
       var antes = tutor.retrato();
       var r = currentRound();
       var at = state.packetAt;
       var entry = TABLES[at][r.dest] === undefined || r.dest === "DEF" ? TABLES[at].DEF : TABLES[at][r.dest];
       var correct = entry !== "local" && entry !== "gateway" && entry.l === l;
       var next = viaLink(at, l);
+      var arrived = (r.dest !== "DEF" && next === r.dest) ||
+        (r.dest === "DEF" && next === "E");
+      var salto = { l: l, at: at, next: next, entry: entry, correct: correct,
+                    arrived: arrived, r: r };
+      state.busy = true;
+      renderStage3();
+      updateNav();
+      tutor.aguardar("O pacote está atravessando o enlace " + l + ". Esta faixa conta o que " +
+        "a tabela mandou fazer assim que ele chegar.");
+      animarSalto(salto, function () { concluirSalto(salto, antes); });
+    }
+
+    function concluirSalto(salto, antes) {
+      state.busy = false;
+      /* Cinto e suspensório do travamento. Se a tela já não for a da etapa 3,
+         este retorno não desenha por cima dela. */
+      if (state.stage !== 3) return;
+      var l = salto.l, at = salto.at, next = salto.next;
+      var entry = salto.entry, correct = salto.correct, r = salto.r;
+      var arrived = salto.arrived;
       bump("hops");
       state.packetAt = next;
       if (correct) {
@@ -678,8 +749,6 @@ SD.demos["camadas-rede"] = (function () {
           "</strong>, mas o pacote foi pelo " + l + " e parou em <strong>" + next +
           "</strong>. Agora é a tabela DELE que decide.");
       }
-      var arrived = (r.dest !== "DEF" && next === r.dest) ||
-        (r.dest === "DEF" && next === "E");
       var saltosDoPacote = state.hops;
       if (arrived) {
         if (r.dest === "DEF") {
@@ -730,6 +799,7 @@ SD.demos["camadas-rede"] = (function () {
       state.converged = true;
       state.deliveredAfterConv = false;
       state.testouNoCaos = false;
+      state.pacote4 = null;
       state.leituras4 = {
         antes: { caminho: "A → B → C", resultado: "entregue, 2 saltos" },
         caos: null,
@@ -769,6 +839,8 @@ SD.demos["camadas-rede"] = (function () {
       var antes = tutor.retrato();
       var rotasAntes = retratoVetores();
       var snap = {};
+      /* Rota velha na tela mente depois que as tabelas mudam. */
+      state.pacote4 = null;
       Object.keys(state.vectors).forEach(function (n) { snap[n] = vecCost(n); });
       var changed = false;
       Object.keys(state.vectors).forEach(function (n) {
@@ -814,7 +886,9 @@ SD.demos["camadas-rede"] = (function () {
             "que parece inútil é justamente a que fecha o processo.",
         olhe: changed
           ? "de onde veio a correção. A notícia da queda chegou a A como o custo infinito " +
-            "anunciado por B, e não como um aviso sobre o enlace 2, que A nem enxerga."
+            "anunciado por B, e não como um aviso sobre o enlace 2, que A nem enxerga. A " +
+            "linha de estado continua dizendo instáveis, e quem encerra isso é uma rodada " +
+            "que não mude nada."
           : (state.linkDown
             ? "a linha de estado, que passou a dizer estáveis, e o custo de A, que ficou em " +
               vecCost("A") + " contra os 2 de antes da falha. Reconvergir custou um salto."
@@ -859,12 +933,15 @@ SD.demos["camadas-rede"] = (function () {
         porque: "a rodada de troca que você acabou de rodar consertou as rotas de A e de " +
           "B, e o pacote encontrou o caminho por D e por E.",
         olhe: "a linha de estado, que ainda diz instáveis. As rotas já estão certas, e " +
-          "falta a rodada sem novidade que autoriza declarar isso."
+          "falta a rodada sem novidade que autoriza declarar isso. É por isso que o último " +
+          "passo da lista continua aberto, mesmo com o pacote entregue."
       };
     }
 
-    function testDelivery() {
-      var antes = tutor.retrato();
+    /* A rota inteira sai das tabelas ANTES de o pacote andar, inclusive o nó
+       em que ele morre. A etapa precisa saber onde vai ser o descarte para
+       poder mostrá-lo acontecendo, e não só narrá-lo depois. */
+    function rotaDaEntrega() {
       var path = ["A"];
       var at = "A";
       var ok = false, reason = "";
@@ -877,6 +954,76 @@ SD.demos["camadas-rede"] = (function () {
         at = viaLink(at, v.l);
         path.push(at);
       }
+      return { path: path, ok: ok, reason: reason };
+    }
+
+    /* Quem pediu menos movimento continua vendo a sequência de saltos, e o que
+       sai é só o deslizamento. O que ensina aqui é a ordem dos nós. */
+    function moverPacote(no, duracao) {
+      var camada = els.area.querySelector(".demo-cr-packet-layer");
+      if (!camada) return;
+      var p = posDoPacote(no);
+      camada.style.transitionDuration = duracao + "ms";
+      camada.style.transform = "translate(" + p[0] + "px, " + p[1] + "px)";
+      els.area.querySelectorAll(".demo-cr-node.is-here").forEach(function (n) {
+        n.classList.remove("is-here");
+      });
+      var circulo = els.area.querySelector('.demo-cr-node[data-node="' + no + '"]');
+      if (circulo) circulo.classList.add("is-here");
+    }
+
+    function duracaoDoSalto() {
+      return movimentoDispensado() ? 0 : Math.round(MS_SALTO * timeScale);
+    }
+
+    /* As durações de CSS passam pela MESMA escala do agendador, senão
+       ?demo-fast dispara os saltos a cada 54 ms com transições de 450 ms e o
+       pacote fica para trás de si mesmo. */
+    function animarEntrega(rota, aoFim) {
+      var duracao = duracaoDoSalto();
+      var t = 0;
+      rota.path.slice(1).forEach(function (no) {
+        to(function () {
+          moverPacote(no, duracao);
+          if (state.pacote4) state.pacote4.at = no;
+        }, t);
+        t += MS_SALTO;
+      });
+      if (rota.ok) {
+        to(aoFim, t + 250);
+        return;
+      }
+      to(function () {
+        var bola = els.area.querySelector(".demo-cr-packet");
+        if (!bola) return;
+        bola.style.transitionDuration = Math.round(MS_DESCARTE * 0.66 * timeScale) + "ms";
+        bola.classList.add("is-lost");
+      }, t + 200);
+      to(aoFim, t + 200 + MS_DESCARTE);
+    }
+
+    function testDelivery() {
+      if (state.busy) return;
+      var antes = tutor.retrato();
+      var rota = rotaDaEntrega();
+      state.busy = true;
+      state.pacote4 = { at: "A" };
+      renderStage4();
+      updateNav();
+      tutor.aguardar("O pacote saiu de A. Siga a bolinha no desenho, porque é lá que se " +
+        "vê onde ela para.");
+      animarEntrega(rota, function () { concluirEntrega(rota, antes); });
+    }
+
+    function concluirEntrega(rota, antes) {
+      var path = rota.path, ok = rota.ok, reason = rota.reason;
+      state.busy = false;
+      /* Cinto e suspensório do travamento acima. Se por qualquer caminho a tela
+         já não for a da etapa 4, este retorno não desenha por cima dela. */
+      if (state.stage !== 4) return;
+      /* Entregue, o pacote fica onde parou, que é a prova visível da rota
+         alternativa. Descartado, ele já sumiu na animação. */
+      state.pacote4 = ok ? { at: path[path.length - 1] } : null;
       if (state.linkDown && state.rounds === 0) {
         state.testouNoCaos = true;
         state.leituras4.caos = {
@@ -941,7 +1088,7 @@ SD.demos["camadas-rede"] = (function () {
         : (state.linkDown && !state.testouNoCaos
           ? "falha detectada em B. Teste a entrega antes de trocar tabelas"
           : "instáveis, troque tabelas até convergir");
-      els.area.innerHTML = renderSvg({}) +
+      els.area.innerHTML = renderSvg(state.pacote4 ? { at: state.pacote4.at } : {}) +
         '<table class="demo-cr-table demo-cr-vectors"><caption>Rota de cada roteador para a ' +
         "<strong>rede de C</strong> (destino do servidor)</caption>" +
         "<thead><tr><th>Roteador</th><th>Próximo salto</th></tr></thead><tbody>" + rows +
@@ -952,21 +1099,27 @@ SD.demos["camadas-rede"] = (function () {
         "durante e depois da reconvergência</caption><thead><tr><th>Momento</th>" +
         "<th>Caminho</th><th>Resultado</th></tr></thead><tbody>" + momentos +
         "</tbody></table>";
+      /* Com o pacote em movimento, todo controle sai do ar até ele parar, que
+         é o mesmo travamento das etapas 2 e 5. */
       els.controls.innerHTML =
         '<button type="button" class="btn btn-secondary demo-cr-break"' +
-        (state.linkDown ? " disabled" : "") + ">💥 Derrubar enlace 2 (B-C)</button>" +
-        '<button type="button" class="btn demo-cr-test">✉️ Testar entrega (A → servidor)</button>' +
+        (state.linkDown || state.busy ? " disabled" : "") +
+        ">💥 Derrubar enlace 2 (B-C)</button>" +
+        '<button type="button" class="btn demo-cr-test"' + (state.busy ? " disabled" : "") +
+        ">✉️ Testar entrega (A → servidor)</button>" +
         '<button type="button" class="btn btn-secondary demo-cr-exchange"' +
-        (!state.linkDown || !state.testouNoCaos ? " disabled" : "") +
+        (!state.linkDown || !state.testouNoCaos || state.busy ? " disabled" : "") +
         ">🔁 Trocar tabelas (1 rodada)</button>" +
         (state.linkDown
-          ? '<button type="button" class="btn-ghost demo-cr-relink">↺ Religar enlace 2</button>'
+          ? '<button type="button" class="btn-ghost demo-cr-relink"' +
+            (state.busy ? " disabled" : "") + ">↺ Religar enlace 2</button>"
           : "");
       els.controls.querySelector(".demo-cr-break").addEventListener("click", function () {
         var antes = tutor.retrato();
         var rotasAntes = retratoVetores();
         state.linkDown = true;
         state.converged = false;
+        state.pacote4 = null;
         state.rounds = 0;
         state.testouNoCaos = false;
         state.deliveredAfterConv = false;
@@ -1312,7 +1465,7 @@ SD.demos["camadas-rede"] = (function () {
             {
               rotulo: "um quadro a menos",
               veredito: "Saem dois a menos, porque o ARP custa dois quadros, a pergunta em " +
-                "difusão e a resposta de quem se reconhece."
+                "broadcast e a resposta de quem se reconhece."
             },
             {
               rotulo: "só o quadro de dados",
@@ -1387,7 +1540,8 @@ SD.demos["camadas-rede"] = (function () {
         passos: [
           { id: "derrubar", texto: 'Clique em "💥 Derrubar enlace 2 (B-C)"' },
           { id: "testar-caos", texto: 'Clique em "✉️ Testar entrega" ANTES de trocar tabelas' },
-          { id: "trocar", texto: 'Clique em "🔁 Trocar tabelas" até a linha dizer estáveis' },
+          { id: "trocar", texto: 'Clique em "🔁 Trocar tabelas" e repita enquanto a ' +
+            'linha disser instáveis' },
           { id: "testar-ok", texto: "Teste a entrega de novo e compare o caminho" }
         ],
         previsao: {
@@ -1472,8 +1626,10 @@ SD.demos["camadas-rede"] = (function () {
     function updateNav() {
       var st = STAGES[state.stage - 1];
       els.stageCounter.textContent = "Etapa " + state.stage + " de " + STAGES.length;
-      els.prev.disabled = state.stage === 1;
-      els.next.disabled = state.stage === STAGES.length || !st.goalMet();
+      /* Sair da etapa com algo em voo deixaria o temporizador desenhando numa
+         tela que já é de outra etapa, então a navegação também espera. */
+      els.prev.disabled = state.stage === 1 || state.busy;
+      els.next.disabled = state.stage === STAGES.length || !st.goalMet() || state.busy;
       els.goal.innerHTML = st.goalText + (st.goalMet()
         ? ' <strong class="demo-cf-goal-ok">✓ cumprida' +
           (state.stage < STAGES.length ? ", avance!" : "") + "</strong>"

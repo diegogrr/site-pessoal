@@ -1007,7 +1007,40 @@
   stroke-dasharray: 3 3;
 }
 
-.demo-cr-packet { fill: var(--color-brand); }
+/* O pacote da etapa 4 anda pela inter-rede. Quem se move é a camada, e não o
+   círculo, porque transição sobre a propriedade CSS transform vale em qualquer
+   navegador, enquanto cx e cy animáveis são recentes demais. A duração vem do
+   JS, que é onde mora a escala de ?demo-fast, e por isso aqui ela é zero. */
+.demo-cr-packet-layer {
+  transition-property: transform;
+  transition-timing-function: linear;
+  transition-duration: 0ms;
+}
+
+.demo-cr-packet {
+  fill: var(--color-brand);
+  transition-property: opacity;
+  transition-timing-function: linear;
+  transition-duration: 0ms;
+}
+
+/* Descarte no meio do caminho. A cor troca na hora e a bolinha some devagar,
+   que é o fenômeno inteiro da etapa acontecendo no lugar em que ele acontece. */
+.demo-cr-packet.is-lost {
+  fill: var(--color-danger);
+  opacity: 0;
+}
+
+/* Chegada à rede de destino, na etapa 3. Ela fica na tela por um tempo próprio,
+   porque o pacote seguinte é outro pacote e nasce em outro lugar. */
+.demo-cr-packet.is-arrived { fill: var(--color-success); }
+
+/* O enlace que o aluno escolheu, aceso enquanto o pacote o atravessa. Só na
+   etapa 3, onde a linha acesa é a resposta ao clique dele. */
+.demo-cr-link.is-crossing {
+  stroke: var(--color-brand);
+  stroke-width: 3;
+}
 
 .demo-cr-round { font-size: var(--font-size-sm); margin-bottom: var(--space-2); }
 
