@@ -448,7 +448,7 @@ SD.content["10"] = {
         "<p>Falta uma escolha menor e que economiza bastante. Ao propagar uma atualização " +
         "para vários servidores, é possível mandar uma mensagem para cada um ou usar o " +
         "multicast que o tópico 04 apresentou. Quando todas as réplicas estão na mesma " +
-        "rede local, com difusão em hardware disponível, alcançar todas custa o mesmo que " +
+        "rede local, com broadcast em hardware disponível, alcançar todas custa o mesmo que " +
         "alcançar uma, e mandar mensagens separadas seria desperdício. O multicast " +
         "combina naturalmente com empurrar, e puxar quase sempre envolve um interessado " +
         "só, que é quem perguntou.</p>" +

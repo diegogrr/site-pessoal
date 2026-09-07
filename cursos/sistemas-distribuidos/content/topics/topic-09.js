@@ -350,18 +350,18 @@ SD.content["09"] = {
         "e guardado. As cinco respostas que seguem foram inventadas em ordem crescente de " +
         "escala, e cada uma resolve o defeito da anterior cobrando um preço novo.</p>" +
         "<h3>Perguntar a todo mundo</h3>" +
-        "<p>A solução mais simples é a <strong>difusão</strong>. Numa rede local, em que " +
+        "<p>A solução mais simples é o <strong>broadcast</strong>. Numa rede local, em que " +
         "todas as máquinas estão ligadas ao mesmo meio, basta enviar a todas uma mensagem " +
         "com o identificador procurado e pedir que cada uma verifique se o possui. Só quem " +
         "oferece um ponto de acesso para aquela entidade responde, e a resposta traz o " +
         "endereço.</p>" +
         "<p>Esse é exatamente o funcionamento do ARP, que o tópico 03 apresentou. Uma " +
-        "máquina difunde na rede local a pergunta sobre quem é o dono de um endereço de " +
+        "máquina pergunta em broadcast na rede local quem é o dono de um endereço de " +
         "rede, e o dono responde com o endereço físico da placa dele. A técnica é tão " +
         "simples que continua em uso quarenta anos depois.</p>" +
         "<p>O defeito aparece com o crescimento da rede. Além do desperdício de banda com " +
         "mensagens de pergunta, o problema sério é que máquinas demais são interrompidas " +
-        "por perguntas que não sabem responder. Trocar a difusão pelo <strong>multicast</strong> " +
+        "por perguntas que não sabem responder. Trocar o broadcast pelo <strong>multicast</strong> " +
         "alivia os dois males, porque restringe a pergunta a um grupo. O tópico 04 mostrou " +
         "que a rede oferece esse serviço tanto no nível de enlace quanto no nível de rede, " +
         "com máquinas entrando num grupo identificado por um endereço de multicast.</p>" +
@@ -570,7 +570,7 @@ SD.content["09"] = {
         '<table class="tabela-conteudo" id="tab-nomes-planos">' +
         "<tr><th>Mecanismo</th><th>Como ele encontra a entidade</th><th>Onde ele para de " +
         "servir</th></tr>" +
-        "<tr><td>Difusão e multicast</td><td>Pergunta a todas as máquinas do grupo e " +
+        "<tr><td>Broadcast e multicast</td><td>Pergunta a todas as máquinas do grupo e " +
         "espera que só a dona responda.</td><td>Deixa de servir quando a rede cresce, " +
         "porque gasta banda e interrompe quem não tem como responder.</td></tr>" +
         "<tr><td>Ponteiro de encaminhamento</td><td>Deixa em cada lugar antigo uma " +
@@ -644,10 +644,10 @@ SD.content["09"] = {
             "</ul>"
         },
         {
-          title: "Difusão, multicast e ponteiro de encaminhamento",
+          title: "Broadcast, multicast e ponteiro de encaminhamento",
           html:
             "<ul>" +
-            "<li>A difusão pergunta a todos e só o dono responde, que é o ARP do tópico " +
+            "<li>O broadcast pergunta a todos e só o dono responde, que é o ARP do tópico " +
             "03</li>" +
             "<li>Ela interrompe quem não pode responder, e o multicast restringe o " +
             "grupo</li>" +
@@ -1955,7 +1955,7 @@ SD.content["09"] = {
         "A entidade fica inalcançável assim que um elo da corrente se perde, e correntes longas ainda ficam caras de percorrer e frágeis de manter.",
         "O mecanismo só funciona se todas as máquinas envolvidas pertencerem ao mesmo domínio administrativo, o que restringe seu uso a uma rede local.",
         "A entidade precisa avisar previamente todos os clientes conhecidos antes de cada mudança, o que gera tráfego proporcional ao número de clientes.",
-        "Cada consulta precisa ser difundida para toda a rede antes de a corrente ser percorrida, o que interrompe máquinas que nada têm com aquela busca."
+        "Cada consulta precisa ir em broadcast para toda a rede antes de a corrente ser percorrida, o que interrompe máquinas que nada têm com aquela busca."
       ],
       answer: 0,
       explanation:

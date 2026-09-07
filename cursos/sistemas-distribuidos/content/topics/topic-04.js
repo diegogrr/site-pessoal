@@ -1002,7 +1002,7 @@ SD.content["04"] = {
         "da árvore que já existia.</p>" +
         "<p>Existe ainda um caminho mais bruto, que é a <strong>inundação</strong>. Cada nó " +
         "repassa a mensagem aos vizinhos que ainda não a receberam, e num sistema " +
-        "estruturado dá para dividir o espaço de identificadores de modo que a difusão " +
+        "estruturado dá para dividir o espaço de identificadores de modo que o broadcast " +
         "termine com N menos 1 mensagens, sendo N o número de nós. É simples e não exige " +
         "árvore nenhuma.</p>" +
         "<h3>Disseminação epidêmica</h3>" +

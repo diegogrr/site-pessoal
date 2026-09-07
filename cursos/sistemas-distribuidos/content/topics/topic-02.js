@@ -1114,8 +1114,8 @@ SD.content["02"] = {
         "<p>O funcionamento tem três passos. Alice anuncia a todos a intenção de " +
         "transferir, o que permite a voluntários validarem a transação. Um validador " +
         "agrupa várias transações num bloco, por eficiência. Se o bloco é válido, ele o " +
-        "protege contra modificação e o acrescenta à cadeia, difundindo-o a todos os " +
-        "participantes.</p>" +
+        "protege contra modificação, o acrescenta à cadeia e o envia em broadcast a " +
+        "todos os participantes.</p>" +
         "<p>A imutabilidade do bloco tem uma consequência que vale notar. Como ele nunca " +
         "vai mudar, replicá-lo em massa sai barato, e cada participante guarda a cadeia " +
         "inteira localmente para que a verificação seja simples. A cadeia é logicamente " +
