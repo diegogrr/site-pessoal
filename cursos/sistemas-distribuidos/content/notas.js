@@ -48,21 +48,21 @@ SD.notas["algoritmo-de-cristian"] = {
     "<li><strong>t1</strong>, no seu relógio, quando a resposta chega.</li>" +
     "</ol>" +
     "<p>Você sabe que o outro nó marcou <strong>T</strong> em algum instante entre t0 e " +
-    "t1, mas não sabe em qual. O algoritmo aposta no meio: supõe que a ida custou metade " +
-    "da viagem e que, no instante t1, o relógio do outro marcava " +
+    "t1, mas não sabe em qual. O algoritmo aposta no meio, supondo que a ida custou " +
+    "metade da viagem e que, no instante t1, o relógio do outro marcava " +
     "<code>T + (t1 - t0) / 2</code>, e o <strong>desvio estimado</strong> é a diferença " +
     "entre esse valor e o seu próprio t1.</p>" +
     "<p>Se a aposta estiver no pior caso possível (a mensagem gastou tudo na ida, ou tudo " +
     "na volta), o erro chega a metade do tempo de ida e volta, para mais ou para menos. É " +
-    "daí que sai a linha <strong>incerteza</strong>: com 2,117 ms de ida e volta, ±1,059 " +
-    "ms. Qualquer desvio menor do que isso é indistinguível de zero, e é por isso que o " +
-    "veredito se recusa a afirmar que os relógios diferem.</p>" +
-    "<p>Repare no que a fórmula não contém: a qualidade dos relógios. A incerteza vem do " +
+    "daí que sai a linha <strong>incerteza</strong>, que com 2,117 ms de ida e volta vale " +
+    "±1,059 ms. Qualquer desvio menor do que isso é indistinguível de zero, e é por isso " +
+    "que o veredito se recusa a afirmar que os relógios diferem.</p>" +
+    "<p>A fórmula não contém a qualidade dos relógios. A incerteza vem do " +
     "tempo de ida e volta que você mediu, venha ele da rede ou do software. " +
     "<strong>Perguntar as horas para uma máquina mais distante dá uma resposta " +
     "pior</strong>, e perguntar por um caminho com mais camadas de software no meio " +
     "também, por melhor que seja o relógio dela. O passo 5 mostrou do que essa janela é " +
-    "feita: boa parte dela é software, não distância.</p>",
+    "feita, e boa parte dela é software, não distância.</p>",
   leia: [
     { rotulo: "Modelos de Sistema: desvio de relógio e ordenação de eventos", topico: "02" }
   ]
@@ -76,7 +76,7 @@ SD.notas["curl-tempos"] = {
     "medido. O <code>-o /dev/null</code> joga o corpo da resposta fora e o <code>-s</code> " +
     "cala a barra de progresso, então o que sobra na tela é só o seu formato. O nome da " +
     "região no começo da linha é o <code>echo</code> do laço, não é do <code>curl</code>.</p>" +
-    "<p>Agora o que importa, e é onde quase todo mundo tropeça: os quatro números " +
+    "<p>Agora o que importa, e é onde quase todo mundo tropeça. Os quatro números " +
     "<strong>não são durações de etapas</strong>. São marcos cronometrados a partir do mesmo " +
     "instante zero, o começo da chamada, e cada um diz quanto tempo já havia passado quando " +
     "aquela etapa terminou. Por isso o TLS já contém o TCP, que já contém o DNS.</p>" +
@@ -100,23 +100,25 @@ SD.notas["curl-tempos"] = {
     "<tr><td>requisição, espera e corpo</td><td>0,341778 - 0,229092</td><td>112,686 ms</td></tr>" +
     "</tbody>" +
     "</table>" +
-    "<p>Some as quatro durações: dá 0,341778 s, o <code>total</code> exato. E veja o que " +
-    "aparece só depois de subtrair: três blocos de 111 a 115 ms, três idas e voltas até São " +
-    "Paulo, uma para cada camada do protocolo.</p>" +
+    "<p>Some as quatro durações e o resultado é 0,341778 s, o <code>total</code> exato. E " +
+    "veja o que aparece só depois de subtrair, que são três blocos de 111 a 115 ms, três " +
+    "idas e voltas até São Paulo, uma para cada camada do protocolo.</p>" +
     "{{figura}}" +
     "<p><strong>Somar os marcos, em vez das durações, não fecha.</strong> " +
     "0,002487 + 0,113934 + 0,229092 dá 0,345513 s, contra 0,341778 s de total. O excesso tem " +
-    "origem exata: <code>soma - total = 2 x DNS + (TCP - HTTP)</code>, ou seja, " +
+    "origem exata, e vale <code>soma - total = 2 x DNS + (TCP - HTTP)</code>, ou seja, " +
     "4,974 + (111,447 - 112,686) = 3,735 ms. O DNS entra três vezes na soma e uma vez no " +
     "total, e o resto é a diferença entre duas idas e voltas que não são idênticas. Repare no " +
-    "tamanho do erro: como o DNS estava em cache, a soma errada chegou a 1% do valor certo. " +
+    "tamanho do erro. Como o DNS estava em cache, a soma errada chegou a 1% do valor certo. " +
     "Ela acerta por acidente aritmético, não por acerto de conceito. Refaça a conta com um " +
     "nome nunca resolvido, DNS de 30 ms, e o mesmo erro passa de 60 ms.</p>" +
-    "<p>Por que o TCP mede quase só rede e o TLS não: o marco do TCP é o núcleo do sistema " +
+    "<p>O TCP mede quase só rede, enquanto o TLS não, e a diferença está no que cada " +
+    "marco representa. O marco do TCP é o núcleo do sistema " +
     "dando a conexão por estabelecida, sem nenhum byte de aplicação e sem criptografia, " +
     "praticamente uma ida e volta pura (daí ele bater com o <code>ping</code>). O marco do " +
-    "TLS é a biblioteca de criptografia terminando a negociação: uma ida e volta no TLS 1.3, " +
-    "duas no 1.2, mais o custo de acordar chaves e validar o certificado. No exemplo, a etapa " +
+    "TLS é a biblioteca de criptografia terminando a negociação, que custa uma ida e volta " +
+    "no TLS 1.3 e duas no 1.2, mais o custo de acordar chaves e validar o certificado. No " +
+    "exemplo, a etapa " +
     "TLS custou uma ida e volta mais 3,7 ms, então foram 3,7 ms de processamento e a versão " +
     "negociada foi a 1.3. Com duas idas e voltas, daria perto de 225 ms.</p>" +
     "<p>Duas coisas que este formato não mostra. Entre o <code>time_appconnect</code> e o " +
@@ -125,7 +127,7 @@ SD.notas["curl-tempos"] = {
     "linha da tabela junta \"enviei a requisição\", \"o servidor pensou\" e \"baixei o " +
     "corpo\" num número só. E <code>%{remote_ip}</code> com <code>%{http_code}</code> dizem " +
     "quem respondeu, o que ajuda quando a mesma URL atende de vários lugares.</p>" +
-    "<p>Um detalhe que amarra com o passo 6: o <code>curl</code> cronometra com um relógio " +
+    "<p>Um detalhe amarra com o passo 6. O <code>curl</code> cronometra com um relógio " +
     "monotônico, não com o de parede. Se o <code>chronyd</code> resolvesse acertar a hora no " +
     "meio da chamada, um cronômetro de parede poderia imprimir duração negativa.</p>",
   figura: {
@@ -162,12 +164,12 @@ SD.notas["chronyc-tracking"] = {
     "<li><code>Reference ID</code>: a fonte que ele está seguindo. <code>A9FEA97B</code> é o " +
     "próprio endereço em hexadecimal (A9 = 169, FE = 254, A9 = 169, 7B = 123), ou seja, " +
     "169.254.169.123, o serviço de tempo da AWS. É um endereço link-local, da mesma família " +
-    "do 169.254.169.254 que você consultou no passo 4: a hora não vem da internet, quem " +
+    "do 169.254.169.254 que você consultou no passo 4. A hora não vem da internet, e quem " +
     "responde é o próprio host.</li>" +
     "<li><code>Stratum</code>: quantos elos separam este relógio do relógio físico. O estrato " +
     "0 é o relógio de verdade (atômico ou GPS), o estrato 1 é a máquina ligada nele, e cada " +
-    "salto soma um. Estrato 4 aqui significa que a instância é o quarto elo: o serviço que " +
-    "ela consulta se declarou estrato 3.</li>" +
+    "salto soma um. Estrato 4 aqui significa que a instância é o quarto elo, porque o " +
+    "serviço que ela consulta se declarou estrato 3.</li>" +
     "<li><code>Ref time (UTC)</code>: quando a última medição da fonte foi aceita. Quanto " +
     "mais velha, mais o <code>chronyd</code> está extrapolando em vez de medir.</li>" +
     "<li><code>Update interval</code>: o intervalo entre as duas últimas medições. Ele cresce " +
@@ -206,8 +208,8 @@ SD.notas["chronyc-tracking"] = {
     "coisa que o <code>chronyd</code> estima, existe uma linha vizinha dizendo o quanto ele " +
     "confia nela. <code>Root dispersion</code> acompanha <code>Root delay</code>, " +
     "<code>Skew</code> acompanha <code>Frequency</code>, <code>RMS offset</code> acompanha " +
-    "<code>Last offset</code>. Um número sozinho não decide nada: ele vale com o limite de " +
-    "erro ao lado.</p>",
+    "<code>Last offset</code>. Um número sozinho não decide nada, porque ele só vale com o " +
+    "limite de erro ao lado.</p>",
   leia: [
     { rotulo: "Modelos de Sistema: desvio de relógio e ordenação de eventos", topico: "02" }
   ]
@@ -292,12 +294,12 @@ SD.notas["relogio-monotonico"] = {
     "<p>A máquina tem dois relógios, e eles respondem a perguntas diferentes.</p>" +
     "<p>O <strong>relógio de parede</strong> é o que o <code>date</code> mostra e o que o " +
     "<code>chronyd</code> ajusta. Ele responde \"que horas são\". Como é ajustado, ele " +
-    "pode saltar, inclusive para trás. Você acabou de fazer isso duas vezes à mão: " +
-    "primeiro com o <code>date -s</code>, depois com o <code>chronyc makestep</code>.</p>" +
+    "pode saltar, inclusive para trás. Você acabou de fazer isso duas vezes à mão, " +
+    "primeiro com o <code>date -s</code> e depois com o <code>chronyc makestep</code>.</p>" +
     "<p>O <strong>relógio monotônico</strong> não sabe que horas são. Ele é só um contador " +
     "que começou a andar quando a máquina ligou e que nunca anda para trás, aconteça o " +
-    "que acontecer com a hora oficial. Ninguém o acerta pela hora certa: no máximo o " +
-    "daemon de tempo corrige o ritmo dele aos poucos, e mesmo assim ele nunca volta. Não " +
+    "que acontecer com a hora oficial. Ninguém o acerta pela hora certa, porque no máximo " +
+    "o daemon de tempo corrige o ritmo dele aos poucos, e mesmo assim ele nunca volta. Não " +
     "há com que acertá-lo, porque ele não representa hora nenhuma. Não serve para carimbar " +
     "um evento, serve para medir duração.</p>" +
     "<p><strong>Relógio de parede para dizer QUANDO. Monotônico para dizer QUANTO " +
@@ -307,15 +309,15 @@ SD.notas["relogio-monotonico"] = {
     "comparar com o relógio de parede do outro nó, e <code>time.monotonic()</code> em " +
     "volta da chamada, para medir quanto ela demorou. É a mesma função que responde ao " +
     "<code>sd rtt</code>, ao <code>sd relogios</code> e ao monitor do passo 7.</p>" +
-    "<p>Repare em qual relógio importa aqui: o da máquina que mede. O cliente roda no nó " +
+    "<p>O relógio que importa aqui é o da máquina que mede. O cliente roda no nó " +
     "A e marca as duas pontas ali mesmo, então o salto que você provocou no nó C não " +
     "entra em nenhuma medição de duração. Se o cliente medisse duração com o relógio de " +
     "parede, um salto como aquele precisaria acontecer <strong>na própria máquina que " +
-    "mede</strong> para estragar a conta (rode o cliente no nó C durante o salto para " +
-    "ver): o <code>sd rtt</code> relataria uma ida e volta <strong>negativa</strong>. " +
-    "Não é hipótese: rodando o cliente com um relógio que salta, o mínimo sai como " +
+    "mede</strong> para estragar a conta. Rode o cliente no nó C durante o salto e o " +
+    "<code>sd rtt</code> passa a relatar uma ida e volta <strong>negativa</strong>. " +
+    "Não é hipótese. Rodando o cliente com um relógio que salta, o mínimo sai como " +
     "<code>-1998 ms</code>.</p>" +
-    "<p>Cuidado com o caminho inverso, que é a armadilha comum: trocar tudo por " +
+    "<p>Cuidado com o caminho inverso, que é a armadilha comum. Trocar tudo por " +
     "<code>time.monotonic()</code> quebraria a comparação de relógios, porque um contador " +
     "desde o boot não tem nada a ver com a hora que o outro nó devolveu. Não existe um " +
     "relógio melhor que o outro. Existe cada um no seu papel.</p>",
@@ -392,8 +394,9 @@ SD.notas["replicar-ou-particionar"] = {
     "dentro de cada partição para aguentar leitura e sobreviver a falhas, e cache na " +
     "frente de tudo.</p>" +
     "<p>O capítulo traz dois exemplos clássicos. A Web é particionada, porque cada " +
-    "servidor responde pelo seu conjunto de páginas. O NIS é replicado, porque cada " +
-    "servidor tem uma cópia inteira do mapa de usuários.</p>",
+    "servidor responde pelo seu conjunto de páginas. O serviço de informações de rede " +
+    "(NIS) é replicado, porque cada servidor tem uma cópia inteira do mapa de " +
+    "usuários.</p>",
   leia: [
     { rotulo: "Modelos de Sistema: posicionamento em vários servidores", topico: "02" },
     { rotulo: "Replicação: manter cópias em dia e o que isso custa", topico: "10" }
@@ -546,7 +549,7 @@ SD.notas["encapsulamento"] = {
 };
 
 SD.notas["arp-e-cache-arp"] = {
-  termo: "ARP, e o cache que poupa a difusão",
+  termo: "ARP, e o cache que poupa o broadcast",
   html:
     "<p>Dentro de uma rede local não há roteamento nenhum a fazer. As estações " +
     "compartilham o mesmo segmento e o quadro alcança todas elas, o que torna a entrega " +
@@ -557,10 +560,10 @@ SD.notas["arp-e-cache-arp"] = {
     "independentes. Um é atribuído pela administração da rede, o outro vem gravado de " +
     "fábrica.</p>" +
     "<p>Quem resolve é o protocolo de resolução de endereços (ARP). Ele pergunta em " +
-    "difusão na rede local quem tem determinado IP e guarda a resposta de quem se " +
+    "broadcast na rede local quem tem determinado IP e guarda a resposta de quem se " +
     "reconhece. São dois quadros no fio, a pergunta que todas as estações recebem e a " +
     "resposta que só o dono do endereço envia.</p>" +
-    "<p>Perguntar em difusão sai caro, porque toda estação do segmento é interrompida " +
+    "<p>Perguntar em broadcast sai caro, porque toda estação do segmento é interrompida " +
     "para examinar um quadro que quase sempre não é dela. Fazer isso a cada envio " +
     "inviabilizaria a rede local, e o cache é o que impede que aconteça. O par (IP, MAC) " +
     "fica guardado, e o envio seguinte para o mesmo destino sai direto, com um quadro " +
