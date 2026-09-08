@@ -27,9 +27,11 @@ SD.content["04"] = {
         "recebeu.</p>" +
         "<p>Toda a distribuição se apoia em duas operações. Um processo executa " +
         "<code>send</code> para entregar uma mensagem a um destino, e outro executa " +
-        "<code>receive</code> para retirá-la de lá. Invocação remota, replicação, " +
-        "consenso e sistema de arquivos distribuído são construções feitas por cima desse " +
-        "par, e nenhuma delas consegue ser mais confiável do que ele.</p>" +
+        "<code>receive</code> para retirá-la de lá. Sobre esse par vêm outros mecanismos " +
+        "de comunicação, como a invocação remota, e sobre eles as técnicas de coordenação, " +
+        "como a replicação e o consenso. Um serviço inteiro, como o sistema de arquivos " +
+        "distribuído, se apoia em todos, e nenhum deles consegue ser mais confiável do que " +
+        "o par da base.</p>" +
         "<p>Cada destino de mensagem tem uma fila associada. O processo remetente faz a " +
         "mensagem ser acrescentada a uma fila remota, e o processo destino retira " +
         "mensagens da fila local dele. É essa fila que permite alguma folga entre os dois " +
@@ -42,7 +44,7 @@ SD.content["04"] = {
         "<p>O primeiro eixo pergunta por quanto tempo o sistema de comunicação guarda a " +
         "mensagem. Na <strong>comunicação persistente</strong>, o middleware armazena a " +
         "mensagem pelo tempo que for preciso para entregá-la. O remetente pode encerrar " +
-        "logo depois de submetê-la, e o destinatário nem precisava estar em execução no " +
+        "logo depois de submetê-la, e o destinatário nem precisa estar em execução no " +
         "momento do envio. O correio eletrônico é o exemplo mais conhecido.</p>" +
         "<p>Na <strong>comunicação transiente</strong>, o sistema guarda a mensagem " +
         "apenas enquanto as duas aplicações estiverem em execução. Se a entrega não puder " +
@@ -53,10 +55,11 @@ SD.content["04"] = {
         "<p>O segundo eixo pergunta se quem enviou continua trabalhando. Na " +
         "<strong>comunicação assíncrona</strong>, o remetente prossegue imediatamente " +
         "depois de submeter a mensagem, que fica guardada pelo middleware no ato da " +
-        "submissão. Na <strong>comunicação síncrona</strong>, o remetente fica bloqueado " +
-        "até saber que o pedido dele foi aceito.</p>" +
-        "<p>A palavra aceito esconde uma ambiguidade que vale desfazer, porque a " +
-        "sincronização pode acontecer em três lugares diferentes do percurso.</p>" +
+        "submissão.</p>" +
+        "<p>Na <strong>comunicação síncrona</strong>, o remetente fica bloqueado até saber " +
+        "que o pedido dele foi aceito. A palavra aceito esconde uma ambiguidade que vale " +
+        "desfazer, porque a sincronização pode acontecer em três lugares diferentes do " +
+        "percurso.</p>" +
         '<figure class="figura" id="fig-pontos-sincronizacao">' +
         '<svg viewBox="0 0 600 300" role="img" ' +
         'aria-labelledby="fig-pontos-sincronizacao-titulo">' +
@@ -105,12 +108,11 @@ SD.content["04"] = {
         "</figure>" +
         "<p>Os três pontos custam coisas diferentes e prometem coisas diferentes. " +
         "Desbloquear na submissão devolve o controle quase de imediato e não promete nada " +
-        "sobre o outro lado. Desbloquear na entrega promete que a mensagem chegou, mas " +
-        "não que ela foi compreendida. Desbloquear na resposta é a promessa mais forte e " +
-        "também a mais cara, porque o remetente passa a pagar o tempo de processamento " +
-        "alheio.</p>" +
-        "<p>Os dois eixos combinados produzem quatro arranjos, e dois deles concentram a " +
-        "maior parte do que se encontra em produção.</p>" +
+        "sobre o outro lado; na entrega, promete que a mensagem chegou, mas não que ela " +
+        "foi compreendida; na resposta, faz a promessa mais forte e também a mais cara, " +
+        "porque o remetente passa a pagar o tempo de processamento alheio.</p>" +
+        "<p>Os dois eixos combinados produzem quatro arranjos, e a tabela abaixo dá a cada " +
+        "um o comportamento que ele produz e o lugar em que ele aparece.</p>" +
         '<div class="tabela-rolagem">' +
         '<table class="tabela-conteudo" id="tab-eixos-comunicacao">' +
         "<tr><th>Combinação</th><th>Como se comporta</th><th>Onde aparece</th></tr>" +
@@ -147,10 +149,14 @@ SD.content["04"] = {
         "compartilha uma porta com outro processo da mesma máquina, embora qualquer " +
         "número de processos possa enviar mensagens para a mesma porta. A porta tem um " +
         "destinatário e muitos remetentes.</p>" +
+        "<p>Essa porta é o destino de mensagem com que o tópico abriu, e a fila associada " +
+        "àquele destino é a fila dela. O que era um termo genérico no início da seção ganha " +
+        "aqui a realização concreta que o sistema operacional oferece.</p>" +
         "<p>A interface de soquetes nasceu no Berkeley Unix nos anos 1970 e foi " +
-        "padronizada depois com pouquíssimas adaptações, o que explica por que o mesmo " +
-        "conjunto de operações reaparece em Linux, Windows e macOS. São oito operações, e o servidor " +
-        "executa as quatro primeiras normalmente nessa ordem.</p>" +
+        "padronizada depois com pouquíssimas adaptações. É por isso que o mesmo conjunto " +
+        "de operações reaparece em Linux, Windows e macOS.</p>" +
+        "<p>São oito operações, e normalmente o servidor executa as quatro primeiras nessa " +
+        "ordem.</p>" +
         '<div class="tabela-rolagem">' +
         '<table class="tabela-conteudo" id="tab-operacoes-soquete">' +
         "<tr><th>Operação</th><th>O que ela faz</th></tr>" +
@@ -195,23 +201,28 @@ SD.content["04"] = {
         "falha, a mensagem pode não chegar, e a aplicação não fica sabendo. Some-se a " +
         "isso que o destinatário precisa oferecer um vetor de bytes de tamanho definido, " +
         "e a mensagem maior que esse vetor chega truncada.</p>" +
-        "<p>Duas fontes de perda merecem atenção porque nenhuma delas envolve a rede. A " +
-        "mensagem pode ser descartada por erro de soma de verificação, e pode ser " +
-        "descartada por falta de espaço em buffer, tanto na origem quanto no destino. Há " +
-        "ainda um terceiro caso que confunde muita gente, porque a mensagem endereçada a " +
-        "uma porta sem soquete vinculado é descartada em silêncio, sem que erro nenhum " +
-        "volte ao remetente.</p>" +
+        "<p>Duas fontes de perda merecem atenção porque em nenhuma delas é o roteador que " +
+        "joga o pacote fora. A mensagem pode ser descartada no destino por erro de soma de " +
+        "verificação, sinal de que ela foi corrompida no caminho, e pode ser descartada por " +
+        "falta de espaço em buffer, tanto na origem quanto no destino.</p>" +
+        "<p>Há ainda um terceiro caso, e ele é o menos intuitivo dos três. A mensagem " +
+        "endereçada a uma porta sem soquete vinculado é descartada, e o aviso de erro que o " +
+        "hospedeiro de destino devolve costuma não chegar à aplicação remetente, que segue " +
+        "sem saber do descarte.</p>" +
         "<p>Em compensação, o UDP não paga três sobrecargas que a entrega garantida " +
         "cobra. Ele não guarda informação de estado na origem nem no destino, não " +
         "transmite mensagens adicionais de confirmação e não impõe latência ao remetente. " +
         "É por isso que o DNS e a voz sobre IP rodam sobre UDP, já que nos dois casos " +
         "repetir a pergunta sai mais barato que sustentar uma conexão.</p>" +
         "<p>O fluxo TCP faz o oposto e esconde quatro características da rede atrás da " +
-        "abstração de um fluxo de bytes. A aplicação escolhe o volume que envia e o que " +
-        "lê, sem pensar em pacotes. As perdas são tratadas por confirmação e " +
-        "retransmissão. O controle de fluxo bloqueia quem escreve rápido demais até que " +
-        "quem lê tenha consumido o suficiente. E os números de sequência descartam " +
-        "duplicatas e recolocam em ordem o que chegou fora dela.</p>" +
+        "abstração de um fluxo de bytes, que são o tamanho, a perda, a velocidade e a " +
+        "ordem. O <strong>tamanho</strong> some porque a aplicação escolhe o volume que " +
+        "envia e o que lê, sem pensar em pacotes. A <strong>perda</strong> é tratada por " +
+        "confirmação e retransmissão. A <strong>velocidade</strong> é acertada pelo " +
+        "controle de fluxo, que bloqueia quem escreve rápido demais até que quem lê tenha " +
+        "consumido o suficiente. E a <strong>ordem</strong> é restaurada pelos números de " +
+        "sequência, que descartam duplicatas e recolocam no lugar o que chegou fora " +
+        "dela.</p>" +
         "<p>Nada disso sai de graça, e o preço aparece antes da primeira mensagem útil. " +
         "Os dois processos estabelecem uma conexão antes de poderem se comunicar, com um " +
         "<code>connect</code> partindo do cliente e um <code>accept</code> respondendo do " +
@@ -301,7 +312,7 @@ SD.content["04"] = {
         "resolver o descompasso que isso cria, porque um programa em execução não guarda " +
         "bytes. Ele guarda estruturas de dados, com objetos que apontam para outros " +
         "objetos, números inteiros, números com casas decimais e texto.</p>" +
-        "<p>Antes de transmitir, essas estruturas precisam ser simplificadas em uma " +
+        "<p>Antes de transmitir, essas estruturas precisam ser convertidas em uma " +
         "sequência de bytes, e precisam ser reconstruídas na chegada. " +
         "<strong>Empacotamento</strong>, também chamado de <em>marshalling</em>, é o " +
         "procedimento de montar um conjunto de itens de dados numa forma conveniente " +
@@ -327,15 +338,20 @@ SD.content["04"] = {
         "volta para a forma local na recepção. O segundo transmite no formato do " +
         "remetente, acompanhado de uma indicação de qual formato é esse, e deixa a " +
         "conversão por conta do destinatário. O padrão acordado que sustenta o primeiro " +
-        "caminho chama-se <strong>representação externa de dados</strong>.</p>" +
+        "caminho chama-se <strong>representação externa de dados</strong>, e é ele que o " +
+        "resto desta seção desenvolve, porque é o caminho que os formatos em uso hoje " +
+        "seguem.</p>" +
         "<h3>A pergunta que separa os formatos</h3>" +
-        "<p>Todo formato de empacotamento responde à mesma pergunta, e é dela que saem as " +
-        "diferenças de tamanho e de flexibilidade entre eles. Além dos valores, o que " +
-        "mais viaja dentro da mensagem?</p>" +
+        "<p>Os formatos tratados a seguir são todos representações externas de dados, e " +
+        "cada um dá uma resposta diferente à mesma pergunta, de onde saem as diferenças " +
+        "de tamanho e de flexibilidade entre eles. Além dos valores, o que mais viaja " +
+        "dentro da mensagem?</p>" +
         "<p>Um formato pode carregar o nome de cada campo, o tipo de cada campo, os dois " +
-        "ou nenhum dos dois. Quanto menos ele carrega, menor fica a mensagem, e mais os " +
-        "dois lados precisam ter combinado de antemão. Essa troca entre tamanho e " +
-        "acoplamento organiza a seção inteira.</p>" +
+        "ou nenhum dos dois. Quanto menos ele carrega, menor tende a ficar a mensagem, e " +
+        "mais os dois lados precisam ter combinado de antemão. A tendência tem exceção, " +
+        "porque um formato que alinha cada valor pode gastar em preenchimento o que " +
+        "economizou em nomes. Essa troca entre tamanho e acoplamento organiza a seção " +
+        "inteira.</p>" +
         "<h3>Do texto ao binário</h3>" +
         "<p>O JSON e a linguagem de marcação extensível (XML) são os formatos textuais " +
         "mais difundidos, e a razão do sucesso deles não é técnica. Eles carregam o nome " +
@@ -345,27 +361,32 @@ SD.content["04"] = {
         "diferentes, porque fazer duas organizações concordarem em qualquer coisa é mais " +
         "difícil que economizar bytes.</p>" +
         "<p>O preço aparece em três lugares. A ambiguidade dos números é o mais " +
-        "perigoso, porque o JSON distingue texto de número mas não distingue inteiro de " +
-        "ponto flutuante e não especifica precisão. Inteiros acima de 2<sup>53</sup> não " +
-        "cabem exatamente num ponto flutuante de precisão dupla, então chegam errados a " +
-        "quem interpreta em JavaScript. A rede social X convive com isso mandando o " +
+        "perigoso, porque o JSON distingue texto de número, mas não distingue inteiro de " +
+        "ponto flutuante e não especifica precisão. O JavaScript representa todo número " +
+        "como ponto flutuante de precisão dupla, e inteiros acima de 2<sup>53</sup> não " +
+        "cabem exatamente nesse formato, então chegam errados a quem interpreta a mensagem " +
+        "ali. A rede social X convive com isso mandando o " +
         "identificador de cada publicação duas vezes, uma como número e outra como texto " +
         "decimal.</p>" +
         "<p>O segundo preço é a ausência de cadeia binária. Nem JSON nem XML transportam " +
-        "uma sequência de bytes sem codificação de caracteres, e a saída usual codifica o " +
-        "binário como texto em Base64, o que aumenta o dado em cerca de um terço. O " +
-        "terceiro preço é o próprio esquema, porque tanto o esquema de JSON quanto o de " +
-        "XML são poderosos e, por isso mesmo, complicados de aprender e de implementar.</p>" +
+        "uma sequência de bytes sem codificação de caracteres, e a saída usual é o " +
+        "<strong>Base64</strong>, que representa cada três bytes como quatro caracteres de " +
+        "texto e aumenta o dado em cerca de um terço.</p>" +
+        "<p>O terceiro preço é o próprio <strong>esquema</strong>, que é o documento onde " +
+        "ficam declarados os campos de uma mensagem e o tipo de cada um. Tanto o de JSON " +
+        "quanto o de XML são poderosos e, por isso mesmo, complicados de aprender e de " +
+        "implementar.</p>" +
         "<p>A verbosidade motivou uma família de codificações binárias do JSON, entre as " +
         "quais o MessagePack é a mais conhecida. Elas mantêm o modelo de dados intacto e apenas trocam a " +
-        "sintaxe textual por bytes. Como não pressupõem esquema nenhum, continuam " +
+        "sintaxe textual por bytes. Como não pressupõem nenhum esquema, continuam " +
         "obrigadas a incluir o nome de cada campo dentro da mensagem, e por isso o ganho " +
         "é modesto. Um registro de exemplo com três campos cai de 81 para 66 bytes.</p>" +
         "<h3>Quando o esquema entra, os nomes saem</h3>" +
         "<p>Os buffers de protocolo, criados no Google, exigem um esquema para qualquer " +
-        "dado codificado. Esse esquema declara os campos numa linguagem de definição de " +
-        "interface, e cada campo recebe um número, chamado de <strong>etiqueta de " +
-        "campo</strong>. Na mensagem codificada não aparece nome nenhum, só a etiqueta, e " +
+        "dado codificado. Esse esquema declara os campos numa <strong>linguagem de " +
+        "definição de interface</strong>, que é uma notação independente de linguagem de " +
+        "programação, e cada campo recebe um número, chamado de <strong>etiqueta de " +
+        "campo</strong>. Na mensagem codificada não aparece nenhum nome, só a etiqueta, e " +
         "o mesmo registro de exemplo cai para 33 bytes.</p>" +
         "<p>A economia é a parte menos interessante. O que a etiqueta compra de verdade é " +
         "a <strong>evolução do esquema</strong>, que é a capacidade de mudar a estrutura " +
@@ -394,7 +415,7 @@ SD.content["04"] = {
         "problema, preenchendo com zeros os bits que faltam. O caminho inverso trunca, " +
         "porque o código antigo continua guardando o valor numa variável de 32 bits.</p>" +
         "<h3>Quando o esquema inteiro é compartilhado</h3>" +
-        "<p>O Avro leva a ideia ao limite e não tem etiqueta nenhuma. A mensagem " +
+        "<p>O Avro leva a ideia ao limite e não tem nenhuma etiqueta. A mensagem " +
         "codificada é a simples concatenação dos valores, e nada nela identifica campo " +
         "nem tipo. Um texto é apenas um prefixo de comprimento seguido dos bytes, e " +
         "olhando para os bytes ninguém consegue dizer se aquilo é texto ou número. O " +
@@ -411,11 +432,12 @@ SD.content["04"] = {
         "<p>Nada disso é invenção recente. A arquitetura comum de intermediação de " +
         "pedidos a objetos (CORBA), padronizada nos anos 1990, definiu uma representação " +
         "comum de dados que já transmitia somente os valores, sem nenhuma " +
-        "informação sobre os tipos. Ela podia fazer isso porque remetente e destinatário " +
-        "compartilhavam de antemão o conhecimento da ordem e dos tipos dos itens, " +
-        "descritos numa linguagem de definição de interface a partir da qual as operações " +
-        "de empacotamento eram geradas automaticamente.</p>" +
-        "<p>É a mesma barganha que o Avro faz hoje, com trinta anos de diferença. E é por " +
+        "informação sobre os tipos.</p>" +
+        "<p>Ela podia fazer isso porque remetente e destinatário compartilhavam de antemão " +
+        "o conhecimento da ordem e dos tipos dos itens. Esses itens eram descritos numa " +
+        "linguagem de definição de interface, e dela as operações de empacotamento saíam " +
+        "geradas automaticamente.</p>" +
+        "<p>É a mesma troca que o Avro faz hoje, com trinta anos de diferença. E é por " +
         "isso que a tecnologia sair do currículo não tira a lição do lugar, porque a lição " +
         "nunca esteve no CORBA.</p>" +
         "<p>Os quatro formatos se comparam pelas mesmas dimensões, usando sempre o mesmo " +
@@ -489,7 +511,7 @@ SD.content["04"] = {
             "<ul>" +
             "<li>A representação de dados do CORBA já mandava só os valores</li>" +
             "<li>Podia, porque a descrição da interface era compartilhada antes</li>" +
-            "<li>O Avro faz a mesma barganha hoje</li>" +
+            "<li>O Avro faz a mesma troca hoje</li>" +
             "<li>A lição nunca esteve na tecnologia</li>" +
             "</ul>"
         }
@@ -501,9 +523,11 @@ SD.content["04"] = {
         "<p>As duas seções anteriores olharam para quem envia. A mensagem, porém, chega a " +
         "algum lugar, e duas decisões tomadas do lado de quem recebe mudam a comunicação " +
         "por inteiro. Uma delas define o que cada mensagem precisa carregar. A outra " +
-        "define em qual máquina ela vai aterrissar.</p>" +
+        "define em qual máquina ela vai aterrissar. Antes de chegar a elas, a seção resolve " +
+        "três questões menores do ciclo de atendimento, que são atender sozinho ou passar " +
+        "adiante, como o cliente descobre a porta e como interromper um servidor.</p>" +
         "<p>Um servidor é um processo que implementa um serviço em nome de um conjunto de " +
-        "clientes, e no fundo todos são organizados do mesmo jeito. Ele espera uma " +
+        "clientes, e todos são organizados da mesma maneira. Ele espera uma " +
         "requisição, garante que ela seja atendida e volta a esperar a próxima. As " +
         "diferenças interessantes estão nos detalhes desse ciclo.</p>" +
         "<h3>Atender sozinho ou passar adiante</h3>" +
@@ -515,13 +539,13 @@ SD.content["04"] = {
         "várias threads é o exemplo mais comum, e criar um processo filho por requisição " +
         "é a alternativa que muitos sistemas Unix seguem.</p>" +
         "<h3>Como o cliente descobre onde bater</h3>" +
-        "<p>O cliente envia a requisição a um ponto de extremidade na máquina do servidor, " +
-        "que é a porta da seção 1, e cada servidor escuta um ponto específico. Resta saber " +
-        "como o cliente descobre qual é.</p>" +
-        "<p>A resposta mais simples é atribuir pontos fixos aos serviços conhecidos. " +
+        "<p>O cliente envia a requisição a uma porta na máquina do servidor, a mesma porta " +
+        "da seção 1, e cada servidor escuta uma porta específica. Resta saber como o " +
+        "cliente descobre qual é.</p>" +
+        "<p>A resposta mais simples é atribuir portas fixas aos serviços conhecidos. " +
         "Servidores de transferência de arquivos escutam sempre a porta TCP 21, e " +
         "servidores da Web escutam a porta TCP 80, por atribuição da autoridade que " +
-        "administra os números da Internet. Com o ponto já definido, ao cliente basta " +
+        "administra os números da Internet. Com a porta já definida, ao cliente basta " +
         "descobrir o endereço de rede da máquina, e para isso serve o serviço de nomes.</p>" +
         "<p>Muitos serviços, porém, não têm ponto atribuído de antemão, e recebem um " +
         "endereço dinâmico do sistema operacional local. Nesse caso entra um processo " +
@@ -533,8 +557,8 @@ SD.content["04"] = {
         "processo que termina ao acabar o trabalho.</p>" +
         "<h3>Como interromper um servidor</h3>" +
         "<p>Imagine alguém que começou a enviar um arquivo enorme e percebeu no meio que " +
-        "escolheu o arquivo errado. O jeito que funciona bem demais na Internet de hoje, e " +
-        "às vezes é o único disponível, consiste em fechar a aplicação cliente de supetão, " +
+        "escolheu o arquivo errado. A saída que funciona bem demais na Internet de hoje, e " +
+        "às vezes é a única disponível, consiste em fechar a aplicação cliente de uma vez, " +
         "abri-la de novo e fingir que nada aconteceu. O servidor acaba desfazendo a " +
         "conexão antiga, achando que o cliente caiu.</p>" +
         "<p>A saída melhor exige que cliente e servidor tenham sido projetados para trocar " +
@@ -572,13 +596,13 @@ SD.content["04"] = {
         "<td>Pode guardar, desde que perder aquilo não derrube o serviço.</td>" +
         "<td>Guarda informação persistente, que só some quando alguém a apaga.</td></tr>" +
         "<tr><td>O que acontece se o servidor cair</td>" +
-        "<td>Ele volta a executar e passa a esperar requisições, sem medida " +
-        "especial nenhuma.</td>" +
+        "<td>Ele volta a executar e passa a esperar requisições, sem nenhuma " +
+        "medida especial.</td>" +
         "<td>Ele precisa recuperar todo o estado que tinha um instante antes da " +
         "queda.</td></tr>" +
         "<tr><td>Desempenho percebido pelo cliente</td>" +
-        "<td>Cada requisição carrega tudo de que o servidor precisa, o que engorda a " +
-        "mensagem.</td>" +
+        "<td>Cada requisição carrega tudo de que o servidor precisa, o que aumenta o " +
+        "tamanho dela.</td>" +
         "<td>Leitura e escrita ficam mais rápidas, porque o servidor já sabe o " +
         "contexto.</td></tr>" +
         "<tr><td>Complexidade que cria</td>" +
@@ -587,19 +611,22 @@ SD.content["04"] = {
         "detalha.</td></tr>" +
         "</table>" +
         "</div>" +
-        "<p>Vale separar dois tipos de estado que costumam ser confundidos. O " +
-        "<strong>estado de sessão</strong> acompanha uma série de operações de um mesmo " +
-        "usuário e deve durar algum tempo, mas não para sempre. Perdê-lo não causa dano " +
-        "real, desde que o cliente possa repetir a requisição original, e é por isso que " +
-        "ele admite armazenamento mais simples e menos confiável. O <strong>estado " +
-        "permanente</strong> é o que vive em banco de dados, como o cadastro de um cliente " +
-        "ou a chave de um software comprado.</p>" +
+        "<p>Vale separar dois tipos de estado que costumam ser confundidos, e que se " +
+        "encaixam no trio anterior. O <strong>estado de sessão</strong> acompanha uma série " +
+        "de operações de um mesmo usuário e deve durar algum tempo, mas não para sempre. " +
+        "Perdê-lo não causa dano real, desde que o cliente possa repetir a requisição " +
+        "original, e é por isso que ele admite armazenamento mais simples e menos " +
+        "confiável.</p>" +
+        "<p>É esse o tipo de informação que um servidor sem estado pode guardar sem deixar " +
+        "de ser sem estado. O <strong>estado permanente</strong> é o outro, o que vive em " +
+        "banco de dados, como o cadastro de um cliente ou a chave de um software comprado, " +
+        "e é ele que caracteriza o servidor com estado.</p>" +
         "<p>A escolha entre os dois desenhos não deve mudar o serviço oferecido, e sim " +
         "como ele é implementado. Se um arquivo precisa ser aberto antes de ser lido, o " +
         "servidor sem estado imita esse comportamento abrindo o arquivo, fazendo a " +
         "operação e fechando o arquivo em seguida, tudo dentro do atendimento de uma " +
         "requisição só.</p>" +
-        "<p>Quando o servidor quer lembrar do comportamento anterior do cliente sem " +
+        "<p>Quando o servidor quer lembrar o comportamento anterior do cliente sem " +
         "guardar estado, a solução conhecida é pedir que o próprio cliente carregue essa " +
         "informação. É o que faz o <em>cookie</em> da Web, um pedaço pequeno de dados com " +
         "informação de interesse do servidor, que o navegador apenas guarda e reenvia no " +
@@ -666,8 +693,9 @@ SD.content["04"] = {
         "arranjo a duas camadas.</p>" +
         "<p>O objetivo de projeto do comutador é esconder que existem várias máquinas. O " +
         "cliente enxerga um único endereço de rede e não precisa saber nada sobre a " +
-        "organização interna do agrupamento, o que é transparência de acesso pela " +
-        "definição do tópico 01.</p>" +
+        "organização interna do agrupamento, o que é transparência de replicação pela " +
+        "definição do tópico 01, já que as várias máquinas somem atrás de um endereço " +
+        "só.</p>" +
         "<p>Existem dois tipos de comutador, e a diferença está em quanto cada um entende " +
         "do que passa por ele. O <strong>comutador de nível de transporte</strong> aceita " +
         "pedidos de conexão TCP e os repassa a um servidor escolhido, ficando no meio da " +
@@ -675,8 +703,8 @@ SD.content["04"] = {
         "uma forma de tradução de endereços de rede.</p>" +
         "<p>O <strong>comutador de nível de aplicação</strong> inspeciona o conteúdo da " +
         "requisição em vez de olhar apenas o que o TCP mostra. Ele pode ler o endereço " +
-        "pedido e mandar vídeo para máquinas preparadas para vídeo, e consulta a banco " +
-        "para máquinas com acesso àquele banco. Quanto mais o comutador sabe sobre o que " +
+        "pedido e mandar vídeo para máquinas preparadas para vídeo, e mandar a consulta " +
+        "a banco para máquinas com acesso àquele banco. Quanto mais o comutador sabe sobre o que " +
         "está sendo pedido, melhor ele decide quem atende, e o custo desse conhecimento é " +
         "ser mais lento que o comutador de transporte.</p>" +
         "<p>Os nomes que a prática corrente usa são outros, e vale reconhecê-los. O " +
@@ -691,7 +719,7 @@ SD.content["04"] = {
         "pareciam separadas são a mesma. O comutador só pode mandar qualquer requisição " +
         "para qualquer máquina se nenhuma delas guardar contexto daquele cliente. É o " +
         "servidor sem estado que torna o agrupamento possível, e é por isso que a escolha " +
-        "da metade desta seção decide o que a outra metade consegue fazer.</p>",
+        "da metade desta seção determina o que a outra metade consegue fazer.</p>",
       slides: [
         {
           title: "Quem recebe também decide",
@@ -746,31 +774,40 @@ SD.content["04"] = {
         "em execução no momento da conversa. A grade da seção 1 já tinha nomeado o outro " +
         "quadrante, e é hora de ir até lá.</p>" +
         "<p>Antes disso, vale uma parada dentro do próprio quadrante transiente. A " +
-        "programação direta com soquetes é básica e frágil, porque erra-se com facilidade " +
+        "programação direta com soquetes é básica e frágil, porque se erra com facilidade " +
         "e porque o soquete oferece apenas TCP ou UDP, deixando todo o resto por conta de " +
         "quem programa.</p>" +
         "<h3>Um degrau acima do soquete</h3>" +
         "<p>Uma observação simples deu origem a bibliotecas melhores. A maior parte das " +
         "aplicações que trocam mensagens se organiza segundo uns poucos padrões de " +
-        "comunicação, então dá para oferecer um soquete já preparado para cada padrão. É " +
-        "isso que o ZeroMQ faz, com três padrões principais, que são requisição e " +
-        "resposta, publicar e assinar, e o encadeamento em linha de produção.</p>" +
-        "<p>Duas escolhas de projeto dessa biblioteca merecem atenção. A comunicação é " +
-        "assíncrona, então o remetente segue adiante depois de submeter a mensagem. E o " +
-        "soquete pode estar vinculado a vários endereços, o que permite a um servidor " +
-        "atender origens bem diferentes por uma interface só, com uma única operação de " +
-        "recepção bloqueante.</p>" +
+        "comunicação, então é possível oferecer um soquete já preparado para cada padrão. " +
+        "É isso que o ZeroMQ faz, com três padrões principais.</p>" +
+        "<p>Na <strong>requisição e resposta</strong>, o cliente manda um pedido e espera " +
+        "o retorno, que é a comunicação cliente-servidor de sempre. Em <strong>publicar e " +
+        "assinar</strong>, quem envia publica a mensagem com uma etiqueta de assunto, e " +
+        "ela chega a todos os que assinaram aquele assunto. No <strong>encadeamento em " +
+        "linha de produção</strong>, quem produz empurra o resultado sem se importar com " +
+        "quem vai buscá-lo, e o primeiro processo disponível o retira, o que serve para " +
+        "manter o maior número possível de processos trabalhando.</p>" +
+        "<p>Duas escolhas de projeto dessa biblioteca merecem atenção. A primeira é que a " +
+        "comunicação é assíncrona, então o remetente segue adiante depois de submeter a " +
+        "mensagem.</p>" +
+        "<p>A segunda é que o soquete pode estar vinculado a vários endereços, o que " +
+        "permite a um servidor atender origens bem diferentes por uma interface só, com uma " +
+        "única operação de recepção bloqueante.</p>" +
         "<p>A combinação das duas produz um efeito curioso, que já é um ensaio do que vem " +
         "adiante nesta seção. O processo pode pedir a conexão e enviar mensagens mesmo que " +
         "o destinatário ainda não esteja no ar, porque o pedido e as mensagens ficam " +
         "enfileirados do lado do remetente, e uma thread da própria biblioteca trata de " +
         "estabelecer a conexão e transmitir tudo quando for possível.</p>" +
-        "<p>No outro extremo do espectro está a interface de passagem de mensagens usada " +
-        "na computação de alto desempenho, que resolve um problema diferente. Ela expõe " +
-        "explicitamente as duas dimensões da seção 1, com variantes bloqueantes e não " +
-        "bloqueantes de envio e de recepção, e a diversidade cobra o preço dela. A quarta " +
-        "versão do padrão passa de 650 operações, o que se explica pela busca de " +
-        "desempenho em aplicações paralelas, e não por elegância de projeto.</p>" +
+        "<p>O espectro em jogo é quanta escolha a biblioteca entrega a quem programa. No " +
+        "outro extremo dele está a interface de passagem de mensagens usada na computação " +
+        "de alto desempenho, que resolve um problema diferente. Ela expõe explicitamente o " +
+        "eixo da sincronização da seção 1, com variantes bloqueantes e não bloqueantes " +
+        "tanto de envio quanto de recepção, embora fique inteira do lado transiente.</p>" +
+        "<p>Essa diversidade cobra o preço dela. A quarta versão do padrão passa de 650 " +
+        "operações, o que se explica pela busca de desempenho em aplicações paralelas, e " +
+        "não por elegância de projeto.</p>" +
         "<h3>A fila de mensagens</h3>" +
         "<p>Os <strong>sistemas de fila de mensagens</strong> oferecem armazenamento de " +
         "médio prazo para mensagens, sem exigir que remetente ou destinatário estejam " +
@@ -848,14 +885,18 @@ SD.content["04"] = {
         "alcança qualquer outro diretamente, porque isso exigiria que todos conhecessem o " +
         "endereço de todos. Na prática, gerenciadores especiais funcionam como roteadores " +
         "e repassam mensagens adiante, e o sistema de filas vai crescendo até virar uma " +
-        "rede de sobreposição completa, montada no nível da aplicação.</p>" +
+        "<strong>rede de sobreposição</strong> completa.</p>" +
+        "<p>Rede de sobreposição é uma rede montada no nível da aplicação, em que cada nó " +
+        "escolhe os vizinhos com quem fala. A ligação entre dois vizinhos é um caminho " +
+        "lógico, que a rede física realiza sem saber que ele existe, e essa diferença de " +
+        "níveis volta na seção 5 como o assunto principal dela.</p>" +
         "<h3>O intermediário que traduz</h3>" +
         "<p>Aplicações diferentes raramente combinam o formato das mensagens de antemão, e " +
         "a estratégia geral é aprender a conviver com a diferença em vez de eliminá-la. " +
         "Quem faz a conversão é um <strong>intermediário de mensagens</strong>, que atua " +
         "como porta de entrada no nível da aplicação dentro da rede de filas.</p>" +
         "<p>Repare na posição dele, que é a parte contraintuitiva. Para o sistema de " +
-        "filas, o intermediário é apenas mais uma aplicação, e não uma peça interna. Ele " +
+        "filas, o intermediário é apenas mais uma aplicação, e não uma parte interna. Ele " +
         "recebe mensagens por uma fila e devolve mensagens por outra, exatamente como " +
         "qualquer participante.</p>" +
         "<p>O trabalho dele varia bastante em ambição. No caso simples, o intermediário " +
@@ -873,10 +914,11 @@ SD.content["04"] = {
         "transformação, e alguém precisa escrever cada uma delas. Produtos comerciais " +
         "costumam vender isso como inteligência do sistema, quando a inteligência está na " +
         "cabeça dos especialistas que preencheram o repositório.</p>" +
-        "<p>A prática corrente chama esse arranjo de arquitetura orientada a eventos, e " +
-        "chama o intermediário de intermediário de mensagens, com produtos que quase todo " +
-        "sistema de porte usa. O nome mudou, o modelo é o desta seção, e o desacoplamento " +
-        "no tempo continua sendo a razão de existir dele.</p>",
+        "<p>A prática corrente chama esse arranjo de <strong>arquitetura orientada a " +
+        "eventos</strong>, que é o desenho em que os componentes reagem a mensagens " +
+        "publicadas por outros em vez de chamarem uns aos outros diretamente. Produtos com " +
+        "esse nome estão em quase todo sistema de porte. O nome mudou, o modelo é o desta " +
+        "seção, e o desacoplamento no tempo continua sendo a razão de existir dele.</p>",
       slides: [
         {
           title: "Um degrau acima do soquete",
@@ -885,7 +927,7 @@ SD.content["04"] = {
             "<li>Soquete puro é básico e frágil</li>" +
             "<li>Bibliotecas oferecem <strong>padrões</strong> prontos</li>" +
             "<li>Requisição e resposta, publicar e assinar, linha de produção</li>" +
-            "<li>Dá para enviar antes de o destinatário subir</li>" +
+            "<li>É possível enviar antes de o destinatário subir</li>" +
             "</ul>"
         },
         {
@@ -939,51 +981,64 @@ SD.content["04"] = {
         "<p>A ideia básica organiza os nós numa rede de sobreposição, que passa a ser usada " +
         "para disseminar a informação entre os membros. Uma observação define tudo o que " +
         "vem depois, porque <strong>os roteadores da rede não participam da associação ao " +
-        "grupo</strong>. Quem sabe quem é membro são os nós, e a rede por baixo não faz " +
-        "ideia de que existe um grupo.</p>" +
-        "<p>Daí decorre o preço. As ligações entre nós da sobreposição podem atravessar " +
-        "vários enlaces físicos, e o roteamento dentro da sobreposição pode ficar bem pior " +
-        "do que o roteamento que a rede faria se soubesse do assunto.</p>" +
+        "grupo</strong>. Quem sabe quem é membro são os nós, e a rede por baixo " +
+        "desconhece a existência dele.</p>" +
+        "<p>Daí decorre o preço. Um caminho entre dois nós da sobreposição pode passar por " +
+        "nós intermediários, e cada salto lógico atravessa vários enlaces físicos, às vezes " +
+        "os mesmos duas vezes. O roteamento dentro da sobreposição fica pior do que o da " +
+        "rede, que conhece a topologia física enquanto a sobreposição não conhece.</p>" +
+        "<p>A razão entre o custo do caminho lógico e o custo do caminho que a rede " +
+        "escolheria entre os mesmos dois nós chama-se <strong>alongamento</strong>. No " +
+        "exemplo do van Steen, a mensagem de B para C percorre a sobreposição passando por " +
+        "E e por D, ao custo de 73 unidades, enquanto a rede a levaria direto por 47, o que " +
+        "dá um alongamento de 1,55.</p>" +
         '<figure class="figura" id="fig-alongamento-sobreposicao">' +
         '<svg viewBox="0 0 600 220" role="img" ' +
         'aria-labelledby="fig-alongamento-sobreposicao-titulo">' +
         '<title id="fig-alongamento-sobreposicao-titulo">Comparação entre dois níveis. No ' +
-        "nível da aplicação, os nós B e C são vizinhos ligados por um único salto. Na " +
-        "rede física, os mesmos dois nós estão separados por quatro enlaces que passam por " +
-        "roteadores intermediários.</title>" +
+        "nível da aplicação, a mensagem de B para C passa pelos nós intermediários E e D, " +
+        "em três saltos lógicos que custam 73 unidades. Na rede, os mesmos dois nós ficam " +
+        "ligados por quatro enlaces através dos roteadores Rb, Rd e Rc, ao custo de 47 " +
+        "unidades.</title>" +
         '<text class="rotulo-secundario" x="8" y="22" font-size="13">no nível da ' +
         "aplicação</text>" +
         '<circle class="caixa-destaque" cx="110" cy="58" r="21"/>' +
         '<text x="110" y="63" text-anchor="middle" font-size="15">B</text>' +
+        '<circle class="caixa" cx="237" cy="58" r="21"/>' +
+        '<text x="237" y="63" text-anchor="middle" font-size="15">E</text>' +
+        '<circle class="caixa" cx="364" cy="58" r="21"/>' +
+        '<text x="364" y="63" text-anchor="middle" font-size="15">D</text>' +
         '<circle class="caixa-destaque" cx="490" cy="58" r="21"/>' +
         '<text x="490" y="63" text-anchor="middle" font-size="15">C</text>' +
-        '<path class="traco" d="M131 58 L469 58"/>' +
-        '<text class="rotulo-secundario" x="300" y="48" text-anchor="middle" ' +
-        'font-size="13">um salto</text>' +
+        '<path class="traco" d="M131 58 L216 58"/>' +
+        '<path class="traco" d="M258 58 L343 58"/>' +
+        '<path class="traco" d="M385 58 L469 58"/>' +
+        '<text class="rotulo-secundario" x="300" y="96" text-anchor="middle" ' +
+        'font-size="13">três saltos lógicos, 73 unidades</text>' +
         '<path class="traco" stroke-dasharray="3 6" d="M20 104 L580 104"/>' +
         '<text class="rotulo-secundario" x="8" y="128" font-size="13">na rede</text>' +
         '<circle class="caixa" cx="110" cy="168" r="21"/>' +
         '<text x="110" y="173" text-anchor="middle" font-size="15">B</text>' +
         '<rect class="caixa" x="184" y="152" width="42" height="32" rx="6"/>' +
-        '<text x="205" y="173" text-anchor="middle" font-size="13">R</text>' +
+        '<text x="205" y="173" text-anchor="middle" font-size="13">Rb</text>' +
         '<rect class="caixa" x="264" y="152" width="42" height="32" rx="6"/>' +
-        '<text x="285" y="173" text-anchor="middle" font-size="13">R</text>' +
+        '<text x="285" y="173" text-anchor="middle" font-size="13">Rd</text>' +
         '<rect class="caixa" x="344" y="152" width="42" height="32" rx="6"/>' +
-        '<text x="365" y="173" text-anchor="middle" font-size="13">R</text>' +
+        '<text x="365" y="173" text-anchor="middle" font-size="13">Rc</text>' +
         '<circle class="caixa" cx="490" cy="168" r="21"/>' +
         '<text x="490" y="173" text-anchor="middle" font-size="15">C</text>' +
         '<path class="traco" d="M131 168 L184 168"/>' +
         '<path class="traco" d="M226 168 L264 168"/>' +
         '<path class="traco" d="M306 168 L344 168"/>' +
         '<path class="traco" d="M386 168 L469 168"/>' +
+        '<text class="rotulo-secundario" x="300" y="206" text-anchor="middle" ' +
+        'font-size="13">o caminho da rede, 47 unidades</text>' +
         '<path class="traco" stroke-dasharray="2 4" d="M110 79 L110 147"/>' +
         '<path class="traco" stroke-dasharray="2 4" d="M490 79 L490 147"/>' +
         "</svg>" +
-        "<figcaption>Um salto entre vizinhos na sobreposição esconde vários enlaces " +
-        "físicos, e nada garante que o caminho percorrido seja o mais curto. A razão entre " +
-        "o custo do caminho lógico e o do caminho que a rede escolheria chama-se " +
-        "alongamento. No exemplo do van Steen, 73 unidades contra 47, o que dá um " +
-        "alongamento de 1,55.</figcaption>" +
+        "<figcaption>O caminho lógico de B para C passa por E e por D, e cada um desses " +
+        "saltos se desdobra em enlaces físicos, alguns percorridos duas vezes. A rede " +
+        "levaria a mensagem direto por Rb, Rd e Rc.</figcaption>" +
         "</figure>" +
         "<p>Montar a sobreposição admite dois desenhos. Os nós podem se organizar " +
         "diretamente em <strong>árvore</strong>, com um caminho único entre cada par de " +
@@ -994,26 +1049,34 @@ SD.content["04"] = {
         "rede inteira na hora.</p>" +
         "<p>Escolher o pai de cada nó novo na árvore parece trivial e não é. Num grupo com " +
         "uma única origem, o melhor pai é obviamente a própria origem, porque assim o " +
-        "alongamento vale 1. Só que fazer isso para todo mundo produz uma estrela com a " +
+        "alongamento vale 1. Fazer isso para todo mundo, porém, produz uma estrela com a " +
         "origem no centro, e a origem afunda sob a carga.</p>" +
         "<p>A saída limita a escolha aos nós que tenham no máximo um certo número de " +
         "vizinhos, e esse número vira parâmetro de projeto. A restrição complica " +
         "seriamente o algoritmo, porque encaixar um nó novo pode exigir reconfigurar parte " +
         "da árvore que já existia.</p>" +
-        "<p>Existe ainda um caminho mais bruto, que é a <strong>inundação</strong>. Cada nó " +
-        "repassa a mensagem aos vizinhos que ainda não a receberam, e num sistema " +
-        "estruturado dá para dividir o espaço de identificadores de modo que o broadcast " +
-        "termine com N menos 1 mensagens, sendo N o número de nós. É simples e não exige " +
-        "árvore nenhuma.</p>" +
+        "<p>Existe ainda um caminho mais bruto, que é a <strong>inundação</strong>, e ela " +
+        "é o que se faz sobre a malha, porque na árvore o caminho já vem embutido. Cada " +
+        "nó repassa a mensagem a todos os vizinhos, menos àquele de quem a recebeu, e " +
+        "ignora as cópias que chegarem depois. Nenhum nó sabe quem já foi alcançado, e " +
+        "é desse desconhecimento que nasce o custo.</p>" +
+        "<p>Numa sobreposição qualquer esse custo é alto, porque quase todo enlace acaba " +
+        "transportando a mensagem nos dois sentidos, e o total fica perto de duas " +
+        "mensagens por enlace. A conta muda quando a sobreposição é " +
+        "<strong>estruturada</strong>, com uma topologia conhecida de antemão. Num " +
+        "hipercubo ou num anel de identificadores, o espaço pode ser dividido de modo " +
+        "que o broadcast termine com N menos 1 mensagens, sendo N o número de nós, que " +
+        "é o mínimo possível. A inundação continua simples de programar, e o preço dela " +
+        "passa a ser manter essa topologia de pé.</p>" +
         "<h3>Disseminação epidêmica</h3>" +
         "<p>Há uma terceira família, e ela abre mão da estrutura por completo. Os " +
         "<strong>protocolos epidêmicos</strong>, também chamados de fofoca, propagam " +
         "informação rapidamente entre muitos nós usando apenas informação local, sem " +
-        "componente central nenhum coordenando a disseminação.</p>" +
+        "nenhum componente central coordenando a disseminação.</p>" +
         "<p>O vocabulário vem do estudo de epidemias, com a diferença de que aqui o " +
         "objetivo se inverte. Um nó está <strong>infectado</strong> quando tem um dado que " +
         "está disposto a espalhar, está <strong>suscetível</strong> quando ainda não viu " +
-        "aquele dado, e está <strong>removido</strong> quando foi atualizado mas não " +
+        "aquele dado, e está <strong>removido</strong> quando foi atualizado, mas não " +
         "espalha mais. Quem projeta o protocolo quer infectar todo mundo o mais rápido " +
         "possível.</p>" +
         "<p>O modelo mais conhecido chama-se <strong>anti-entropia</strong>. Um nó P " +
@@ -1031,20 +1094,22 @@ SD.content["04"] = {
         "estratégia, e o número de rodadas necessárias para levar uma atualização a todos " +
         "os nós cresce com o logaritmo do número de nós, o que é o mesmo que dizer que a " +
         "propagação é rápida e, sobretudo, escalável.</p>" +
-        "<p>Uma variante chamada <strong>propagação de boato</strong> imita ainda mais de " +
-        "perto a fofoca humana. O nó recém-atualizado procura outro e tenta empurrar a " +
+        "<p>Uma variante dos protocolos epidêmicos, chamada <strong>propagação de " +
+        "boato</strong>, imita ainda mais de perto a fofoca humana. O nó recém-atualizado procura outro e tenta empurrar a " +
         "novidade, mas se descobre que aquele outro já sabia, perde o interesse com certa " +
         "probabilidade e para de espalhar. É o que faz quem liga para um amigo com uma " +
         "notícia quente e desanima ao ouvir que ele já ficou sabendo.</p>" +
-        "<p>Essa variante espalha notícia muito bem e traz um defeito que não dá para " +
+        "<p>Essa variante espalha notícia muito bem e traz um defeito que não se pode " +
         "esconder, porque ela <strong>não garante que todos os nós sejam atualizados</strong>. " +
-        "A fração que permanece ignorante depende da probabilidade de desistir, e fica " +
-        "sempre abaixo de mais ou menos 0,2. Para uma probabilidade de desistência de 0,20, " +
+        "A fração que permanece sem a atualização depende da probabilidade de desistir, e " +
+        "fica sempre abaixo de aproximadamente 0,2. Para uma probabilidade de desistência de 0,20, " +
         "a fração que fica sem saber é de 0,0025, ou seja, cerca de um nó em cada " +
         "quatrocentos. Quando a desistência é alta, o sistema precisa de medida adicional " +
         "para fechar a conta.</p>" +
-        "<p>Feche o tópico comparando as três famílias, porque a escolha entre elas é uma " +
-        "troca e não um ranking.</p>" +
+        "<p>Feche o tópico comparando as três maneiras de fazer a informação chegar a " +
+        "todos os membros, porque a escolha entre elas é uma troca e não um ranking. A " +
+        "primeira depende de manter uma árvore, a segunda depende do desenho da " +
+        "sobreposição, e a terceira se contenta com sortear vizinhos.</p>" +
         '<div class="tabela-rolagem">' +
         '<table class="tabela-conteudo" id="tab-familias-multicast">' +
         "<tr><th>Família</th><th>O que ela exige</th><th>O que ela entrega</th></tr>" +
@@ -1052,19 +1117,22 @@ SD.content["04"] = {
         "<td>Exige montar e manter a árvore, e reconfigurá-la quando um nó entra ou " +
         "sai.</td>" +
         "<td>Entrega a todos os membros por um caminho conhecido, com alongamento que " +
-        "dá para medir e melhorar.</td></tr>" +
+        "se pode medir e melhorar.</td></tr>" +
         "<tr><td>Inundação</td>" +
-        "<td>Exige apenas que cada nó conheça os vizinhos dele.</td>" +
-        "<td>Alcança todo mundo com N menos 1 mensagens, sem estrutura para " +
-        "manter.</td></tr>" +
+        "<td>Exige uma sobreposição estruturada, como o hipercubo ou o anel de " +
+        "identificadores, para não desperdiçar mensagem.</td>" +
+        "<td>Numa sobreposição qualquer gasta cerca de duas mensagens por enlace, e só " +
+        "na estruturada alcança todo mundo com N menos 1 mensagens, sem árvore de " +
+        "multicast para manter.</td></tr>" +
         "<tr><td>Epidemia</td>" +
         "<td>Exige só a capacidade de sortear outro nó e trocar atualizações com " +
         "ele.</td>" +
-        "<td>Propaga em tempo logarítmico e escala muito bem, sem prometer que todos " +
-        "serão alcançados.</td></tr>" +
+        "<td>Propaga em tempo logarítmico e escala muito bem. A anti-entropia alcança " +
+        "todos os nós, e é a variante de boato que troca essa garantia por menos " +
+        "tráfego.</td></tr>" +
         "</table>" +
         "</div>" +
-        "<p>Guarde a anti-entropia com carinho, porque ela volta. Quando o curso chegar à " +
+        "<p>Guarde a anti-entropia, porque ela volta. Quando o curso chegar à " +
         "replicação, o problema de manter cópias em dia vai ser resolvido com esse mesmo " +
         "mecanismo, e o vocabulário de infectado, suscetível e removido vai reaparecer " +
         "aplicado a réplicas em vez de a nós.</p>" +
@@ -1097,7 +1165,7 @@ SD.content["04"] = {
           title: "O preço de não conhecer a rede",
           html:
             "<ul>" +
-            "<li>Um salto lógico esconde vários enlaces físicos</li>" +
+            "<li>A rota lógica passa por nós intermediários</li>" +
             "<li><strong>Alongamento</strong> mede o desvio, 73 contra 47</li>" +
             "<li>Árvore dá caminho único, malha dá robustez</li>" +
             "<li>O melhor pai sobrecarrega, então a escolha é limitada</li>" +
@@ -1111,7 +1179,8 @@ SD.content["04"] = {
             "<li>Infectado, suscetível, removido</li>" +
             "<li><strong>Só empurrar é a pior escolha</strong></li>" +
             "<li>Puxar funciona quando muitos já sabem</li>" +
-            "<li>Propaga em tempo logarítmico, sem garantir todos</li>" +
+            "<li>Propaga em tempo logarítmico, e a anti-entropia alcança todos</li>" +
+            "<li>O boato troca essa garantia por menos tráfego</li>" +
             "</ul>"
         },
         {
@@ -1122,10 +1191,25 @@ SD.content["04"] = {
     }
   ],
 
+  lab: {
+    href: "labs/pratica-04/index.html",
+    title: "A mensagem chegou, foi entendida ou ficou esperando",
+    summary:
+      "Um programa Python monta o ambiente inteiro na AWS chamando as APIs direto, e três " +
+      "máquinas passam a trocar o mesmo registro de sensor. Veja a mesma ausência de " +
+      "destinatário virar silêncio no UDP e recusa no TCP, o registro encolher de 65 para " +
+      "17 bytes ao trocar de formato, uma temperatura ser lida como umidade sem erro " +
+      "nenhum, quatro clientes esperarem em escada contra um servidor que atende um de " +
+      "cada vez, e cinco mensagens sobreviverem na fila ao fim do produtor e ao reinício " +
+      "do gerenciador.",
+    duration: "100 min",
+    environment: "AWS Academy Sandbox"
+  },
+
   quiz: [
     {
       question:
-        "Um sistema em que o remetente pode encerrar logo depois de submeter a mensagem, e em que o destinatário nem precisava estar em execução naquele momento, é de que tipo?",
+        "Um sistema em que o remetente pode encerrar logo depois de submeter a mensagem, e em que o destinatário nem precisa estar em execução naquele momento, é de que tipo?",
       options: [
         "Transiente, porque a mensagem só existe enquanto os dois lados executam.",
         "Persistente, porque o middleware guarda a mensagem até conseguir entregá-la.",
@@ -1288,9 +1372,9 @@ SD.content["04"] = {
       answer: 2,
       explanation:
         "Quem sabe quem é membro do grupo são os nós da sobreposição, e a rede por " +
-        "baixo não faz ideia de que existe um grupo. Por isso uma ligação entre dois " +
-        "vizinhos lógicos pode atravessar vários enlaces físicos, às vezes o mesmo " +
-        "enlace mais de uma vez. A razão entre o custo do caminho lógico e o do " +
+        "baixo desconhece a existência dele. Por isso uma rota entre dois nós na " +
+        "sobreposição pode passar por nós intermediários e atravessar o mesmo enlace " +
+        "físico mais de uma vez. A razão entre o custo do caminho lógico e o do " +
         "caminho da rede é o alongamento."
     }
   ],
@@ -1404,8 +1488,16 @@ SD.content["04"] = {
       definition:
         "Nó especial de uma rede de filas que converte mensagens para que a " +
         "aplicação de destino as entenda. Para o sistema de filas ele é apenas mais " +
-        "uma aplicação, e não uma peça interna, e também faz a mediação de onde nasce " +
+        "uma aplicação, e não uma parte interna, e também faz a mediação de onde nasce " +
         "o modelo publicar e assinar."
+    },
+    {
+      term: "Rede de sobreposição",
+      definition:
+        "Rede montada no nível da aplicação, em que cada nó escolhe os vizinhos com " +
+        "quem se comunica. A ligação entre dois vizinhos é um caminho lógico que a " +
+        "rede física realiza sem saber que ele existe, e é dessa diferença de níveis " +
+        "que nascem o alongamento e a tensão de enlace."
     },
     {
       term: "Alongamento (stretch)",
@@ -1450,9 +1542,6 @@ SD.content["04"] = {
     "atualiza o empacotamento, com JSON, buffers de protocolo, Avro e evolução de " +
     "esquema, e que traz os balanceadores de carga, a descoberta de serviço e as " +
     "malhas de serviço.",
-    "TORNOW, S. Thinking Distributed Systems. Cap. 5. Message Delivery and " +
-    "Processing. Leitura complementar sobre as garantias de entrega no máximo uma " +
-    "vez, ao menos uma vez e exatamente uma vez.",
     "KSHEMKALYANI, A. D.; SINGHAL, M. Distributed Computing: Principles, Algorithms, " +
     "and Systems. Cambridge University Press, 2011. Cap. 6. Message Ordering and " +
     "Group Communication. Leitura complementar sobre as ordens FIFO, causal e total " +

@@ -72,7 +72,7 @@ SD.demos["sockets-mensagens"] = (function () {
       /* etapa 3 */ fmt: "crus", mismatch: false, rawSeen: false, swappedSeen: false,
                     sizes: { cdr: 0, json: 0, pb: 0 }, busy3: false,
       /* etapa 4 */ reps: [10, 10, 10], reliable: false, divLoss: false,
-                    divOrder: false, convergedSeen: false, busy4: false
+                    divOrder: false, preservedSeen: false, busy4: false
     };
 
     function to(fn, ms) {
@@ -96,13 +96,14 @@ SD.demos["sockets-mensagens"] = (function () {
       '    <div><dt>Descartadas</dt><dd data-metric="dropped">0</dd></div>' +
       '  </dl>' +
       '  <div class="demo-cf-summary callout" hidden>' +
-      '    <p class="callout-title">🎓 O que você fez à mão → quem faz por você</p>' +
-      '    <p><strong>Vincular e localizar</strong> portas e serviços → servidor de nomes/' +
-      "<em>binder</em> (Tópico 9). <strong>Empacotar e desempacotar</strong> structs → o " +
-      "middleware de RPC/RMI gera isso a partir da interface (Tópico 5). <strong>Escolher " +
-      "o formato</strong> entre carregar nomes, etiquetas ou nada → o contrato de serviço " +
-      "versionado (Tópico 5). <strong>Multicast confiável e totalmente ordenado</strong> → " +
-      "as garantias que a replicação exige (Tópico 10). A comunicação entre processos é o " +
+      '    <p class="callout-title">🎓 O que você fez à mão, e quem faz isso por você</p>' +
+      '    <p><strong>Vincular e localizar</strong> portas e serviços é trabalho do servidor de' +
+      " nomes, ou <em>binder</em> (tópico 09). <strong>Empacotar e desempacotar</strong> " +
+      "structs é o que o middleware de RPC/RMI gera a partir da interface (tópico 05). " +
+      "<strong>Escolher o formato</strong> entre carregar nomes, etiquetas ou nada vira o " +
+      "contrato de serviço versionado (tópico 05). <strong>Multicast confiável e totalmente " +
+      "ordenado</strong> é o que as garantias da replicação entregam (tópico 10). A " +
+      "comunicação entre processos é o " +
       "porão de TODO o resto do curso, e agora você sabe o que tem lá embaixo.</p>" +
       '  </div>' +
       '  <div class="demo-cf-log-wrap">' +
@@ -198,7 +199,7 @@ SD.demos["sockets-mensagens"] = (function () {
       });
       els.controls.querySelector(".demo-sm-bind2").addEventListener("click", function () {
         state.bindErrSeen = true;
-        log("✗ <strong>Erro: endereço já em uso.</strong> S2 não pode vincular a porta 6789: " +
+        log("✗ <strong>Erro: endereço já em uso.</strong> S2 não pode ser vinculado à porta 6789. " +
           "processos do mesmo computador NÃO compartilham portas (a exceção é o multicast IP).");
         renderStage1();
       });
@@ -338,7 +339,7 @@ SD.demos["sockets-mensagens"] = (function () {
           state[tr.to] = "run";
           state.exchanges++;
           bump("delivered");
-          log("✅ Entregue: " + tr.to.toUpperCase() + " recebeu e os DOIS desbloquearam: é a " +
+          log("✅ Entregue. " + tr.to.toUpperCase() + " recebeu, e os DOIS desbloquearam. É a " +
             "sincronização a cada mensagem.");
           if (state.stage === 2) { renderControls2(); renderProcs(); }
           updateNav();
@@ -373,8 +374,9 @@ SD.demos["sockets-mensagens"] = (function () {
       renderControls2();
       var tmo = state.expTimeout;
       var arrived = false, gaveUp = false;
-      log("🧪 Experimento (UDP): A executa receive com <strong>timeout de " +
-        (tmo === 500 ? "0,5 s" : "5 s") + "</strong>; B envia: a mensagem leva 1,6 s.");
+      log("🧪 Experimento (UDP). A executa receive com <strong>timeout de " +
+        (tmo === 500 ? "0,5 s" : "5 s") + "</strong>, e B envia uma mensagem que leva " +
+        "1,6 s.");
       to(function () {
         if (!arrived) {
           gaveUp = true;
@@ -384,11 +386,14 @@ SD.demos["sockets-mensagens"] = (function () {
       to(function () {
         arrived = true;
         if (gaveUp) {
-          bump("dropped");
+          /* O datagrama nao se perdeu: num soquete UDP real ele fica na fila e a
+             proxima leitura o recebe fora de contexto. Por isso ele nao entra em
+             "Descartadas". A consequencia disso pertence ao topico 05. */
           state.timeoutLost = true;
-          log("📭 A mensagem chegou 1,6 s depois, e não havia mais ninguém esperando: perdida " +
-            "para esta troca. Timeout curto demais desiste do que ESTAVA a caminho (o dilema " +
-            "da demo do Tópico 1).");
+          log("📭 A mensagem chegou 1,6 s depois e ficou na fila do soquete, sem ninguém " +
+            "esperando por ela. Ela não foi descartada, e por isso não entra no placar. " +
+            "Timeout curto demais desiste do que ESTAVA a caminho (o dilema da demo do " +
+            "tópico 01).");
         } else {
           bump("delivered");
           log("📬 A mensagem chegou dentro do prazo: recebida. Timeout longo cobre a viagem, " +
@@ -438,7 +443,8 @@ SD.demos["sockets-mensagens"] = (function () {
         'JSON <strong data-size-json="' + s.json + '">' + (s.json || "n/d") + "</strong> bytes · " +
         'buffers de protocolo <strong data-size-pb="' + s.pb + '">' + (s.pb || "n/d") +
         "</strong> bytes · " +
-        'CDR <strong data-size-cdr="' + s.cdr + '">' + (s.cdr || "n/d") + "</strong> bytes</p>";
+        'representação comum <strong data-size-cdr="' + s.cdr + '">' + (s.cdr || "n/d") +
+        "</strong> bytes</p>";
       els.controls.innerHTML =
         '<label><input type="radio" name="demo-sm-fmt" value="crus"' +
         (state.fmt === "crus" ? " checked" : "") + "> bytes crus</label>" +
@@ -447,7 +453,7 @@ SD.demos["sockets-mensagens"] = (function () {
         '<label><input type="radio" name="demo-sm-fmt" value="pb"' +
         (state.fmt === "pb" ? " checked" : "") + "> buffers de protocolo</label>" +
         '<label><input type="radio" name="demo-sm-fmt" value="cdr"' +
-        (state.fmt === "cdr" ? " checked" : "") + "> CDR</label>" +
+        (state.fmt === "cdr" ? " checked" : "") + "> representação comum (CDR)</label>" +
         '<label class="demo-sm-mismatch"><input type="checkbox" class="demo-sm-mm"' +
         (state.mismatch ? " checked" : "") + "> as pontas discordam da ordem dos campos (CDR)</label>" +
         '<button type="button" class="btn demo-sm-send3"' + (state.busy3 ? " disabled" : "") +
@@ -491,7 +497,7 @@ SD.demos["sockets-mensagens"] = (function () {
           state.rawSeen = true;
           showBytes("bytes de A (sem representação externa):\n00 00 07 C0  (year, na ordem de A)" +
             "\n00 53 00 6D 00 69 00 74 00 68  (“Smith” em Unicode de 2 bytes)");
-          showRx("S□m□i□", "L□o□n□", YEAR_GARBLED, false, false);
+          showRx("□S□m□i", "□L□o□n", YEAR_GARBLED, false, false);
           log("💥 B leu <strong>lixo</strong>: o inteiro 1984 virou <strong>" + YEAR_GARBLED +
             "</strong> (ordem de bytes trocada) e as strings ganharam caracteres nulos " +
             "(Unicode de 2 bytes lido como ASCII). Nenhum bit se corrompeu na viagem: as " +
@@ -509,7 +515,7 @@ SD.demos["sockets-mensagens"] = (function () {
             state.sizes.cdr = CDR_SIZE;
             bump("delivered");
             showRx("Smith", "London", "1984", true, false);
-            log("✅ Íntegra em <strong>" + CDR_SIZE + " bytes</strong>, compacto porque a " +
+            log("✅ Íntegra em <strong>" + CDR_SIZE + " bytes</strong>, compacta porque a " +
               "mensagem só carrega VALORES: a ordem e os tipos vêm do acordo prévio (IDL) " +
               "das duas pontas.");
           }
@@ -535,7 +541,7 @@ SD.demos["sockets-mensagens"] = (function () {
         }
         if (state.sizes.cdr && state.sizes.json && state.sizes.pb) {
           log("📏 Compare os três. JSON " + state.sizes.json + " bytes carrega os nomes, " +
-            "buffers de protocolo " + state.sizes.pb + " troca o nome por uma etiqueta, e o " +
+            "buffers de protocolo " + state.sizes.pb + " trocam o nome por uma etiqueta, e o " +
             "CDR " + state.sizes.cdr + " não carrega nem etiqueta. Repare que carregar menos " +
             "<strong>não garante ficar menor</strong>, porque o CDR alinha cada valor em " +
             "múltiplos do tamanho dele e paga o preenchimento com zeros.");
@@ -581,7 +587,7 @@ SD.demos["sockets-mensagens"] = (function () {
         stat.className = "demo-sm-diverge " + (eq ? "is-ok" : "is-bad");
         stat.setAttribute("data-div-loss", state.divLoss);
         stat.setAttribute("data-div-order", state.divOrder);
-        stat.setAttribute("data-converged5", state.convergedSeen);
+        stat.setAttribute("data-preserved5", state.preservedSeen);
       }
     }
 
@@ -595,8 +601,8 @@ SD.demos["sockets-mensagens"] = (function () {
       els.area.innerHTML =
         '<div class="demo-sm-world">' + cards + "</div>" +
         '<p class="demo-sm-status demo-sm-diverge" data-repstatus data-div-loss="' +
-        state.divLoss + '" data-div-order="' + state.divOrder + '" data-converged5="' +
-        state.convergedSeen + '"></p>';
+        state.divLoss + '" data-div-order="' + state.divOrder + '" data-preserved5="' +
+        state.preservedSeen + '"></p>';
       els.controls.innerHTML =
         '<button type="button" class="btn demo-sm-mc1"' + (state.busy4 ? " disabled" : "") +
         ">📢 Multicast: +10 (uma origem)</button>" +
@@ -604,7 +610,7 @@ SD.demos["sockets-mensagens"] = (function () {
         ">📢📢 Duas origens: +10 e ×2</button>" +
         '<label class="demo-sm-filterlabel"><input type="checkbox" class="demo-sm-rel"' +
         (state.reliable ? " checked" : "") +
-        "> multicast confiável + totalmente ordenado (caixa-preta, Tópico 10)</label>" +
+        "> multicast confiável + totalmente ordenado (caixa-preta, tópico 10)</label>" +
         '<button type="button" class="btn-ghost demo-sm-rreset">↺ Reiniciar réplicas (valor 10)' +
         "</button>";
       els.controls.querySelector(".demo-sm-mc1").addEventListener("click", mc1);
@@ -613,7 +619,7 @@ SD.demos["sockets-mensagens"] = (function () {
         state.reliable = ev.target.checked;
         log(state.reliable
           ? "🛡️ Garantias LIGADAS: entrega tudo-ou-nada e mesma ordem em todos os membros " +
-            "(como se constrói isso é assunto do Tópico 10)."
+            "(como se constrói isso é assunto do tópico 10)."
           : "🚫 De volta ao multicast IP puro: omissão possível, ordem não garantida.");
       });
       els.controls.querySelector(".demo-sm-rreset").addEventListener("click", function () {
@@ -633,7 +639,16 @@ SD.demos["sockets-mensagens"] = (function () {
         if (state.reliable) {
           state.reps = state.reps.map(function (v) { return v + 10; });
           bump("delivered");
-          log("✅ Entrega tudo-ou-nada: as TRÊS réplicas aplicaram +10.");
+          /* Espelha a mc2: quem liga o interruptor logo depois da divergência
+             precisa da dica de reiniciar, senão fica preso na meta. */
+          if (allEqual5()) {
+            log("✅ Entrega tudo-ou-nada: as TRÊS réplicas aplicaram +10 e continuam " +
+              "iguais.");
+          } else {
+            log("✅ Entrega tudo-ou-nada: as TRÊS réplicas aplicaram +10. Elas continuam " +
+              "diferentes porque <strong>já estavam diferentes</strong> quando as " +
+              "garantias foram ligadas. Reinicie as réplicas e repita as duas jogadas.");
+          }
         } else {
           var miss = 1 + Math.floor(rand() * 3);
           state.reps = state.reps.map(function (v, i) { return i + 1 === miss ? v : v + 10; });
@@ -643,7 +658,7 @@ SD.demos["sockets-mensagens"] = (function () {
             "falhas do multicast IP.");
           if (!allEqual5()) state.divLoss = true;
         }
-        if (state.reliable && allEqual5()) state.convergedSeen = true;
+        if (state.reliable && allEqual5()) state.preservedSeen = true;
         state.busy4 = false;
         if (state.stage === 4) renderStage4();
         updateNav();
@@ -660,20 +675,32 @@ SD.demos["sockets-mensagens"] = (function () {
         if (state.reliable) {
           state.reps = state.reps.map(function (v) { return (v + 10) * 2; });
           bump("delivered");
-          log("✅ Ordem TOTAL: todos entregaram +10 antes de ×2, as réplicas aplicaram a mesma " +
-            "sequência e continuam iguais.");
+          /* A mensagem depende do estado, e não só das garantias. Ligar o
+             interruptor sem reiniciar as réplicas é a ordem natural, porque a
+             divergência acabou de acontecer, e ali afirmar igualdade
+             contradiz o placar na tela. */
+          if (allEqual5()) {
+            log("✅ Ordem TOTAL: todos entregaram +10 antes de ×2, as réplicas aplicaram a " +
+              "mesma sequência e continuam iguais.");
+          } else {
+            log("✅ Ordem TOTAL: todos entregaram +10 antes de ×2, e as réplicas aplicaram a " +
+              "mesma sequência. Elas continuam diferentes porque <strong>já estavam " +
+              "diferentes</strong> quando as garantias foram ligadas. Ordem total " +
+              "<strong>preserva</strong> a igualdade, mas não a restaura. Reinicie as " +
+              "réplicas e repita as duas jogadas para ver a convergência.");
+          }
         } else {
           var flip = 1 + Math.floor(rand() * 3);
           state.reps = state.reps.map(function (v, i) {
             return i + 1 === flip ? v * 2 + 10 : (v + 10) * 2;
           });
           bump("delivered");
-          log("💥 Sem perda nenhuma, mas <strong>R" + flip + " recebeu ×2 antes de +10</strong> " +
+          log("💥 Sem nenhuma perda, mas <strong>R" + flip + " recebeu ×2 antes de +10</strong> " +
             "e as outras, o contrário. Ordens diferentes, estados diferentes: réplicas divergem " +
             "SEM perder uma única mensagem.");
           if (!allEqual5()) state.divOrder = true;
         }
-        if (state.reliable && allEqual5()) state.convergedSeen = true;
+        if (state.reliable && allEqual5()) state.preservedSeen = true;
         state.busy4 = false;
         if (state.stage === 4) renderStage4();
         updateNav();
@@ -688,11 +715,13 @@ SD.demos["sockets-mensagens"] = (function () {
         instructions: "O servidor S deveria atender em 10.0.0.2:6789, mas ninguém vinculou o " +
           "soquete ainda. Envie uma mensagem ANTES de vincular; depois vincule, envie dos dois " +
           "clientes e tente vincular S2 à mesma porta.",
-        goalText: "Meta: 1 mensagem descartada em silêncio + soquete vinculado + entregas de C1 e C2.",
+        goalText: "Meta: 1 mensagem descartada em silêncio + soquete vinculado + erro de porta " +
+          "já em uso + entregas de C1 e C2.",
         setup: function () { state.busy1 = false; },
         render: renderStage1,
         goalMet: function () {
-          return state.dropSeen && state.bound && state.delC1 > 0 && state.delC2 > 0;
+          return state.dropSeen && state.bound && state.bindErrSeen &&
+            state.delC1 > 0 && state.delC2 > 0;
         }
       },
       {
@@ -715,7 +744,7 @@ SD.demos["sockets-mensagens"] = (function () {
         instructions: "A máquina A (big-endian, Unicode) envia a struct Person à máquina B " +
           "(little-endian, ASCII). Envie primeiro em bytes crus; depois compare JSON, buffers " +
           "de protocolo e CDR, e experimente violar o acordo de ordem do CDR.",
-        goalText: "Meta: ver os bytes crus chegarem adulterados e entregar a struct íntegra " +
+        goalText: "Meta: ver os bytes crus chegarem ilegíveis e entregar a struct íntegra " +
           "nos três formatos.",
         setup: function () { state.busy3 = false; },
         render: renderStage3,
@@ -729,12 +758,12 @@ SD.demos["sockets-mensagens"] = (function () {
         instructions: "Três réplicas guardam o mesmo valor. Com multicast IP, veja a omissão e a " +
           "ordem quebrarem a igualdade; depois reinicie as réplicas, ligue as garantias e repita " +
           "as duas jogadas.",
-        goalText: "Meta: divergir por omissão, divergir por ordem e convergir com as garantias " +
-          "ligadas.",
+        goalText: "Meta: divergir por omissão, divergir por ordem e, com as réplicas " +
+          "reiniciadas, ver as garantias mantendo as três iguais.",
         setup: function () { state.busy4 = false; },
         render: renderStage4,
         goalMet: function () {
-          return state.divLoss && state.divOrder && state.convergedSeen;
+          return state.divLoss && state.divOrder && state.preservedSeen;
         }
       }
     ];
