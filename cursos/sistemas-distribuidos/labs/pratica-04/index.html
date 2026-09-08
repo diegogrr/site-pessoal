@@ -1,0 +1,2770 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Prática 04 da disciplina Sistemas Distribuídos (IFSP Campus Salto): três máquinas na AWS trocam o mesmo registro de sensor por soquete TCP e UDP, em JSON e em Protocol Buffers, contra um servidor que atende um de cada vez ou todos ao mesmo tempo, e por fim através de uma fila que guarda a mensagem enquanto ninguém a busca.">
+  <title>Prática 04: A mensagem chegou, foi entendida ou ficou esperando</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A8%3C/text%3E%3C/svg%3E">
+
+  <link rel="stylesheet" href="../../assets/css/tokens.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lab.css">
+</head>
+<body>
+
+<div class="lab-topbar">
+  <a class="voltar" href="../../index.html#/topico/04">‹ Tópico 04</a>
+  <span class="titulo">Prática 04 · Comunicação entre Processos</span>
+  <span class="espaco"></span>
+  <span class="contador" id="lab-contador">0 de 8 passos</span>
+  <button type="button" class="btn-ghost" id="theme-toggle" aria-label="Mudar de tema">🌙</button>
+</div>
+
+<div class="lab-wrap">
+
+  <!-- ============================================================
+       Abertura
+       ============================================================ -->
+  <header class="lab-hero">
+    <p class="eyebrow">Prática 04 · Tópico 04 · AWS Academy Sandbox</p>
+    <h1>A mensagem chegou, foi entendida ou ficou esperando</h1>
+    <p class="lab-lead">
+      Um único registro de sensor, com quatro campos, atravessa a prática inteira. Ele vai
+      primeiro por dois tipos de soquete, e você vê a diferença entre o silêncio e a recusa
+      quando o destinatário não está lá. Depois vai em dois formatos, e a versão do esquema
+      de quem lê deixa de bater com a de quem escreve, três vezes, de três maneiras
+      diferentes. Depois vai quatro vezes ao mesmo tempo, contra um servidor que atende um de
+      cada vez e contra outro que atende todos juntos. No fim ele vai para uma fila, sem
+      ninguém do outro lado, e continua lá depois de o programa que o enviou terminar e de o
+      gerenciador de filas reiniciar.
+    </p>
+
+    <div class="lab-chips">
+      <span class="chip">◷ 100 min</span>
+      <span class="chip">▲ dificuldade 3 de 5</span>
+      <span class="chip">☁ AWS Academy Sandbox</span>
+      <span class="chip">▤ 3 instâncias, duas t3.micro e uma t3.small</span>
+      <span class="chip">$ menos de US$ 0,10</span>
+      <span class="chip">👤 individual</span>
+    </div>
+
+    <p><strong>O que você vai construir e medir:</strong></p>
+    <ul>
+      <li>o ambiente inteiro montado por um <strong>programa Python</strong> que chama as APIs
+        da AWS direto, sem console e sem linha de comando da Amazon;</li>
+      <li>a diferença entre <strong>o silêncio do UDP</strong> e <strong>a recusa do
+        TCP</strong> quando não há ninguém escutando do outro lado, que é a mesma ausência
+        produzindo duas respostas opostas;</li>
+      <li>o tamanho do mesmo registro em JSON e em Protocol Buffers, e as
+        <strong>três situações de esquema</strong> que aparecem quando quem lê não tem a mesma
+        versão de quem escreve;</li>
+      <li>o tempo de quatro clientes simultâneos contra um servidor iterativo e contra um
+        concorrente, com a mesma espera de um segundo por mensagem nos dois;</li>
+      <li>uma fila durável que guarda cinco mensagens sem nenhum consumidor e as devolve
+        inteiras depois de o gerenciador reiniciar.</li>
+    </ul>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Antes de começar, entenda o ambiente</p>
+      <p>
+        A sessão do Sandbox tem cronômetro e <strong>apaga tudo quando termina</strong>, o que
+        inclui as três máquinas, a rede, a chave e a credencial. Reserve o bloco inteiro de uma
+        aula, com folga. Se a sessão acabar no meio, o mesmo programa do passo 2 refaz o
+        ambiente inteiro em um comando, e a seção <a href="#se-der-errado">Se der errado</a>
+        explica como.
+      </p>
+    </div>
+
+    <div class="lab-sumario">
+      <p class="titulo">Nesta prática</p>
+      <ol>
+        <li><a href="#passo-1">Abrir o laboratório, preparar a chave e conferir o Python</a></li>
+        <li><a href="#passo-2">Rodar o programa que monta o ambiente</a></li>
+        <li><a href="#passo-3">Entrar nos três nós e ver o que subiu</a></li>
+        <li><a href="#passo-4">Experimento 1: o silêncio do UDP e a recusa do TCP</a></li>
+        <li><a href="#passo-5">Experimento 2: o mesmo dado em dois formatos</a></li>
+        <li><a href="#passo-6">Experimento 3: um de cada vez ou todos ao mesmo tempo</a></li>
+        <li><a href="#passo-7">Experimento 4: quando a mensagem espera</a></li>
+        <li><a href="#passo-8">Anotar os resultados, encerrar e limpar</a></li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       Pré-requisitos
+       ============================================================ -->
+  <section class="lab-step" id="antes">
+    <h2><span class="step-num is-accent">✓</span><span>Antes de começar</span></h2>
+    <ul>
+      <li>Acesso ao curso <strong>AWS Academy Cloud Foundations</strong>, no laboratório
+        <strong>Sandbox</strong>.</li>
+      <li><strong>Python 3 instalado</strong>, que é a novidade desta prática. Confira com
+        <code>python --version</code>, e serve qualquer versão a partir da 3.9. Se o comando
+        não responder, instale pela
+        <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">página
+        oficial</a> antes da aula. No Windows, marque a caixa <code>Add python.exe to PATH</code>
+        na primeira tela do instalador, porque sem ela o terminal não encontra o comando.</li>
+      <li><strong>A biblioteca boto3</strong>, que o passo 1 instala em um comando. Ela é a
+        biblioteca oficial da Amazon para Python, e é por ela que o ambiente de hoje vai
+        nascer.</li>
+      <li>Um terminal com cliente de <em>secure shell</em> (<strong>SSH</strong>). No Windows
+        o <strong>PowerShell</strong> já traz um instalado, e no macOS ou Linux serve o
+        terminal do sistema. Você vai abrir <strong>quatro janelas</strong> dele.</li>
+      <li>Nas máquinas remotas, nada para instalar. O software delas vem pronto.</li>
+      <li>A <strong>prática 03 não é pré-requisito</strong>, mas quem a fez vai reconhecer o
+        passo 2. Lá o ambiente nascia de um script de shell chamando a interface de
+        linha de comando (CLI) da Amazon, e aqui nasce de um programa Python chamando as
+        mesmas APIs sem intermediário.</li>
+    </ul>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Se o computador for do laboratório do campus</p>
+      <p>
+        Máquinas de laboratório costumam voltar ao estado original a cada reinício, e nesse
+        caso o <code>boto3</code> precisa ser instalado de novo no começo de cada aula. É um
+        comando só, e ele está no passo 1. A instalação por usuário não pede privilégio de
+        administrador, que é justamente a que serve nesse cenário.
+      </p>
+    </div>
+
+    <div class="os-switch" role="group" aria-label="Escolha do sistema operacional">
+      <button type="button" data-os-btn="win" aria-pressed="true">Windows / PowerShell</button>
+      <button type="button" data-os-btn="unix" aria-pressed="false">macOS / Linux</button>
+    </div>
+    <p>Os comandos que mudam de um sistema para o outro seguem esta escolha na página inteira.</p>
+  </section>
+
+  <!-- ============================================================
+       O parêntese de AWS
+       ============================================================ -->
+  <section class="lab-step" id="aws-em-5-minutos">
+    <h2><span class="step-num is-accent">AWS</span><span>O mínimo de AWS para esta prática</span></h2>
+
+    <p>
+      Toda ação que você faz num console de nuvem é, por baixo, uma chamada a uma API sobre
+      HTTPS. O console é um cliente dessa API, e a linha de comando da Amazon é outro. Nesta
+      prática você usa um terceiro, que é o seu próprio programa. A biblioteca <code>boto3</code>
+      monta a requisição, assina com a sua credencial e devolve a resposta já em estruturas de
+      Python.
+    </p>
+
+    <p>
+      A diferença prática aparece no que o programa faz <em>entre</em> as chamadas. Um script
+      de shell precisa recortar texto para achar o identificador que a chamada anterior
+      devolveu. Um programa lê um dicionário. É por isso que o <code>preparar-ambiente.py</code>
+      consegue gravar cada identificador assim que ele nasce, esperar recurso ficar pronto,
+      recusar uma segunda criação e conferir a limpeza no fim, coisas que ficariam grandes
+      demais em shell.
+    </p>
+
+    <p><strong>As partes que o programa cria, e o que cada uma é:</strong></p>
+    <ul>
+      <li>A <strong>nuvem privada virtual (VPC)</strong>, que é a rede isolada onde as três
+        máquinas vivem, com o bloco <code>10.44.0.0/16</code>.</li>
+      <li>A <strong>sub-rede</strong>, que recorta a VPC dentro de uma zona de
+        disponibilidade, aqui o <code>10.44.0.0/24</code> em <code>us-east-1a</code>. As três
+        máquinas ficam na mesma sub-rede, porque hoje a rede não é o objeto de estudo.</li>
+      <li><strong>Gateway de internet</strong> e <strong>tabela de rotas</strong>, que juntos
+        dão saída à sub-rede. Sem os dois, as máquinas nascem sem alcançar o repositório de
+        onde o software é baixado.</li>
+      <li>O <strong>grupo de segurança</strong>, que filtra o que entra. Ele libera a porta 22
+        apenas para o IP público do seu computador, e libera as portas da aplicação e da fila
+        apenas para quem já está no próprio grupo.</li>
+      <li><strong>Três instâncias EC2</strong>, sigla de Elastic Compute Cloud, que são os
+        nós A, B e C, cada uma com um endereço privado fixo. Elas recebem o <code>LabInstanceProfile</code>, que já existe na conta,
+        porque o Sandbox não permite criar papel de acesso.</li>
+    </ul>
+
+    <p>
+      Todo recurso nasce com a etiqueta <code>Project=sd-pratica04</code>. A limpeza do passo 8
+      só apaga o que tem essa etiqueta, e é isso que impede o programa de encostar nas duas
+      instâncias que o laboratório já traz ligadas quando você abre a sessão.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">A credencial, e por que ela vai para um perfil de nome próprio</p>
+      <p>
+        O programa grava os três valores da credencial temporária num perfil chamado
+        <code>sd-sandbox</code>, dentro do arquivo de credenciais da AWS no seu computador.
+        Ele nunca escreve no perfil <code>default</code>, que é o que uma instalação da AWS usa
+        quando ninguém diz qual perfil quer. Escrever no <code>default</code> passaria por cima
+        da configuração de quem já usa a AWS na própria máquina. O passo 8 apaga esse perfil,
+        e o hábito de apagar é o que protege o computador do laboratório.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Ficha do ambiente
+       ============================================================ -->
+  <section class="lab-step" id="ficha">
+    <h2><span class="step-num is-accent">✎</span><span>Ficha do ambiente</span></h2>
+    <p>
+      O passo 2 termina imprimindo três linhas. Cole o bloco inteiro no campo abaixo e clique
+      em preencher, ou digite campo a campo se preferir. A partir daí todo comando desta página
+      mostra os seus valores reais, e o botão <em>copiar</em> já leva o comando pronto. Os dados
+      ficam só no seu navegador.
+    </p>
+    <p>
+      A ficha é curta porque <strong>os endereços privados são sempre os mesmos</strong>. O
+      programa fixa o nó A em <code>10.44.0.10</code>, o B em <code>10.44.0.20</code> e o C em
+      <code>10.44.0.30</code>, então o roteiro escreve esses números direto e a sua turma
+      inteira digita os mesmos comandos. Só os endereços públicos mudam de aluno para aluno e
+      de sessão para sessão.
+    </p>
+    <p>
+      As <strong>saídas de exemplo</strong> não acompanham a ficha. Elas guardam os endereços e
+      os tempos de outra execução, então servem para você reconhecer o formato da resposta,
+      nunca para conferir dígito a dígito. Ver um número diferente do seu logo abaixo de um
+      comando já preenchido é o esperado.
+    </p>
+
+    <div class="ficha-colar">
+      <label for="p04-colar">Colar de uma vez o bloco que o programa imprimiu</label>
+      <textarea id="p04-colar" data-ficha-colar rows="4"
+        placeholder="IP_PUB_A=54.237.159.134&#10;IP_PUB_B=107.22.44.154&#10;IP_PUB_C=54.146.207.161"></textarea>
+      <div class="ficha-colar-acoes">
+        <button type="button" class="btn-copiar" data-ficha-aplicar>preencher a ficha</button>
+        <span class="ficha-colar-aviso" data-ficha-resultado role="status"></span>
+      </div>
+    </div>
+
+    <div class="ficha">
+      <label>IPv4 público do nó A, o produtor
+        <input type="text" data-ficha="IP_PUB_A" placeholder="ex.: 54.237.159.134" autocomplete="off"></label>
+      <label>IPv4 público do nó B, o gerenciador de filas
+        <input type="text" data-ficha="IP_PUB_B" placeholder="ex.: 107.22.44.154" autocomplete="off"></label>
+      <label>IPv4 público do nó C, o destinatário
+        <input type="text" data-ficha="IP_PUB_C" placeholder="ex.: 54.146.207.161" autocomplete="off"></label>
+    </div>
+    <p class="saida">A cada nova sessão do Sandbox estes três endereços mudam. Rode o programa
+de novo e cole o bloco novo aqui.</p>
+  </section>
+
+  <!-- ============================================================
+       Diagrama de arquitetura de nuvem
+       ============================================================ -->
+  <section class="lab-step" id="diagrama">
+    <h2><span class="step-num is-accent">▦</span><span>Diagrama de arquitetura de nuvem</span></h2>
+
+    <p>
+      O programa do passo 2 cria uma rede e três máquinas. Vale ver antes o desenho do que vai
+      existir no fim, porque é mais fácil reconhecer cada parte depois de tê-la visto no lugar.
+      Olhe para o <strong>grupo de segurança</strong>, que é a caixa que envolve os três nós. A
+      seta que vem do seu computador entra nele pela porta 22 e para aí. As portas 9104 e 5672
+      não têm seta vindo de fora, e só existem entre os nós de dentro.
+    </p>
+
+    <figure class="figura-diagrama">
+      <div class="diagrama-rolagem">
+        <svg id="diagrama-pratica-04-infra" class="fig-pratica-04-infra" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1345 620" role="img" aria-labelledby="pratica-04-infra-titulo pratica-04-infra-desc">
+<title id="pratica-04-infra-titulo">A infraestrutura da Prática 04 na AWS</title>
+<desc id="pratica-04-infra-desc">Três instâncias EC2 numa VPC da região us-east-1, com o bloco 10.44.0.0/16, todas na mesma sub-rede pública 10.44.0.0/24 da zona us-east-1a e todas dentro do grupo de segurança sd04-nos. O nó A é o produtor e tem o endereço privado 10.44.0.10, numa t3.micro. O nó B é o gerenciador de filas, com o RabbitMQ na porta 5672 e o endereço 10.44.0.20, numa t3.small. O nó C é o destinatário, com o servidor na porta 9104 e o endereço 10.44.0.30, numa t3.micro. O computador do aluno alcança o grupo de segurança pela internet, através do gateway de internet, apenas na porta 22 e apenas a partir do endereço IP dele. As portas 9104 e 5672 não recebem seta vinda de fora, porque só aceitam tráfego originado no próprio grupo de segurança.</desc>
+<style>
+  .fig-pratica-04-infra{--diag-fundo:var(--color-bg-elevated,#ffffff);
+       --diag-texto:var(--color-text,#16202e);
+       --diag-apagado:var(--color-text-muted,#56657b);
+       --diag-linha:var(--color-text-muted,#3b4a5f);
+       --diag-caixa:var(--color-bg-elevated,#ffffff);
+       --diag-borda:var(--color-border,#8592a6);
+       --diag-nuvem:#242F3E}
+  @media (prefers-color-scheme:dark){
+    .fig-pratica-04-infra{--diag-nuvem:#96a4b8}
+    .fig-pratica-04-infra .so-claro{display:none} .fig-pratica-04-infra .so-escuro{display:inline}
+  }
+  [data-theme="light"] .fig-pratica-04-infra{--diag-nuvem:#242F3E}
+  [data-theme="light"] .fig-pratica-04-infra .so-claro{display:inline}
+  [data-theme="light"] .fig-pratica-04-infra .so-escuro{display:none}
+  [data-theme="dark"] .fig-pratica-04-infra{--diag-nuvem:#96a4b8}
+  [data-theme="dark"] .fig-pratica-04-infra .so-claro{display:none}
+  [data-theme="dark"] .fig-pratica-04-infra .so-escuro{display:inline}
+  .fig-pratica-04-infra .so-escuro{display:none}
+  .fig-pratica-04-infra text{font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+       fill:var(--diag-texto)}
+  .fig-pratica-04-infra .fundo{fill:var(--diag-fundo)}
+  .fig-pratica-04-infra .grupo{fill:none;stroke-width:2}
+  .fig-pratica-04-infra .subrede{fill:#7AA116;fill-opacity:.06;stroke:#7AA116;stroke-width:2}
+  .fig-pratica-04-infra .subrede-privada{fill:#00A4A6;fill-opacity:.06;stroke:#00A4A6;stroke-width:2}
+  .fig-pratica-04-infra .zona{fill:none;stroke:#147EBA;stroke-width:2;stroke-dasharray:8 6}
+  .fig-pratica-04-infra .sg{fill:none;stroke:#DD3522;stroke-width:2;stroke-dasharray:9 6}
+  .fig-pratica-04-infra .instancia{fill:var(--diag-caixa);stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-04-infra .faixa{fill:none;stroke:var(--diag-borda);stroke-width:1.5}
+  .fig-pratica-04-infra .apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.5;stroke-dasharray:4 3}
+  .fig-pratica-04-infra .seta{fill:none;stroke:var(--diag-linha);stroke-width:2;stroke-linejoin:round}
+  .fig-pratica-04-infra .seta-apoio{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:5 4;stroke-linejoin:round}
+  .fig-pratica-04-infra .seta-api{fill:none;stroke:var(--diag-apagado);stroke-width:1.6;
+       stroke-dasharray:11 4 2 4;stroke-linejoin:round}
+  .fig-pratica-04-infra .rotulo{font-size:13px}
+  .fig-pratica-04-infra .rotulo-grupo{font-size:14px;font-weight:600}
+  .fig-pratica-04-infra .rotulo-instancia{font-size:17px;font-weight:600}
+  .fig-pratica-04-infra .rotulo-tipo{font-size:12px;opacity:.75}
+  .fig-pratica-04-infra .rotulo-faixa{font-size:11px}
+  .fig-pratica-04-infra .rotulo-apoio{font-size:11.5px}
+  .fig-pratica-04-infra .rotulo-endereco{font-size:10.5px;fill:var(--diag-apagado)}
+  .fig-pratica-04-infra .rotulo-seta{font-size:12px;paint-order:stroke;stroke:var(--diag-fundo);
+       stroke-width:3.5;stroke-linejoin:round}
+  .fig-pratica-04-infra .rotulo-sg{font-size:13px;font-weight:600;fill:#DD3522}
+  .fig-pratica-04-infra .legenda{font-size:11.5px;fill:var(--diag-apagado)}
+</style>
+<defs><marker id="pratica-04-infra-ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-linha)"/></marker><marker id="pratica-04-infra-ponta-fina" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diag-apagado)"/></marker><symbol id="pratica-04-infra-ic-AWS-Cloud_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#242F3E" x="0" y="0" width="40" height="40"></rect>
+        <path d="M28.993,27.9952689 L11.487,27.9762689 C9.121,27.9742689 7.154,26.1292689 7.012,23.7752689 C7.004,23.6522689 7,23.5262689 7,23.3972689 C7,20.2992689 9.091,19.2872689 10.337,18.9592689 C10.577,18.8962689 10.735,18.6662689 10.707,18.4192689 C10.676,18.1492689 10.659,17.8752689 10.659,17.5962689 C10.659,15.1322689 12.308,12.4822689 14.415,11.5632689 C15.359,11.1502689 16.232,10.9862689 17.023,10.9862689 C19.276,10.9862689 20.867,12.3152689 21.561,13.0332689 C22.329,13.8262689 22.927,14.8382689 23.34,16.0422689 C23.4,16.2192689 23.555,16.3472689 23.74,16.3742689 C23.918,16.4012689 24.109,16.3232689 24.219,16.1712689 C24.807,15.3502689 25.766,14.9822689 26.659,15.2392689 C27.782,15.5602689 28.516,16.7272689 28.62,18.3072689 C28.578,18.5762689 28.759,18.8292689 29.027,18.8772689 C30.222,19.0892689 33,19.9572689 33,23.4402689 C33,27.5892689 29.114,27.9822689 28.993,27.9952689 M29.594,17.9742689 C29.379,16.0672689 28.4,14.6962689 26.934,14.2782689 C25.899,13.9822689 24.811,14.2452689 23.989,14.9502689 C23.553,13.9362689 22.979,13.0602689 22.28,12.3382689 C20.023,10.0052689 16.933,9.37226889 14.014,10.6462689 C11.531,11.7302689 9.659,14.7182689 9.659,17.5962689 C9.659,17.7702689 9.665,17.9432689 9.676,18.1142689 C8.319,18.5732689 6,19.8752689 6,23.3972689 C6,23.5492689 6.004,23.6962689 6.014,23.8382689 C6.188,26.7162689 8.593,28.9732689 11.486,28.9762689 L29.034,28.9932689 C29.084,28.9892689 34,28.5192689 34,23.4402689 C34,19.5022689 31.003,18.3142689 29.594,17.9742689" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Public-subnet_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#7AA116" x="0" y="0" width="40" height="40"></rect>
+        <path d="M19.536,22.049 C20.642,22.049 21.542,22.948 21.542,24.054 C21.542,25.16 20.642,26.06 19.536,26.06 C18.43,26.06 17.53,25.16 17.53,24.054 C17.53,22.948 18.43,22.049 19.536,22.049 L19.536,22.049 Z M19.012,27.007 L19.012,30.501 L20.012,30.501 L20.012,27.012 C21.442,26.782 22.542,25.549 22.542,24.054 C22.542,22.397 21.193,21.049 19.536,21.049 C17.879,21.049 16.53,22.397 16.53,24.054 C16.53,25.532 17.604,26.757 19.012,27.007 L19.012,27.007 Z M10,33.014 L29.012,33.014 L29.012,18 L10,18 L10,33.014 Z M14.046,12.484 C14.046,9.46 16.506,7 19.529,7 C22.553,7 25.012,9.46 25.012,12.484 L25.012,17 L14.046,17 L14.046,12.484 Z M29.512,17 L26.012,17 L26.012,12.484 C26.012,8.908 23.103,6 19.529,6 C15.954,6 13.046,8.908 13.046,12.484 L13.046,17 L9.5,17 C9.223,17 9,17.224 9,17.5 L9,33.514 C9,33.79 9.223,34.014 9.5,34.014 L29.512,34.014 C29.788,34.014 30.012,33.79 30.012,33.514 L30.012,17.5 C30.012,17.224 29.788,17 29.512,17 L29.512,17 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Region_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#00A4A6" x="0" y="0" width="40" height="40"></rect>
+        <path d="M14,20.026 L14,11.026 L29.293,11.026 L25.146,15.172 C24.951,15.368 24.951,15.684 25.146,15.88 L29.293,20.026 L14,20.026 Z M26.207,15.526 L30.854,10.88 C30.996,10.736 31.039,10.522 30.962,10.335 C30.885,10.148 30.702,10.026 30.5,10.026 L14,10.026 L14,8.97 C14.596,8.76 15.026,8.198 15.026,7.531 C15.026,6.687 14.34,6 13.495,6 C12.65,6 11.963,6.687 11.963,7.531 C11.963,8.201 12.398,8.766 13,8.973 L13,33.026 L10,33.026 L10,34.026 L17,34.026 L17,33.026 L14,33.026 L14,21.026 L30.5,21.026 C30.702,21.026 30.885,20.904 30.962,20.717 C31.039,20.53 30.996,20.316 30.854,20.172 L26.207,15.526 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_Amazon-EC2_Instance_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M9,39 L39,39 L39,9 L9,9 L9,39 Z M46,13 L46,11 L41,11 L41,8 C41,7.448 40.552,7 40,7 L37,7 L37,2 L35,2 L35,7 L31,7 L31,2 L29,2 L29,7 L25,7 L25,2 L23,2 L23,7 L19,7 L19,2 L17,2 L17,7 L13,7 L13,2 L11,2 L11,7 L8,7 C7.447,7 7,7.448 7,8 L7,11 L2,11 L2,13 L7,13 L7,17 L2,17 L2,19 L7,19 L7,23 L2,23 L2,25 L7,25 L7,29 L2,29 L2,31 L7,31 L7,35 L2,35 L2,37 L7,37 L7,40 C7,40.553 7.447,41 8,41 L11,41 L11,46 L13,46 L13,41 L17,41 L17,46 L19,46 L19,41 L23,41 L23,46 L25,46 L25,41 L29,41 L29,46 L31,46 L31,41 L35,41 L35,46 L37,46 L37,41 L40,41 C40.552,41 41,40.553 41,40 L41,37 L46,37 L46,35 L41,35 L41,31 L46,31 L46,29 L41,29 L41,25 L46,25 L46,23 L41,23 L41,19 L46,19 L46,17 L41,17 L41,13 L46,13 Z" fill="#ED7100"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M33.4312,35.1778 L31.9332,35.1778 L31.9332,17.5018 C31.9332,17.1088 31.7022,16.7518 31.3442,16.5908 L31.2522,16.5488 C29.2432,15.6418 27.1642,14.7028 24.1762,14.7028 C21.0532,14.7028 18.7612,15.7118 16.4952,16.8368 C16.1552,17.0058 15.9402,17.3528 15.9402,17.7328 L15.9402,35.1778 L14.4772,35.1778 L14.4772,16.3118 C16.9112,14.3328 20.4202,13.2048 24.1862,13.2048 C27.6872,13.2048 31.0252,14.2018 33.4312,15.9528 L33.4312,35.1778 Z M24.1862,11.2048 C19.7612,11.2048 15.6172,12.6238 12.8152,15.0998 C12.6002,15.2888 12.4772,15.5618 12.4772,15.8488 L12.4772,36.1778 C12.4772,36.7308 12.9242,37.1778 13.4772,37.1778 L16.9402,37.1778 C17.4932,37.1778 17.9402,36.7308 17.9402,36.1778 L17.9402,18.3558 C19.8592,17.4288 21.7192,16.7028 24.1762,16.7028 C26.5112,16.7028 28.2092,17.3778 29.9332,18.1488 L29.9332,36.1778 C29.9332,36.7308 30.3802,37.1778 30.9332,37.1778 L34.4312,37.1778 C34.9842,37.1778 35.4312,36.7308 35.4312,36.1778 L35.4312,15.4578 C35.4312,15.1538 35.2922,14.8658 35.0532,14.6748 C32.2792,12.4698 28.3182,11.2048 24.1862,11.2048 L24.1862,11.2048 Z M23.9542,43.9088 C12.9522,43.9088 3.9992,34.9568 3.9992,23.9538 C3.9992,12.9508 12.9522,3.9998 23.9542,3.9998 C34.9572,3.9998 43.9092,12.9508 43.9092,23.9538 C43.9092,34.9568 34.9572,43.9088 23.9542,43.9088 L23.9542,43.9088 Z M23.9542,1.9998 C11.8482,1.9998 1.9992,11.8488 1.9992,23.9538 C1.9992,36.0608 11.8482,45.9088 23.9542,45.9088 C36.0602,45.9088 45.9092,36.0608 45.9092,23.9538 C45.9092,11.8488 36.0602,1.9998 23.9542,1.9998 L23.9542,1.9998 Z" fill="#8C4FFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_Client_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_Client_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M42.299,38.773 L42.299,40.696 C42.299,41.134 41.945,41.49 41.506,41.49 L30.762,41.49 C30.323,41.49 29.968,41.134 29.968,40.696 L29.968,38.773 C29.968,38.335 30.323,37.98 30.762,37.98 L41.506,37.98 C41.945,37.98 42.299,38.335 42.299,38.773 L42.299,38.773 Z M43.797,42.399 C43.797,42.754 43.508,43.044 43.153,43.044 L4.645,43.044 C4.289,43.044 4,42.754 4,42.399 L4,37.011 C4,36.656 4.289,36.367 4.645,36.367 L43.153,36.367 C43.508,36.367 43.797,36.656 43.797,37.011 L43.797,42.399 Z M43.153,34.367 L4.645,34.367 C3.187,34.367 2,35.553 2,37.011 L2,42.399 C2,43.857 3.187,45.044 4.645,45.044 L43.153,45.044 C44.611,45.044 45.797,43.857 45.797,42.399 L45.797,37.011 C45.797,35.553 44.611,34.367 43.153,34.367 L43.153,34.367 Z M7.501,27.21 L40.264,27.21 L40.264,7.502 L7.501,7.502 L7.501,27.21 Z M40.842,5.502 L6.924,5.502 C6.14,5.502 5.501,6.139 5.501,6.923 L5.501,27.788 C5.501,28.572 6.14,29.21 6.924,29.21 L40.842,29.21 C41.626,29.21 42.264,28.572 42.264,27.788 L42.264,6.923 C42.264,6.139 41.626,5.502 40.842,5.502 L40.842,5.502 Z M43.797,30.067 C43.797,30.422 43.508,30.711 43.153,30.711 L4.645,30.711 C4.289,30.711 4,30.422 4,30.067 L4,4.644 C4,4.289 4.289,4 4.645,4 L43.153,4 C43.508,4 43.797,4.289 43.797,4.644 L43.797,30.067 Z M43.153,2 L4.645,2 C3.187,2 2,3.186 2,4.644 L2,30.067 C2,31.525 3.187,32.711 4.645,32.711 L43.153,32.711 C44.611,32.711 45.797,31.525 45.797,30.067 L45.797,4.644 C45.797,3.186 44.611,2 43.153,2 L43.153,2 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_Internet_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_Internet_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M34.59,29.7893333 L30.997,33.3813333 L30.997,21.7593333 L28.997,21.7593333 L28.997,33.2703333 L25.556,29.7733333 L24.13,31.1763333 L29.325,36.4553333 C29.513,36.6453333 29.768,36.7533333 30.034,36.7543333 L30.038,36.7543333 C30.303,36.7543333 30.558,36.6483333 30.745,36.4613333 L36.004,31.2033333 L34.59,29.7893333 Z M22.35,27.7243333 L23.764,26.3103333 L18.506,21.0523333 C18.319,20.8643333 18.065,20.7593333 17.799,20.7593333 L17.795,20.7593333 C17.528,20.7603333 17.274,20.8673333 17.086,21.0583333 L11.89,26.3363333 L13.316,27.7383333 L16.757,24.2433333 L16.757,37.5543333 L18.757,37.5543333 L18.757,24.1313333 L22.35,27.7243333 Z M20.333,37.5723333 L27.4,37.5793333 L27.402,35.5793333 L20.335,35.5723333 L20.333,37.5723333 Z M46.026,29.1303333 C46.026,31.6173333 45.272,33.6283333 43.783,35.1053333 C41.332,37.5403333 37.776,37.5903333 37.496,37.5903333 L37.484,37.5903333 L32.721,37.5853333 L32.723,35.5853333 L37.491,35.5903333 C37.531,35.5903333 40.489,35.5693333 42.385,33.6763333 C43.474,32.5883333 44.026,31.0593333 44.026,29.1303333 C44.026,27.9483333 43.701,26.1793333 40.896,24.4603333 C39.422,23.5573333 38.041,23.2593333 37.517,23.1743333 C36.986,23.0873333 36.622,22.5993333 36.685,22.0693333 C36.507,19.9743333 35.526,18.5083333 33.982,18.0403333 C32.647,17.6363333 31.218,18.1083333 30.337,19.2443333 C30.116,19.5313333 29.763,19.6773333 29.396,19.6203333 C29.036,19.5653333 28.736,19.3203333 28.61,18.9793333 C27.992,17.3143333 27.099,15.9173333 25.955,14.8233333 C24.545,13.4753333 20.675,10.5743333 15.204,12.7843333 C12.069,14.0513333 9.611,17.6893333 9.611,21.0673333 C9.611,21.4443333 9.635,21.8223333 9.682,22.1893333 C9.743,22.6733333 9.446,23.1313333 8.981,23.2723333 C8.943,23.2843333 8.903,23.2933333 8.865,23.3003333 C7.02,23.7643333 4,25.1573333 4,29.2983333 C4,32.4433333 5.799,34.1823333 7.308,35.0873333 C7.823,35.3963333 8.419,35.5603333 9.029,35.5613333 L15.181,35.5673333 L15.179,37.5673333 L9.028,37.5613333 C8.055,37.5603333 7.104,37.2983333 6.278,36.8023333 C4.681,35.8443333 2,33.5953333 2,29.2983333 C2,25.5833333 4.084,22.7513333 7.623,21.5793333 C7.615,21.4093333 7.611,21.2383333 7.611,21.0673333 C7.611,16.8633333 10.554,12.5053333 14.456,10.9303333 C19.001,9.09333332 23.817,10.0113333 27.338,13.3783333 C28.37,14.3643333 29.228,15.5503333 29.897,16.9143333 C31.234,15.9453333 32.938,15.6373333 34.562,16.1263333 C36.751,16.7903333 38.234,18.7233333 38.615,21.3603333 C39.748,21.6423333 40.925,22.1323333 41.941,22.7553333 C44.69,24.4383333 46.026,26.5243333 46.026,29.1303333 L46.026,29.1303333 Z" fill="#232F3D"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_User_48_Dark" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#FFFFFF"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Res_User_48_Light" viewBox="0 0 48 48"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M6.025,44 C6.524,34.085 14.395,26.178 24,26.178 C27.248,26.178 30.43,27.092 33.205,28.822 C38.354,32.033 41.653,37.783 41.974,44 L6.025,44 Z M14.192,13.878 C14.192,8.432 18.592,4 24.001,4 C29.408,4 33.807,8.432 33.807,13.878 C33.807,19.325 29.408,23.757 24.001,23.757 C18.592,23.757 14.192,19.325 14.192,13.878 L14.192,13.878 Z M34.263,27.125 C32.53,26.044 30.65,25.26 28.698,24.771 C32.877,22.939 35.807,18.749 35.807,13.878 C35.807,7.329 30.51,2 24.001,2 C17.489,2 12.192,7.329 12.192,13.878 C12.192,18.755 15.13,22.95 19.317,24.778 C10.545,26.981 4,35.2 4,45 C4,45.552 4.447,46 5,46 L43,46 C43.552,46 44,45.552 44,45 C44,37.719 40.269,30.87 34.263,27.125 L34.263,27.125 Z" fill="#242F3E"></path>
+    </g></symbol><symbol id="pratica-04-infra-ic-Virtual-private-cloud-VPC_32" viewBox="0 0 40 40"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#8C4FFF" x="0" y="0" width="40" height="40"></rect>
+        <path d="M30.9707,21.0293596 L28.0267,19.7663596 L28.0267,30.2553596 C30.5717,29.9033596 30.9587,27.2873596 30.9747,27.1683596 L30.9707,21.0293596 Z M27.0267,30.2693596 L27.0267,19.7593596 L23.9917,21.0323596 L23.9917,27.2333596 C24.0047,27.2873596 24.4367,30.0003596 27.0267,30.2693596 L27.0267,30.2693596 Z M27.3327,18.5473596 C27.4567,18.4943596 27.5987,18.4953596 27.7237,18.5483596 L31.6677,20.2403596 C31.8517,20.3193596 31.9707,20.4993596 31.9707,20.6993596 L31.9707,27.2333596 C31.7877,28.6803596 30.6137,31.2963596 27.4437,31.2963596 C24.3687,31.2963596 23.1897,28.6843596 22.9957,27.3023596 L22.9917,20.6993596 C22.9917,20.4983596 23.1127,20.3163596 23.2977,20.2383596 L27.3327,18.5473596 Z M32.9827022,19.1843596 L27.5217,16.7783596 L21.9917,19.1053596 L21.9917,26.2333596 C21.9907,26.2753596 21.9377,29.1013596 23.6487,30.8563596 C24.5657,31.7973596 25.8427,32.2753596 27.4437,32.2753596 C29.0457,32.2753596 30.3307,31.7963596 31.2627,30.8533596 C32.9977,29.0953596 32.9827022,26.2683596 32.9827022,26.2403596 L32.9827022,19.1843596 Z M31.9797,31.5503596 C30.8527,32.6943596 29.3257,33.2753596 27.4437,33.2753596 C25.5597,33.2753596 24.0397,32.6943596 22.9267,31.5483596 C20.9217,29.4853596 20.9877,26.3513596 20.9917,26.2193596 L20.9917,18.7733596 C20.9917,18.5723596 21.1117,18.3903596 21.2967,18.3123596 L27.3317,15.7723596 C27.4587,15.7203596 27.6027,15.7193596 27.7277,15.7763596 L33.6837,18.4013596 C33.8657,18.4813596 33.9827,18.6603596 33.9827,18.8583596 L33.9827,26.2333596 C33.9847,26.3583596 34.0097,29.4883596 31.9797,31.5503596 L31.9797,31.5503596 Z M10.9917,24.2363596 L18.9917,24.2363596 L18.9917,25.2363596 L10.9917,25.2363596 C8.1807,25.2363596 6.1807,23.2203596 6.0127,20.2203596 C6.0007,20.1093596 5.9997,19.9753596 5.9997,19.8413596 C5.9997,17.3323596 7.3177,15.6183596 9.8167,14.8623596 C9.7977,14.6353596 9.7847,14.3963596 9.7847,14.2153596 C9.7847,11.2993596 11.3617,8.77035958 13.8017,7.77035958 C17.0997,6.42235958 20.8437,6.87635958 22.9077,8.87435958 C23.6527,9.59835958 24.2317,10.4163596 24.6677,11.3593596 C25.2767,10.9093596 26.0677,10.6983596 27.0167,10.7453596 C28.7967,10.8353596 30.1657,12.4583596 30.4497,14.7523596 C31.9477,14.8763596 32.9347,15.6353596 33.4597,17.0603596 L32.5227,17.4063596 C32.0947,16.2493596 31.3147,15.7333596 29.9917,15.7333596 C29.7267,15.7333596 29.5077,15.5273596 29.4917,15.2633596 C29.3537,12.9253596 28.0857,11.8003596 26.9657,11.7443596 C26.0207,11.6913596 25.3207,11.9633596 24.8867,12.5353596 C24.7757,12.6803596 24.6017,12.7523596 24.4137,12.7283596 C24.2337,12.7003596 24.0817,12.5773596 24.0187,12.4053596 C23.6147,11.3023596 23.0237,10.3823596 22.2117,9.59135958 C20.4237,7.86135958 17.1217,7.49235958 14.1807,8.69635958 C12.1177,9.54135958 10.7847,11.7073596 10.7847,14.2153596 C10.7847,14.4883596 10.8197,14.9113596 10.8507,15.1743596 C10.8807,15.4253596 10.7197,15.6583596 10.4747,15.7183596 C8.1687,16.2903596 6.9997,17.6773596 6.9997,19.8413596 C6.9997,19.9423596 6.9987,20.0423596 7.0087,20.1433596 C7.1497,22.6383596 8.7117,24.2363596 10.9917,24.2363596 L10.9917,24.2363596 Z" fill="#FFFFFF"></path>
+    </g></symbol></defs>
+<rect x="0" y="0" width="1345" height="620" class="fundo"/>
+<rect x="270" y="30" width="1050" height="560" class="grupo" stroke="var(--diag-nuvem)"/>
+<use href="#pratica-04-infra-ic-AWS-Cloud_32" x="270" y="30" width="34" height="34"/>
+<text x="316" y="53" class="rotulo-grupo" text-anchor="start" fill="var(--diag-nuvem)">Nuvem AWS</text>
+<rect x="290" y="75" width="1010" height="495" class="grupo" stroke="#00A4A6" stroke-dasharray="8 6"/>
+<use href="#pratica-04-infra-ic-Region_32" x="290" y="75" width="34" height="34"/>
+<text x="336" y="98" class="rotulo-grupo" text-anchor="start" fill="#00A4A6">Região us-east-1</text>
+<rect x="310" y="110" width="970" height="440" class="grupo" stroke="#8C4FFF"/>
+<use href="#pratica-04-infra-ic-Virtual-private-cloud-VPC_32" x="310" y="110" width="34" height="34"/>
+<text x="356" y="133" class="rotulo-grupo" text-anchor="start" fill="#8C4FFF">VPC sd04-vpc, 10.44.0.0/16</text>
+<rect x="335" y="155" width="920" height="375" class="zona"/>
+<text x="795" y="181" class="rotulo-grupo" text-anchor="middle" fill="#147EBA">Zona de disponibilidade us-east-1a</text>
+<rect x="355" y="195" width="880" height="315" class="subrede"/>
+<use href="#pratica-04-infra-ic-Public-subnet_32" x="355" y="195" width="32" height="32"/>
+<text x="399" y="217" class="rotulo-grupo" text-anchor="start" fill="#7AA116">Sub-rede pública sd04-subrede, 10.44.0.0/24</text>
+<rect x="375" y="235" width="840" height="245" class="sg"/>
+<text x="795" y="226" class="rotulo-sg" text-anchor="middle">Grupo de segurança sd04-nos</text>
+<rect x="420" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-04-infra-ic-Res_Amazon-EC2_Instance_48" x="481.0" y="284" width="48" height="48"/>
+<text x="505.0" y="358" class="rotulo-instancia" text-anchor="middle">nó A</text>
+<text x="505.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="420" y="382" width="170" height="29" class="faixa"/>
+<text x="505.0" y="401" class="rotulo-faixa" text-anchor="middle">produtor</text>
+<rect x="420" y="411" width="170" height="29" class="faixa"/>
+<text x="505.0" y="430" class="rotulo-faixa" text-anchor="middle">10.44.0.10</text>
+<rect x="700" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-04-infra-ic-Res_Amazon-EC2_Instance_48" x="761.0" y="284" width="48" height="48"/>
+<text x="785.0" y="358" class="rotulo-instancia" text-anchor="middle">nó B</text>
+<text x="785.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.small</text>
+<rect x="700" y="382" width="170" height="29" class="faixa"/>
+<text x="785.0" y="401" class="rotulo-faixa" text-anchor="middle">RabbitMQ :5672</text>
+<rect x="700" y="411" width="170" height="29" class="faixa"/>
+<text x="785.0" y="430" class="rotulo-faixa" text-anchor="middle">10.44.0.20</text>
+<rect x="980" y="270" width="170" height="170" class="instancia"/>
+<use href="#pratica-04-infra-ic-Res_Amazon-EC2_Instance_48" x="1041.0" y="284" width="48" height="48"/>
+<text x="1065.0" y="358" class="rotulo-instancia" text-anchor="middle">nó C</text>
+<text x="1065.0" y="376" class="rotulo-tipo" text-anchor="middle">t3.micro</text>
+<rect x="980" y="382" width="170" height="29" class="faixa"/>
+<text x="1065.0" y="401" class="rotulo-faixa" text-anchor="middle">servidor :9104</text>
+<rect x="980" y="411" width="170" height="29" class="faixa"/>
+<text x="1065.0" y="430" class="rotulo-faixa" text-anchor="middle">10.44.0.30</text>
+<use href="#pratica-04-infra-ic-Res_User_48_Light" x="60" y="40" width="48" height="48" class="so-claro"/>
+<use href="#pratica-04-infra-ic-Res_User_48_Dark" x="60" y="40" width="48" height="48" class="so-escuro"/>
+<text x="84" y="106" class="rotulo" text-anchor="middle">Aluno</text>
+<use href="#pratica-04-infra-ic-Res_Client_48_Light" x="60" y="150" width="48" height="48" class="so-claro"/>
+<use href="#pratica-04-infra-ic-Res_Client_48_Dark" x="60" y="150" width="48" height="48" class="so-escuro"/>
+<text x="84" y="216" class="rotulo" text-anchor="middle">Computador do aluno</text>
+<path d="M 84 232 L 84 312" class="seta" marker-end="url(#pratica-04-infra-ponta)"/>
+<use href="#pratica-04-infra-ic-Res_Internet_48_Light" x="60" y="320" width="48" height="48" class="so-claro"/>
+<use href="#pratica-04-infra-ic-Res_Internet_48_Dark" x="60" y="320" width="48" height="48" class="so-escuro"/>
+<text x="84" y="386" class="rotulo" text-anchor="middle">Internet</text>
+<path d="M 114 344 L 375 344" class="seta" marker-end="url(#pratica-04-infra-ponta)"/>
+<text x="120" y="332" class="rotulo-seta" text-anchor="start">SSH 22, origem Meu IP</text>
+<use href="#pratica-04-infra-ic-Res_Amazon-VPC_Internet-Gateway_48" x="288" y="322" width="44" height="44"/>
+<text x="310" y="380" class="rotulo-seta" text-anchor="middle">Internet</text>
+<text x="310" y="396" class="rotulo-seta" text-anchor="middle">gateway</text>
+<text x="795" y="500" class="rotulo-seta" text-anchor="middle">as portas 9104 e 5672 só aceitam tráfego vindo do próprio grupo</text>
+</svg>
+      </div>
+      <figcaption>
+        A infraestrutura da prática 04, como o <code>preparar-ambiente.py</code> a
+        cria. Os três nós ficam na mesma sub-rede e na mesma zona, com endereços privados
+        fixos. Só o nó B carrega o gerenciador de filas.
+      </figcaption>
+    </figure>
+
+    <p>
+      Repare que <strong>não há seta entre os nós</strong>. Ligação entre eles não existe antes
+      de alguém digitar um comando, e quem determina o caminho de cada mensagem é o experimento
+      que você vai rodar. Nos três primeiros, o nó A fala direto com o nó C. No quarto, os dois
+      param de se falar e passam a depender do nó B, que é o único que os dois conhecem.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       Passo 1
+       ============================================================ -->
+  <section class="lab-step" id="passo-1">
+    <h2><span class="step-num">1</span><span>Abrir o laboratório, preparar a chave e conferir o Python</span><span class="step-time">8 min</span></h2>
+
+    <p>
+      No AWS Academy, abra o curso <strong>Cloud Foundations</strong>, entre no laboratório
+      <strong>Sandbox</strong> e clique em <em>Start Lab</em>. Espere a bolinha ao lado de
+      <em>AWS</em> ficar verde. Enquanto ela está amarela, a conta ainda está sendo preparada e
+      qualquer chamada falha por motivo que não é o seu.
+    </p>
+
+    <p>
+      Baixe a chave da sessão. No painel do laboratório, clique em <em>AWS Details</em>, depois
+      em <strong>Download PEM</strong>. O arquivo se chama <code>labsuser.pem</code>, e a
+      extensão vem de <em>privacy-enhanced mail</em> (PEM), um formato antigo de correio
+      seguro que sobreviveu como formato padrão de guardar chaves em texto. Ele vale
+      <strong>só para esta sessão</strong>. Cada sessão nova gera uma chave nova, e a antiga
+      deixa de servir.
+    </p>
+
+    <h3>1.1 Ajustar a permissão da chave</h3>
+    <p>
+      O cliente de SSH recusa uma chave privada que outros usuários da máquina possam ler. O
+      comando abaixo tira essa permissão. Ele supõe que o arquivo está na pasta de downloads.
+    </p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 1, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd $HOME\Downloads
+icacls labsuser.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"</pre>
+      </div>
+      <p class="saida">processed file: labsuser.pem
+Successfully processed 1 files; Failed processing 0 files</p>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 1, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>cd ~/Downloads
+chmod 400 labsuser.pem</pre>
+      </div>
+      <p class="saida">(sem saída, e a ausência de saída aqui é sinal de sucesso)</p>
+    </div>
+
+    <h3>1.2 O Python responde nesta máquina?</h3>
+    <p>
+      Os dois comandos abaixo conferem a versão e instalam a única biblioteca que falta. O
+      <code>--user</code> instala na sua conta, sem pedir privilégio de administrador, que é o
+      que permite rodar isto numa máquina de laboratório.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 1, no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>python --version
+python -m pip install --user boto3</pre>
+    </div>
+    <p class="saida">Python 3.13.6
+Successfully installed boto3-1.43.89 botocore-1.43.89 jmespath-1.1.0
+python-dateutil-2.9.0.post0 s3transfer-0.19.2 six-1.17.0 urllib3-2.7.0</p>
+
+    <p>
+      Se o segundo comando disser que já está instalado, está tudo certo, e é o que acontece a
+      partir da segunda vez. Se o <code>python</code> não for encontrado, tente
+      <code>python3</code>, e use essa forma no resto da prática.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c1">
+      <label for="p04-c1"><strong>Checkpoint 1.</strong> O laboratório está verde, tenho o
+        <code>labsuser.pem</code> desta sessão com a permissão ajustada, e o
+        <code>python -m pip install boto3</code> terminou sem erro.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 2
+       ============================================================ -->
+  <section class="lab-step" id="passo-2">
+    <h2><span class="step-num">2</span><span>Rodar o programa que monta o ambiente</span><span class="step-time">10 min</span></h2>
+
+    <p>
+      São dois arquivos, e os dois precisam ficar <strong>na mesma pasta</strong>. O
+      <code>preparar-ambiente.py</code> roda no seu computador e conversa com a AWS. O
+      <code>setup.sh</code> não roda aqui, e sim dentro de cada máquina que nascer, porque o
+      programa o entrega no campo <em>User data</em> da instância.
+    </p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 1, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>mkdir $HOME\sd-pratica04-arquivos -Force | Out-Null
+cd $HOME\sd-pratica04-arquivos
+curl.exe -sO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-04/preparar-ambiente.py
+curl.exe -sO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-04/setup.sh
+dir</pre>
+      </div>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 1, no seu computador</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>mkdir -p ~/sd-pratica04-arquivos
+cd ~/sd-pratica04-arquivos
+curl -sO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-04/preparar-ambiente.py
+curl -sO https://diedu.com.br/cursos/sistemas-distribuidos/labs/pratica-04/setup.sh
+ls -l</pre>
+      </div>
+    </div>
+    <p class="saida">preparar-ambiente.py
+setup.sh</p>
+
+    <h3>2.1 A credencial, que ele vai pedir</h3>
+    <p>
+      No painel do laboratório, clique em <em>AWS Details</em> e depois em <em>Show</em>, ao
+      lado de <em>AWS CLI</em>. Aparece um bloco com três valores. O programa pede um de cada
+      vez, e <strong>os dois últimos não aparecem enquanto você cola</strong>. Isso é
+      proposital, e é o mesmo comportamento de uma senha digitada no terminal.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 1, no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>python preparar-ambiente.py</pre>
+    </div>
+
+    <h3>2.2 O que ele faz, e quanto tempo leva</h3>
+    <p>
+      O programa anuncia cada etapa antes de executá-la. Primeiro ele tira uma foto da conta,
+      para saber o que já existia antes de criar qualquer coisa, e guarda essa foto em disco. É
+      ela que permite conferir, no fim da prática, que a limpeza devolveu a conta ao estado em
+      que ela estava. Depois ele recusa continuar se a cota não comportar mais três instâncias,
+      escolhe a imagem mais recente do Amazon Linux 2023, monta a rede e sobe os três nós.
+    </p>
+
+    <p class="saida">============================================================
+ montando a rede
+============================================================
+  VPC criada: vpc-0510d2626a0f1c207
+  sub-rede criada: subnet-0f074ae1baf671a75
+  gateway de internet criado: igw-020f96023d45f0da6
+  tabela de rotas criada: rtb-08458a87d3aa5b61a
+  tabela associada: rtbassoc-056beefe2481f5483
+  grupo de seguranca criado: sg-0e95256a32ac5039b
+  SSH liberado apenas para 179.235.51.138/32
+
+============================================================
+ subindo os tres nos
+============================================================
+  no B (t3.small) iniciando em 10.44.0.20
+  no A (t3.micro) iniciando em 10.44.0.10
+  no C (t3.micro) iniciando em 10.44.0.30
+  esperando as tres maquinas ligarem
+  as tres estao ligadas</p>
+
+    <p>
+      A linha <code>SSH liberado apenas para</code> mostra o endereço público da sua máquina,
+      que o programa descobre sozinho em <code>checkip.amazonaws.com</code>, e é esse o único
+      endereço que vai conseguir entrar nos nós. Falhando a descoberta, o programa recusa
+      continuar e pede que você rode
+      <code>python preparar-ambiente.py --ssh-cidr SEU.IP.AQUI/32</code> com o valor que aquele
+      site mostrar. Se o seu endereço mudar depois, com o ambiente já criado, quem resolve é o
+      console, e o caminho está em <a href="#se-der-errado">se der errado</a>.
+    </p>
+
+    <p>
+      O nó B sobe primeiro de propósito. Ele é o único que baixa uma imagem de contêiner e
+      espera um serviço responder, então demora mais que os outros dois, e começar por ele faz
+      as três esperas correrem juntas.
+    </p>
+
+    <p>
+      A última etapa é a que costuma surpreender. Depois de as três máquinas estarem
+      <code>running</code>, o programa continua esperando. <strong>Uma instância em
+      <code>running</code> afirma apenas que a máquina ligou</strong>, nunca que o software
+      terminou de instalar. Quem separa uma coisa da outra é o arquivo <code>/opt/sd/PRONTO</code>,
+      que o <code>setup.sh</code> cria na última linha, e o programa pergunta por ele pelo
+      Systems Manager até encontrá-lo nos três nós.
+    </p>
+
+    <p class="saida">============================================================
+ esperando o software terminar de instalar
+============================================================
+  a maquina ligar nao e a mesma coisa que o programa estar instalado
+  no A pronto
+  no B pronto
+  no C pronto
+  os tres nos terminaram a instalacao</p>
+
+    <p>
+      Da primeira linha até aqui passam perto de <strong>dois minutos e meio</strong>. Se em
+      sete minutos algum nó não confirmar, o programa avisa e segue em frente, em vez de travar
+      a prática. Nesse caso, entre por SSH no nó em questão e leia
+      <code>/var/log/sd-setup.log</code>, que traz a instalação inteira.
+    </p>
+
+    <h3>2.3 Preencher a ficha</h3>
+    <p>
+      O programa termina imprimindo três linhas. Copie o bloco inteiro e cole no campo da
+      <a href="#ficha">ficha do ambiente</a>, mais acima nesta página.
+    </p>
+
+    <p class="saida">IP_PUB_A=54.237.159.134
+IP_PUB_B=107.22.44.154
+IP_PUB_C=54.146.207.161</p>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c2">
+      <label for="p04-c2"><strong>Checkpoint 2.</strong> O programa terminou com os três nós
+        confirmados, e a ficha desta página está preenchida com os meus três endereços
+        públicos.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 3
+       ============================================================ -->
+  <section class="lab-step" id="passo-3">
+    <h2><span class="step-num">3</span><span>Entrar nos três nós e ver o que subiu</span><span class="step-time">10 min</span></h2>
+
+    <p>
+      Abra mais três janelas de terminal, uma para cada nó, e deixe a janela 1 livre para o seu
+      computador. A partir daqui, <strong>o rótulo cinza de cada bloco diz em qual janela o
+      comando é digitado</strong>. Nos experimentos, quem digita e quem responde quase nunca
+      são o mesmo nó, e o rótulo marca só o primeiro.
+    </p>
+
+    <p>
+      Os três comandos abaixo escrevem o <strong>caminho completo</strong> da chave. Cada
+      uma dessas janelas acabou de nascer na sua pasta padrão, e nenhuma delas passou pela
+      pasta de downloads, que é onde o <code>labsuser.pem</code> está.
+    </p>
+
+    <div class="so-win">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 2, para o nó A</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i $HOME\Downloads\labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 3, para o nó B</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i $HOME\Downloads\labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_B">IP-PUBLICO-B</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 4, para o nó C</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i $HOME\Downloads\labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_C">IP-PUBLICO-C</span></pre>
+      </div>
+    </div>
+
+    <div class="so-unix">
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 2, para o nó A</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i ~/Downloads/labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_A">IP-PUBLICO-A</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 3, para o nó B</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i ~/Downloads/labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_B">IP-PUBLICO-B</span></pre>
+      </div>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">janela 4, para o nó C</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-copiar>copiar</button>
+        </div>
+        <pre>ssh -i ~/Downloads/labsuser.pem ec2-user@<span class="var" data-var="IP_PUB_C">IP-PUBLICO-C</span></pre>
+      </div>
+    </div>
+
+    <p>
+      Na primeira conexão de cada nó, o SSH pergunta se você confia na máquina e mostra uma
+      impressão digital. Responda <code>yes</code>. Ele está dizendo que nunca viu aquela
+      máquina antes, o que é verdade, porque ela nasceu há três minutos.
+    </p>
+
+    <h3>3.1 O mesmo texto, três papéis</h3>
+    <p>
+      Os três nós receberam o <strong>mesmo</strong> <code>setup.sh</code>, caractere por
+      caractere. Nenhum deles sabia, ao nascer, se era A, B ou C. O comando abaixo mostra o que
+      cada um descobriu sozinho, e a segunda linha mostra de onde veio a descoberta.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janelas 2, 3 e 4, em cada nó</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>cat /opt/sd/papel
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/Name</pre>
+    </div>
+    <p class="saida">A
+sd04-A</p>
+
+    <p>
+      O endereço <code>169.254.169.254</code> é de <em>link local</em>. Ele responde apenas
+      dentro da própria instância, não consome nenhuma rota da VPC e devolve dados sobre a
+      máquina que pergunta. Foi assim que um script único virou três papéis diferentes, sem
+      existirem três versões dele para manter em acordo.
+    </p>
+
+    <h3>3.2 O que existe no nó B, e só nele</h3>
+    <p>
+      O nó B é o único que carrega o gerenciador de filas, e ele roda dentro de um contêiner.
+      O comando abaixo mostra o contêiner e a porta que ele abriu.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó B</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo docker ps --format "{{.Names}} {{.Status}}"
+sudo docker port sd04-rabbit</pre>
+    </div>
+    <p class="saida">sd04-rabbit Up 19 minutes
+5672/tcp -&gt; 10.44.0.20:5672</p>
+
+    <p>
+      O segundo comando lista apenas as portas <strong>publicadas</strong>, e há uma só. Leia
+      o lado direito da seta com atenção. A porta está amarrada a <code>10.44.0.20</code>, que
+      é o endereço privado do nó, e não a <code>0.0.0.0</code>, que aceitaria conexão por
+      qualquer interface. O contêiner expõe outras portas internamente, e o
+      <code>docker ps</code> completo as mostraria, mas nenhuma delas foi publicada para fora
+      dele. Some a isso a regra do grupo de segurança, que só deixa entrar na 5672 quem já
+      está no grupo, e o resultado é que <strong>o gerenciador de filas não é alcançável de
+      fora do seu ambiente</strong>.
+    </p>
+
+    <p>
+      Isso explica uma escolha que salta aos olhos no <code>setup.sh</code>. A senha do
+      gerenciador está escrita ali, à vista, num arquivo publicado na internet. Ela é
+      aceitável aqui porque quem consegue usá-la já está dentro das suas máquinas, e quem
+      chegou lá não precisava dela. <strong>Fora de um laboratório isso seria erro grave</strong>,
+      e a diferença não é a senha em si. É que num sistema real o gerenciador atende clientes
+      que você não controla, e aí a credencial passa a ser a única coisa entre um estranho e a
+      sua fila.
+    </p>
+
+    <h3>3.3 O programa dos experimentos</h3>
+    <p>
+      Os quatro experimentos usam um programa só, instalado nos três nós, com o atalho
+      <code>sd04</code>. Ele sempre imprime JSON em uma linha, para o resultado caber na tela
+      e você poder comparar duas execuções lado a lado.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 --help</pre>
+    </div>
+    <p class="saida">usage: experimentos.py [-h] [--host HOST] [--port PORT] [--protocol {tcp,udp}]
+                       [--format {json,protobuf}]
+                       [--schema {v1,v2,incompativel}] [--delay DELAY]
+                       [--concurrent] [--wait] [--count COUNT]
+                       [--clients CLIENTS] [--timeout TIMEOUT]
+                       {servir,enviar,formatos,publicar,consumir,fila}
+
+Programas da pratica 04
+...</p>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c3">
+      <label for="p04-c3"><strong>Checkpoint 3.</strong> Estou dentro dos três nós, cada um
+        respondeu o próprio papel, e o contêiner <code>sd04-rabbit</code> aparece no nó B com a
+        porta amarrada ao endereço privado.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 4
+       ============================================================ -->
+  <section class="lab-step" id="passo-4">
+    <h2><span class="step-num">4</span><span>Experimento 1: o silêncio do UDP e a recusa do TCP</span><span class="step-time">16 min</span></h2>
+
+    <p>
+      Quem envia é o nó A e quem responde é o serviço do nó C. Nos três primeiros experimentos
+      é sempre assim, e o nó B fica parado, esperando a vez dele no experimento 4.
+    </p>
+
+    <h3>4.1 Com o destinatário no ar, por TCP</h3>
+    <p>
+      Primeiro suba o servidor no nó C. Ele fica em primeiro plano de propósito, imprimindo
+      cada leitura que recebe, e é isso que você vai observar na janela 4 enquanto digita na
+      janela 2.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir</pre>
+    </div>
+    <p class="saida">{"pronto": true, "protocolo": "tcp", "porta": 9104}</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --count 3</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 65, "resposta": {"processado":
+{"id": 1, "sensor": "sala-1", "temperatura_mili": 23500, "unidade": "C"}}, "ms": 3.893},
+{"id": 2, ... "ms": 1.084}, {"id": 3, ... "ms": 0.934}], "total_ms": 6.532}</p>
+
+    <p>
+      Olhe agora a janela 4. O servidor imprimiu três linhas que não estavam lá antes, uma por
+      leitura, e elas são a metade da história que o cliente não vê.
+    </p>
+    <p class="saida">{"recebido": {"id": 1, "sensor": "sala-1", "temperatura_mili": 23500,
+"unidade": "C"}}
+{"recebido": {"id": 2, ...}}
+{"recebido": {"id": 3, ...}}</p>
+
+    <p>
+      São três leituras e não uma porque <strong>a primeira não mede o protocolo</strong>. Ela
+      paga a partida do interpretador e o aquecimento do caminho até o nó C, custos que
+      acontecem uma vez só e que existiriam com qualquer transporte. Repare nos 3,893 ms da
+      primeira contra os 1,084 ms da segunda. A medida que vale é a segunda, e é ela que vai
+      para a tabela do passo 8.
+    </p>
+
+    <p>
+      Cada uma das três abriu conexão nova, então as três pagaram o aperto de mão. Três
+      segmentos estabelecem a conexão antes de qualquer byte útil, que são o pedido de
+      abertura, a resposta a ele e a confirmação. Só então o pedido e a resposta viajam, o que
+      dá <strong>duas idas e voltas</strong> antes de o programa ter a resposta na mão, e é
+      isso que os 1,084 ms medem.
+    </p>
+
+    <p>
+      Repare no <code>bytes_payload</code>, que vale 65. Ele conta apenas o registro
+      codificado, e <strong>não</strong> conta o envelope que o cliente monta em volta dele,
+      nem os quatro bytes de comprimento que precedem cada quadro, nem os cabeçalhos de
+      transporte. Isso vai importar no experimento 2, quando o número mudar.
+    </p>
+
+    <h3>4.2 Com o destinatário no ar, por UDP</h3>
+    <p>
+      Pare o servidor na janela 4 com <code>Ctrl+C</code> e suba o mesmo programa em UDP. O
+      código do lado do servidor é praticamente o mesmo, e o que muda é a classe de soquete que
+      ele usa.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir --protocol udp</pre>
+    </div>
+    <p class="saida">{"pronto": true, "protocolo": "udp", "porta": 9104}</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --protocol udp --wait --count 3</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 65, "resposta": {...},
+"ms": 1.234}, {"id": 2, ... "ms": 0.531}, {"id": 3, ... "ms": 0.431}],
+"total_ms": 2.804}</p>
+
+    <p>
+      As três leituras voltaram, e a primeira de novo custou mais que as outras duas, pelo
+      mesmo aquecimento do passo anterior. Compare então as duas segundas leituras, que é a
+      comparação limpa. O UDP levou 0,531 ms e o TCP levou 1,084 ms, o dobro. A diferença não
+      é o UDP transportar bytes mais depressa, e sim precisar de uma ida e volta onde o TCP
+      precisa de duas, porque a primeira das duas serve só para abrir a conexão.
+    </p>
+
+    <p>
+      O <code>--wait</code> não é enfeite. Sem ele, o cliente envia e vai embora, porque
+      <strong>o UDP não obriga ninguém a responder</strong>. Com ele, o cliente decide esperar
+      uma resposta que o protocolo não promete, e o que sustenta essa espera é o acordo entre
+      os dois programas, nunca o transporte.
+    </p>
+
+    <h3>4.3 Com o destinatário fora do ar</h3>
+    <p>
+      Aqui está o coração do experimento. Pare o servidor na janela 4 com <code>Ctrl+C</code> e
+      <strong>não suba nada no lugar</strong>. A porta 9104 do nó C passa a não ter ninguém
+      escutando. Agora envie pelos dois protocolos e compare as duas respostas.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --protocol udp --count 3</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 65, "submetido_localmente":
+true, "ms": 0.101}, {"id": 2, ... "ms": 7.252}, {"id": 3, ...
+"ms": 0.215}], "total_ms": 55.062}</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --protocol tcp --count 1 --timeout 2</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 65, "erro":
+"ConnectionRefusedError", "ms": 2.111}], "total_ms": 2.592}</p>
+
+    <p>
+      A mesma ausência produziu duas respostas opostas. O UDP relatou sucesso três vezes, e a
+      rótulo <code>submetido_localmente</code> foi escolhido com cuidado, porque é literalmente
+      o que aconteceu. O sistema operacional aceitou o datagrama e o entregou à rede, e é aí
+      que a responsabilidade dele termina. O programa do nó A não tem como saber se alguém o
+      recebeu, e <strong>não saber é o comportamento correto</strong>, não um defeito.
+    </p>
+
+    <p>
+      O TCP falhou em 2 ms, com um erro que nomeia a causa. Ele falhou porque tentou
+      estabelecer uma conexão, e o nó C respondeu que não havia serviço naquela porta. A recusa
+      é uma informação, e ela custou uma viagem de ida e volta para ser obtida.
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">O que este experimento não mostrou</p>
+      <p>
+        Nenhuma leitura se perdeu no caminho. As três chegaram ao nó C e foram descartadas lá,
+        porque não havia processo escutando a porta. Perda de verdade, com pacote sumindo no
+        meio da rede, é outro fenômeno, e esta prática não o produz. O que ela mostra é que
+        <strong>o remetente UDP não distingue os dois casos</strong>, e é essa
+        indistinguibilidade que muda o desenho de quem escreve a aplicação.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c4">
+      <label for="p04-c4"><strong>Checkpoint 4.</strong> Vi as três respostas do UDP com o
+        servidor no ar, os três <code>submetido_localmente</code> com ele fora do ar, e o
+        <code>ConnectionRefusedError</code> do TCP na mesma situação.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 5
+       ============================================================ -->
+  <section class="lab-step" id="passo-5">
+    <h2><span class="step-num">5</span><span>Experimento 2: o mesmo dado em dois formatos</span><span class="step-time">16 min</span></h2>
+
+    <p>
+      O registro do sensor tem quatro campos, e até agora ele viajou em JSON. Este experimento
+      troca o formato e, depois, quebra o acordo entre quem escreve e quem lê, de três maneiras
+      diferentes.
+    </p>
+
+    <h3>5.1 O tamanho de cada um</h3>
+    <p>
+      O comando abaixo não usa a rede. Ele codifica o mesmo registro nos dois formatos e mostra
+      o tamanho de cada um, mais o que um leitor da versão 1 enxerga em cada caso.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 formatos</pre>
+    </div>
+    <p class="saida">{"json": {"bytes": 65, "leitor_v1": {"id": 7, "sensor": "sala-1",
+"temperatura_mili": 23500, "unidade": "C"}}, "protobuf": {"bytes": 17,
+"leitor_v1": {"id": 7, "sensor": "sala-1", "temperatura_mili": 23500}}}</p>
+
+    <p>
+      São 65 bytes contra 17, quase quatro vezes menos. A diferença inteira está em uma escolha
+      só. O JSON transporta o <strong>nome</strong> de cada campo junto com o valor, e por isso
+      a cadeia <code>temperatura_mili</code> viaja completa, com dezesseis caracteres, ou
+      dezoito bytes contando as aspas, toda vez.
+      O Protocol Buffers transporta um <strong>número de etiqueta</strong> no lugar do nome, e
+      o nome só existe no arquivo de esquema que os dois lados compilaram antes.
+    </p>
+
+    <p>
+      Olhe agora a segunda metade da saída, que é onde a escolha cobra o preço. Os dois
+      registros foram escritos na versão 2 do esquema, que tem o campo <code>unidade</code>. O
+      leitor da versão 1, que não conhece esse campo, recebeu <code>unidade</code> no JSON e
+      não recebeu no Protocol Buffers. <strong>O JSON carrega o nome, então um campo
+      desconhecido continua legível</strong>. No formato binário ele é apenas uma etiqueta que
+      o leitor não sabe interpretar.
+    </p>
+
+    <p>
+      Uma observação sobre a coluna do JSON, que reforça o argumento em vez de enfraquecê-lo.
+      No JSON não existe versão de esquema a fixar, porque o dado se descreve sozinho, e é por
+      isso que o leitor da versão 1 enxerga os quatro campos ali. Fixar a versão só faz sentido
+      no formato que deixou os nomes de fora, e é justamente essa dependência que ele troca
+      pelos 17 bytes.
+    </p>
+
+    <h3>5.2 Quem escreve na versão 2, quem lê na versão 1</h3>
+    <p>
+      Agora pela rede, e com o servidor do nó C fixado numa versão de esquema. Suba o servidor
+      na versão 1 e envie do nó A na versão 2, primeiro em binário e depois em JSON.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir --schema v1</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --format protobuf --schema v2 --count 1
+sd04 enviar --format json --schema v2 --count 1</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 17, "resposta": {"processado":
+{"id": 1, "sensor": "sala-1", "temperatura_mili": 23500}}, "ms": 27.874}],
+"total_ms": 51.705}
+{"resultados": [{"id": 1, "bytes_payload": 65, "resposta": {"processado":
+{"id": 1, "sensor": "sala-1", "temperatura_mili": 23500, "unidade": "C"}},
+"ms": 2.256}], "total_ms": 2.715}</p>
+
+    <p>
+      As duas leituras chegaram e as duas foram processadas. <strong>Nenhuma das duas deu
+      erro</strong>, e essa é a notícia. O leitor da versão 1 simplesmente ignorou o campo que
+      não conhecia, que é exatamente o comportamento projetado. Sistemas grandes atualizam suas
+      partes em dias diferentes, e a alternativa a essa tolerância seria parar tudo para
+      trocar de versão ao mesmo tempo.
+    </p>
+
+    <p>
+      Ignore os 27,874 ms da primeira linha. Esse número não compara formatos, e sim mede a
+      primeira mensagem binária que o <strong>servidor do nó C</strong> decodifica, quando ele
+      monta o descritor do esquema e importa a biblioteca. No cliente esse custo fica fora do
+      cronômetro, porque a codificação acontece antes de ele começar a contar. Por isso o
+      segundo envio contra o mesmo servidor sai muito mais barato.
+    </p>
+
+    <h3>5.3 Quem escreve na versão 1, quem lê na versão 2</h3>
+    <p>
+      Agora o contrário. Pare o servidor com <code>Ctrl+C</code> e suba-o na versão 2, que tem
+      um campo a mais do que o produtor vai enviar.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir --schema v2</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --format protobuf --schema v1 --count 1</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 14, "resposta": {"processado":
+{"id": 1, "sensor": "sala-1", "temperatura_mili": 23500, "unidade": ""}},
+"ms": 25.612}], "total_ms": 48.925}</p>
+
+    <p>
+      O campo apareceu com o valor vazio. Ninguém o enviou, então o leitor usou o valor padrão
+      do tipo, que para texto é a cadeia vazia. De novo não houve erro, e de novo isso é
+      projeto e não acaso.
+    </p>
+
+    <p>
+      Repare que a carga caiu de 17 para 14 bytes. O produtor da versão 1 não tem o campo
+      <code>unidade</code> para enviar, e o que não é enviado não ocupa espaço. Num formato em
+      que os nomes viajam, essa economia seria maior, e é por isso que a comparação de tamanho
+      entre formatos depende de qual versão está falando.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ O valor padrão esconde uma pergunta que você não pode responder</p>
+      <p>
+        O leitor recebeu <code>unidade</code> vazia. Isso significa que o produtor é antigo e
+        não tem o campo, ou que o produtor é novo e mandou o campo vazio de propósito? No
+        Protocol Buffers da versão 3, <strong>os dois casos chegam idênticos</strong>. Se essa
+        diferença importar para a sua aplicação, ela precisa ser codificada no dado, com um
+        campo que diga qual versão escreveu.
+      </p>
+    </div>
+
+    <h3>5.4 A mesma etiqueta com outro significado</h3>
+    <p>
+      As duas situações anteriores foram tratadas sem susto. Esta é diferente. Pare o servidor
+      e suba-o num esquema em que a <strong>etiqueta 3</strong>, que no produtor significa
+      temperatura, passou a significar umidade.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir --schema incompativel</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --format protobuf --schema v1 --count 1</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, "bytes_payload": 14, "resposta": {"processado":
+{"id": 1, "sensor": "sala-1", "umidade_mili": 23500}}, "ms": 25.533}],
+"total_ms": 48.519}</p>
+
+    <p>
+      Uma temperatura de 23,5 graus virou uma umidade de 23,5 por cento, e
+      <strong>nada acusou o problema</strong>. Não houve erro de transporte, nem de formato,
+      nem de decodificação. Os bytes estavam corretos, a etiqueta 3 estava lá com um número
+      inteiro dentro, e o leitor fez o que lhe mandaram fazer.
+    </p>
+
+    <p>
+      Este é o custo real de tirar os nomes da mensagem. As duas primeiras situações mostraram a
+      tolerância do formato, e é fácil concluir dali que ele perdoa qualquer mudança. Esta
+      terceira delimita a fronteira. <strong>O que ele tolera é campo novo e campo ausente</strong>.
+      O que ele não tem como perceber é uma etiqueta reaproveitada, porque a etiqueta é a única
+      identidade que sobrou, e mudar o significado dela é mentir para o leitor em uma linguagem
+      que não tem como conferir.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c5">
+      <label for="p04-c5"><strong>Checkpoint 5.</strong> Vi 65 bytes contra 17, o campo novo
+        sendo ignorado pelo leitor antigo, o campo ausente virando valor padrão no leitor novo,
+        e a temperatura sendo lida como umidade sem nenhum erro.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 6
+       ============================================================ -->
+  <section class="lab-step" id="passo-6">
+    <h2><span class="step-num">6</span><span>Experimento 3: um de cada vez ou todos ao mesmo tempo</span><span class="step-time">14 min</span></h2>
+
+    <p>
+      Até aqui houve sempre um cliente só. Agora são quatro ao mesmo tempo, contra o mesmo
+      servidor, e a única diferença entre as duas rodadas está em como ele foi construído.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ Anote sempre a segunda medição</p>
+      <p>
+        A primeira chamada a um servidor recém-iniciado sai mais lenta que as seguintes, às
+        vezes bem mais. Quem esquenta é o processo do servidor, que fica de pé entre um comando
+        e outro. Por isso cada rodada abaixo é executada <strong>duas vezes</strong>, e o número
+        que vai para a sua tabela é o da segunda.
+      </p>
+    </div>
+
+    <h3>6.1 Um servidor que atende um de cada vez</h3>
+    <p>
+      O <code>--delay 1</code> faz o servidor gastar um segundo processando cada leitura. Ele
+      simula trabalho, e sem ele os tempos ficariam pequenos demais para se distinguirem.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir --delay 1</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A, duas vezes</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --count 4 --clients 4</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, ... "ms": 1005.717}, {"id": 2, ...
+"ms": 3008.06}, {"id": 3, ... "ms": 4009.07}, {"id": 4, ...
+"ms": 2003.821}], "total_ms": 4010.543}</p>
+
+    <p>
+      Leia os quatro tempos individuais antes do total. Eles formam uma escada de mil em mil
+      milissegundos, e a ordem em que os identificadores aparecem nos degraus não é a ordem
+      deles. Os quatro clientes partiram juntos, mas o servidor pegou um, gastou um segundo
+      com ele, e só então olhou para o próximo. <strong>O que estava na fila esperou
+      parado</strong>, e o último saiu com quatro segundos.
+    </p>
+
+    <h3>6.2 Um servidor que atende todos juntos</h3>
+    <p>
+      Pare o servidor e suba-o de novo com uma opção a mais. O trabalho por mensagem continua
+      sendo de um segundo, e o número de clientes continua sendo quatro.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 servir --delay 1 --concurrent</pre>
+    </div>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A, duas vezes</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 enviar --count 4 --clients 4</pre>
+    </div>
+    <p class="saida">{"resultados": [{"id": 1, ... "ms": 1006.57}, {"id": 2, ...
+"ms": 1006.066}, {"id": 3, ... "ms": 1005.984}, {"id": 4, ...
+"ms": 1004.604}], "total_ms": 1007.398}</p>
+
+    <p>
+      A escada sumiu. Os quatro voltaram em pouco mais de um segundo, e o total caiu de
+      4010,543 ms para 1007,398 ms, quatro vezes menos. Anote os dois totais, porque eles vão
+      para a tabela do passo 8.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ O que esses quatro segundos economizados são, e o que não são</p>
+      <p>
+        A espera de um segundo por mensagem foi declarada por você, no comando, e durante ela o
+        servidor não faz nada. O ganho medido é de <strong>sobreposição de espera</strong>, e a
+        máquina do nó C não trabalhou mais depressa em nenhum momento. Se o trabalho fosse
+        cálculo de verdade, consumindo processador, dois clientes disputariam os mesmos núcleos
+        e o ganho seria bem menor. Esse número não é uma propriedade da AWS, nem do Python, nem
+        do tamanho da instância.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c6">
+      <label for="p04-c6"><strong>Checkpoint 6.</strong> Anotei os dois totais da segunda
+        rodada, e vi a escada de mil em mil milissegundos aparecer no servidor iterativo e
+        desaparecer no concorrente.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Passo 7
+       ============================================================ -->
+  <section class="lab-step" id="passo-7">
+    <h2><span class="step-num">7</span><span>Experimento 4: quando a mensagem espera</span><span class="step-time">16 min</span></h2>
+
+    <p>
+      Nos três experimentos anteriores, o nó A e o nó C precisavam estar de pé ao mesmo tempo.
+      Se o destinatário não estivesse lá, ou a mensagem sumia em silêncio ou a conexão era
+      recusada. Agora o nó B entra, e ele muda essa exigência.
+    </p>
+
+    <p>
+      Pare o servidor na janela 4 com <code>Ctrl+C</code>. Desta vez ele não vai voltar, e o
+      nó C só reaparece no fim do experimento, como consumidor.
+    </p>
+
+    <h3>7.1 A fila antes de tudo</h3>
+    <p>
+      Antes de publicar qualquer coisa, veja o estado da fila. Os dois números que vêm aqui são
+      a linha de base contra a qual todo o resto do experimento será lido.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 fila</pre>
+    </div>
+    <p class="saida">{"prontas": 0, "consumidores": 0}</p>
+
+    <p>
+      Zero mensagens e zero consumidores. Guarde o segundo número, porque ele é o que dá sentido
+      ao experimento inteiro. Quem responde essa pergunta é o nó B, e o comando foi digitado no
+      nó A.
+    </p>
+
+    <h3>7.2 Publicar sem ninguém do outro lado</h3>
+    <p>
+      Agora publique cinco leituras com o nó C parado. Repare que nada no comando abaixo cita o
+      consumidor, e é essa ausência que o experimento inteiro está montado para mostrar.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 publicar --count 5
+sd04 fila</pre>
+    </div>
+    <p class="saida">{"confirmados_pelo_broker": [1, 2, 3, 4, 5], "ms": 5.359}
+{"prontas": 5, "consumidores": 0}</p>
+
+    <p>
+      As cinco foram publicadas e confirmadas em pouco mais de cinco milissegundos, sem que
+      existisse um único consumidor. Compare com o experimento 1, em que a ausência do
+      destinatário produzia silêncio ou recusa. Aqui ela não produz nada, porque
+      <strong>o remetente não fala com o destinatário</strong>, e sim com um intermediário que
+      aceita guardar.
+    </p>
+
+    <p>
+      A confirmação merece leitura cuidadosa. Ela diz que o gerenciador de filas assumiu a
+      responsabilidade por aquelas cinco mensagens, e nada além disso. Ela
+      <strong>não</strong> diz que alguém as leu, nem que alguém vai lê-las, nem que o trabalho
+      que elas pedem foi feito. Confirmar publicação não é confirmar processamento, e tratar
+      uma coisa como a outra é um dos erros mais caros deste modelo.
+    </p>
+
+    <p>
+      Agora repare no que aconteceu com o programa que publicou. Ele terminou. O processo do
+      nó A não existe mais, e as cinco mensagens continuam de pé. Nos experimentos anteriores,
+      os dois lados precisavam coexistir no tempo, e é essa exigência que a fila acabou de
+      dissolver.
+    </p>
+
+    <h3>7.3 Derrubar e levantar o gerenciador</h3>
+    <p>
+      As mensagens estão no nó B. Reinicie o contêiner e veja o que sobrevive.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 3, no nó B</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sudo docker restart sd04-rabbit
+sudo docker exec sd04-rabbit rabbitmq-diagnostics -q ping</pre>
+    </div>
+    <p class="saida">sd04-rabbit
+Ping succeeded</p>
+
+    <p>
+      Espere o <code>Ping succeeded</code> antes de continuar. Se o comando falhar, o
+      gerenciador ainda está subindo, e repetir a linha resolve.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 fila</pre>
+    </div>
+    <p class="saida">{"prontas": 5, "consumidores": 0}</p>
+
+    <p>
+      As cinco continuam lá, e <strong>duas decisões tomadas juntas</strong> explicam isso.
+      A fila foi declarada durável, então ela mesma sobrevive ao reinício. Cada mensagem foi
+      publicada como persistente, então o conteúdo foi gravado em disco antes da confirmação.
+      Faltando qualquer uma das duas, o resultado seria zero.
+    </p>
+
+    <p>
+      O contêiner ainda guarda esse disco num <strong>volume nomeado</strong>, e vale saber o
+      que essa terceira decisão protege, porque não é este experimento. O
+      <code>docker restart</code> para e inicia o mesmo contêiner, e a camada gravável dele
+      sobrevive a isso mesmo sem volume. Quem apagaria o disco é remover e recriar o contêiner,
+      ou trocar a imagem por outra, e é contra essas duas coisas que o volume nomeado serve.
+    </p>
+
+    <h3>7.4 Buscar as mensagens, muito depois</h3>
+    <p>
+      O produtor terminou há vários minutos e o gerenciador foi reiniciado no meio. Vá agora ao
+      nó C e busque as cinco, observando quais identificadores voltam e em que ordem.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 4, no nó C</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 consumir --count 5 --timeout 20</pre>
+    </div>
+    <p class="saida">{"consumidos_e_confirmados": [1, 2, 3, 4, 5]}</p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 2, no nó A</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>sd04 fila</pre>
+    </div>
+    <p class="saida">{"prontas": 0, "consumidores": 0}</p>
+
+    <p>
+      Os cinco identificadores voltaram inteiros e na ordem, para um processo que estava em
+      outra máquina e que nem existia quando eles foram publicados. A fila esvaziou porque o
+      consumidor confirmou cada mensagem depois de processá-la, e é essa confirmação, e não a
+      entrega, que autoriza o gerenciador a esquecê-la.
+    </p>
+
+    <div class="callout is-warn">
+      <p class="callout-title">⚠ O que este experimento não provou</p>
+      <p>
+        O reinício foi controlado, com o mesmo disco no lugar. Nada aqui demonstra
+        sobrevivência à perda do disco, à queda abrupta da máquina ou ao fim da sessão do
+        Sandbox, que apaga o volume junto com a instância. Também não há réplica da fila em
+        outro nó, então o nó B continua sendo um ponto único de falha. Durabilidade e
+        replicação são propriedades diferentes, e esta prática exercita apenas a primeira.
+      </p>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c7">
+      <label for="p04-c7"><strong>Checkpoint 7.</strong> Publiquei cinco mensagens sem
+        consumidor, o programa que publicou terminou, o gerenciador reiniciou, e as cinco
+        foram recuperadas depois pelo nó C.</label>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Fechamento conceitual
+       ============================================================ -->
+  <section class="lab-step" id="fechamento">
+    <h2><span class="step-num is-accent">§</span><span>O que isso tem a ver com o tópico 04</span></h2>
+
+    <p>
+      Os quatro experimentos percorreram, na ordem, as quatro primeiras seções do tópico. Vale
+      reler cada uma agora, com o resultado na mão, porque a leitura muda depois de o resultado ter
+      aparecido na sua tela.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+      <thead>
+        <tr><th>Seção do tópico</th><th>O que ela afirma</th><th>O que o experimento mediu</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1. Os dois eixos e o soquete</td>
+          <td>A comunicação transiente guarda a mensagem apenas enquanto os dois lados
+            executam.</td>
+          <td>O experimento 1 mostrou isso da forma mais crua possível. A leitura enviada por
+            UDP a um destinatário ausente deixou de existir, e o remetente relatou sucesso. O
+            TCP também não é persistente, e a prova é que a recusa veio no ato, e não numa
+            tentativa posterior.</td>
+        </tr>
+        <tr>
+          <td>2. Empacotamento de dados</td>
+          <td>Um formato carrega o nome de cada campo, outro carrega uma etiqueta, e a
+            evolução de esquema tem limites.</td>
+          <td>O experimento 2 pôs número nessa separação, com 65 bytes contra 17, e mostrou
+            onde a tolerância do formato binário termina. Campo novo e campo ausente ele
+            resolve, e etiqueta reaproveitada ele não tem como perceber.</td>
+        </tr>
+        <tr>
+          <td>3. A outra ponta, quem recebe</td>
+          <td>O servidor iterativo trata a requisição ele mesmo, e o concorrente a repassa e
+            volta a esperar a próxima.</td>
+          <td>O experimento 3 mediu os dois com o mesmo trabalho por mensagem. A escada de mil
+            em mil milissegundos é a forma visível da fila que se acumula quando quem atende é
+            um só.</td>
+        </tr>
+        <tr>
+          <td>4. Quando a mensagem espera</td>
+          <td>A tabela de desacoplamento no tempo combina remetente e destinatário, cada um em
+            execução ou passivo, e dá quatro situações.</td>
+          <td>O experimento 4 produziu duas dessas quatro linhas. Em 7.2, o remetente em
+            execução publicou para um destinatário passivo. Em 7.4, o destinatário em execução
+            leu mensagens de um remetente que já havia terminado.</td>
+        </tr>
+      </tbody>
+      </table>
+    </div>
+
+    <p>
+      A comparação revela o mesmo movimento nas quatro. O tópico entrega a distinção, e o
+      experimento entrega a grandeza dela ou o caso limite em que ela deixa de valer, que é o
+      que o texto sozinho não consegue dar. As duas linhas produzidas no experimento 4 são
+      também as duas metades do <strong>desacoplamento no tempo</strong> que a seção 4 define,
+      porque em nenhuma delas os dois lados precisaram estar no ar ao mesmo tempo.
+    </p>
+
+    <p>
+      A quinta seção do tópico, sobre comunicação em grupo, não tem experimento aqui. Ela é
+      cobrada na leitura e no questionário, e o motivo de ter ficado de fora é de relógio, não
+      de importância.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       Passo 8
+       ============================================================ -->
+  <section class="lab-step" id="passo-8">
+    <h2><span class="step-num">8</span><span>Anotar os resultados, encerrar e limpar</span><span class="step-time">10 min</span></h2>
+
+    <h3>8.1 Anotar</h3>
+    <p>
+      Preencha a tabela abaixo com os seus números antes de apagar o ambiente. Ela serve para
+      você reconstruir o raciocínio depois, porque o questionário no Moodle traz os números no
+      enunciado e cobra o porquê de cada resultado, nunca um valor anotado.
+    </p>
+
+    <div class="tabela-rolavel">
+      <table class="lab-tabela">
+      <thead>
+        <tr><th>O que</th><th>Onde apareceu</th><th>O seu valor</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Tempo da segunda leitura por TCP, com o servidor no ar</td><td>4.1</td><td></td></tr>
+        <tr><td>Tempo da segunda leitura por UDP, com o servidor no ar</td><td>4.2</td><td></td></tr>
+        <tr><td>O que o UDP relatou com o servidor fora do ar</td><td>4.3</td><td></td></tr>
+        <tr><td>O que o TCP relatou na mesma situação</td><td>4.3</td><td></td></tr>
+        <tr><td>Bytes do registro em JSON e em Protocol Buffers</td><td>5.1</td><td></td></tr>
+        <tr><td>O que o leitor da versão 1 fez com o campo novo</td><td>5.2</td><td></td></tr>
+        <tr><td>O valor que a temperatura assumiu no esquema incompatível</td><td>5.4</td><td></td></tr>
+        <tr><td>Total dos quatro clientes, servidor iterativo, segunda rodada</td><td>6.1</td><td></td></tr>
+        <tr><td>Total dos quatro clientes, servidor concorrente, segunda rodada</td><td>6.2</td><td></td></tr>
+        <tr><td>Mensagens prontas depois do reinício do gerenciador</td><td>7.3</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>8.2 Encerrar e limpar</h3>
+    <p>
+      Saia das três sessões de SSH com <code>exit</code> e volte à janela 1, na pasta em que
+      você baixou os dois arquivos.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-head">
+        <span class="onde">janela 1, no seu computador</span>
+        <span class="espaco"></span>
+        <button type="button" class="btn-copiar" data-copiar>copiar</button>
+      </div>
+      <pre>python preparar-ambiente.py --apagar</pre>
+    </div>
+    <p class="saida">  instancias a terminar: 3
+  redes a apagar: 1
+  esperando as instancias terminarem, o que leva cerca de um minuto
+  instancias terminadas, e os discos delas foram junto
+  sub-rede apagada: subnet-0f074ae1baf671a75
+  tabela de rotas apagada: rtb-08458a87d3aa5b61a
+  grupo de seguranca apagado: sg-0e95256a32ac5039b
+  gateway apagado: igw-020f96023d45f0da6
+  VPC apagada: vpc-0510d2626a0f1c207
+  nenhum recurso desta pratica continua de pe
+  o que ja existia antes da pratica continua igual
+  perfil sd-sandbox removido de C:\Users\voce\.aws\credentials</p>
+
+    <p>
+      As três últimas linhas são as que interessam. A primeira delas varre a conta pelas
+      etiquetas do projeto e afirma que não sobrou nada. A segunda compara a conta com a foto
+      que o passo 2 tirou antes de criar qualquer coisa, e afirma que o que já existia continua
+      lá. A terceira apaga a sua credencial temporária do computador.
+    </p>
+
+    <p>
+      Por fim, volte ao painel do AWS Academy e clique em <em>End Lab</em>. O Sandbox também
+      apaga o que sobrar quando a sessão termina, mas depender disso é hábito ruim. Num
+      ambiente de trabalho ninguém apaga a sua conta por você.
+    </p>
+
+    <div class="check">
+      <input type="checkbox" id="p04-c8">
+      <label for="p04-c8"><strong>Checkpoint 8.</strong> A tabela está preenchida, a limpeza
+        confirmou que nada sobrou e que o que já existia continua igual, e a sessão do
+        laboratório foi encerrada.</label>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">O questionário</p>
+      <p>
+        Responda ao questionário desta prática no Moodle da disciplina. Ele pergunta sobre o
+        que você anotou na tabela acima e sobre o porquê de cada resultado, então tenha os
+        números por perto.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Se der errado
+       ============================================================ -->
+  <section class="lab-step" id="se-der-errado">
+    <h2><span class="step-num is-accent">!</span><span>Se der errado</span></h2>
+
+    <p><strong>O programa diz que a biblioteca boto3 não está instalada.</strong></p>
+    <p>
+      Rode <code>python -m pip install --user boto3</code> de novo e observe a saída. Se ela
+      instalar com sucesso e o erro continuar, provavelmente há mais de um Python na máquina.
+      Use <code>python -m pip</code> em vez de <code>pip</code>, porque essa forma garante que a
+      instalação vai para o mesmo interpretador que roda o programa.
+    </p>
+
+    <p><strong>A AWS recusou a credencial.</strong></p>
+    <p>
+      Confira se copiou os três valores inteiros, sem espaço sobrando no começo ou no fim. O
+      erro mais comum é copiar só dois, porque o terceiro é longo e a caixa do painel o quebra
+      em várias linhas. Se a sessão do laboratório tiver expirado, a credencial deixa de valer
+      mesmo estando correta, e a solução é reiniciar a sessão e rodar o programa de novo.
+    </p>
+
+    <p><strong>O SSH recusa a chave, falando em permissões.</strong></p>
+    <p>
+      O comando do passo 1.1 não foi executado, ou foi executado em outra pasta. Repita-o com o
+      terminal na pasta em que o <code>labsuser.pem</code> está. No Windows, o erro costuma
+      dizer que o arquivo é acessível demais, e o <code>icacls</code> é o que resolve.
+    </p>
+
+    <p><strong>O SSH não responde e nem chega a pedir alguma coisa.</strong></p>
+    <p>
+      A conexão fica pendurada até estourar o tempo, sem mensagem que explique nada. A causa
+      mais provável não é a chave, e sim o seu endereço público ter mudado. O programa liberou
+      a porta 22 apenas para o IP que a sua máquina tinha no passo 2, e esse endereço muda
+      quando a rede do campus troca a saída, quando a VPN entra ou sai, e quando o computador
+      passa do cabo para o celular.
+    </p>
+    <p>
+      Abra <code>checkip.amazonaws.com</code> no navegador e compare o valor com a linha
+      <code>SSH liberado apenas para</code> que o programa imprimiu no passo 2. Sendo
+      diferentes, abra o console da AWS em <em>EC2</em>, depois <em>Security Groups</em>,
+      escolha o grupo <code>sd04-nos</code>, edite a regra de entrada da porta 22 e troque a
+      origem pelo endereço novo, com <code>/32</code> no fim.
+    </p>
+
+    <p><strong>O programa avisou que não conseguiu confirmar um nó.</strong></p>
+    <p>
+      Ele segue em frente de propósito, para não travar a prática por causa do canal
+      administrativo. Entre por SSH no nó e rode <code>sudo tail -n 30 /var/log/sd-setup.log</code>.
+      Se a última linha for <code>SD04_SETUP_PRONTO</code>, está tudo certo e o aviso era falso
+      alarme.
+    </p>
+    <p>
+      Aparecendo <code>SD04_SETUP_FALHOU</code> entre as últimas linhas, a instalação parou de
+      propósito, e o arquivo
+      <code>/opt/sd/FALHOU</code> diz por quê. Isso só acontece no nó B, que é o único a baixar
+      uma imagem de contêiner, e o motivo mais comum é o repositório de imagens ter recusado o
+      download. Apague o ambiente e crie de novo. Esse caso o programa também nomeia sozinho,
+      dizendo que o nó <strong>FALHOU na instalação</strong> em vez de dizer que não conseguiu
+      confirmá-lo.
+    </p>
+
+    <p><strong>O <code>sd04</code> não é encontrado no nó.</strong></p>
+    <p>
+      O <code>setup.sh</code> ainda não terminou naquela máquina. Espere meio minuto e tente de
+      novo. Se persistir, confira o arquivo <code>/opt/sd/PRONTO</code>, que só existe depois da
+      última linha da instalação.
+    </p>
+
+    <p><strong>O servidor do nó C diz que o endereço já está em uso.</strong></p>
+    <p>
+      Sobrou um servidor de um passo anterior. Pare-o com <code>Ctrl+C</code> na janela em que
+      ele está, ou rode <code>pkill -f experimentos.py</code> no nó C e suba de novo.
+    </p>
+
+    <p><strong>A sessão do Sandbox acabou no meio da prática.</strong></p>
+    <p>
+      Tudo foi apagado, inclusive a chave e a credencial. Comece uma sessão nova, baixe o
+      <code>labsuser.pem</code> outra vez, apague o arquivo de estado antigo em
+      <code>sd-pratica04/identificadores.json</code> e rode o programa de novo. O ambiente
+      inteiro volta em cerca de dois minutos e meio, e você retoma do passo em que estava.
+      Querendo limpar o computador antes disso, <code>python preparar-ambiente.py --apagar</code>
+      remove o perfil <code>sd-sandbox</code> mesmo quando não encontra o arquivo de estado.
+    </p>
+
+    <p><strong>O programa recusa criar, dizendo que já existe um ambiente.</strong></p>
+    <p>
+      É a proteção contra duas redes iguais na mesma conta. Rode
+      <code>python preparar-ambiente.py --apagar</code> primeiro. Se a limpeza também recusar,
+      porque a conta mudou entre uma sessão e outra, apague os recursos pelo console procurando
+      pela etiqueta <code>Project=sd-pratica04</code>.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       Extensões
+       ============================================================ -->
+  <section class="lab-step" id="extensoes">
+    <h2><span class="step-num is-accent">+</span><span>Se sobrar tempo</span></h2>
+
+    <h3>Quantos clientes o servidor concorrente aguenta</h3>
+    <p>
+      Suba o servidor com <code>--delay 1 --concurrent</code> e mande
+      <code>sd04 enviar --count 20 --clients 20</code>. O total continua perto de um segundo?
+      Repita com 50 e depois com 100, e procure o ponto em que o número começa a subir. Onde
+      quer que ele esteja, o limite não é a espera de um segundo, e sim algum recurso da
+      máquina que passou a ser disputado.
+    </p>
+
+    <h3>O que sobra quando o consumidor busca menos do que existe</h3>
+    <p>
+      Publique cinco mensagens e comece a consumir com <code>--count 3</code>. Depois pergunte
+      <code>sd04 fila</code>. As duas que sobraram continuam prontas, e é isso que se espera.
+      Repita agora com <code>--count 2</code>, e observe que os identificadores que voltam são
+      os que ficaram, e não os do começo. Pedir três de novo deixaria o comando pendurado até o
+      tempo limite, porque só duas existem.
+    </p>
+
+    <h3>O tamanho de uma leitura maior</h3>
+    <p>
+      O registro desta prática é pequeno, e é justamente aí que o JSON perde mais, porque o
+      nome do campo pesa quase tanto quanto o valor. Pense em quanto a diferença de 65 para 17
+      bytes mudaria se o campo <code>sensor</code> tivesse duzentos caracteres em vez de seis, e
+      confira o raciocínio comparando <code>bytes_payload</code> nos dois formatos.
+    </p>
+
+    <h3>Com um colega, se houver oportunidade</h3>
+    <p>
+      Comparem os tempos do experimento 3. Os totais devem ficar muito próximos nas duas
+      contas, porque eles são definidos pela espera declarada no comando e não pela máquina.
+      Comparem depois os tempos do experimento 1, que dependem da rede entre as instâncias de
+      vocês, e vejam se a diferença ali é maior.
+    </p>
+  </section>
+
+  <!-- ============================================================
+       Os dois arquivos que o aluno baixa, embutidos aqui para
+       leitura. Quem os mantém em dia com os arquivos da pasta é
+       tools/injetar_setup_lab.py, e o teste falha se divergirem.
+       ============================================================ -->
+  <section class="lab-step" id="os-dois-arquivos">
+    <h2><span class="step-num is-accent">&lt;/&gt;</span><span>Os dois arquivos, por dentro</span></h2>
+    <p>
+      Nada aqui é obrigatório para terminar a prática. É o mesmo texto que o passo 2 baixa, e
+      lê-lo é a diferença entre rodar o ambiente e entender como ele nasce.
+    </p>
+
+    <details class="lab-detalhe">
+      <summary>Ver o programa que monta o ambiente</summary>
+      <p>
+        Ele roda no seu computador. Pede a credencial, tira a foto da conta, confere a cota,
+        cria a rede e as três máquinas, espera o software terminar e imprime a ficha. O modo
+        <code>--apagar</code> desfaz tudo o que ele criou e confere que não sobrou nada.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">executado no seu computador, com Python</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-baixar="preparar-py"
+            data-arquivo="preparar-ambiente.py">baixar</button>
+          <button type="button" class="btn-copiar" data-copiar="preparar-py">copiar</button>
+        </div>
+        <pre id="preparar-py">#!/usr/bin/env python3
+# ============================================================
+# Pratica 04 (Topico 4) - Sistemas Distribuidos - IFSP Salto
+# Prepara o ambiente inteiro da pratica, no seu computador.
+#
+# Este arquivo unico atende Windows, macOS e Linux. Na pratica 03
+# eram dois scripts gemeos, um por sistema, porque quem falava com
+# a AWS era o AWS CLI dentro de um shell. Aqui quem fala e o proprio
+# Python, pela biblioteca boto3, e a mesma linguagem roda nos tres.
+#
+#   python preparar-ambiente.py            monta tudo
+#   python preparar-ambiente.py --apagar   apaga tudo o que ele criou
+#
+# Ele constroi a rede, sobe os tres nos, espera o software terminar
+# de instalar e imprime no fim o bloco que voce cola na ficha do
+# roteiro. Cada passo e anunciado antes de acontecer.
+#
+# Sem acentos de proposito, porque o mesmo texto precisa sair
+# legivel no terminal do macOS, no do Linux e no console do
+# Windows, que nem sempre concordam sobre codificacao.
+# ============================================================
+"""Provisionador da pratica 04, com chamadas diretas as APIs da AWS."""
+
+import argparse
+import configparser
+import getpass
+import ipaddress
+import json
+import sys
+import time
+from pathlib import Path
+from urllib.request import urlopen
+
+PERFIL = "sd-sandbox"
+REGIAO = "us-east-1"
+PROJETO = "sd-pratica04"
+
+CIDR_VPC = "10.44.0.0/16"
+CIDR_SUB = "10.44.0.0/24"
+# Enderecos privados fixos. Sem isto, cada aluno teria endereco
+# diferente e o roteiro precisaria de uma variavel a mais em todo
+# comando. O experimentos.py conhece estes mesmos numeros.
+NOS = {"A": "10.44.0.10", "B": "10.44.0.20", "C": "10.44.0.30"}
+TIPOS = {"A": "t3.micro", "B": "t3.small", "C": "t3.micro"}
+PORTA_APP = 9104
+PORTA_FILA = 5672
+
+PASTA = Path.home() / "sd-pratica04"
+ESTADO = PASTA / "identificadores.json"
+ANTES = PASTA / "antes.txt"
+AQUI = Path(__file__).resolve().parent
+
+
+def titulo(texto):
+    print("\n" + "=" * 60 + "\n " + texto + "\n" + "=" * 60, flush=True)
+
+
+def diz(texto):
+    print("  " + texto, flush=True)
+
+
+def morre(texto):
+    print("\nFALHA: " + texto, file=sys.stderr, flush=True)
+    raise SystemExit(1)
+
+
+# ------------------------------------------------------------
+# Credencial. Ela vai para um perfil de nome proprio, nunca para
+# o [default]. Escrever no default passaria por cima da configuracao
+# de quem ja usa a AWS na propria maquina, e apagar depois ficaria
+# impossivel de fazer sem risco. O modo --apagar remove este perfil.
+# ------------------------------------------------------------
+def arquivo_de_credenciais():
+    return Path.home() / ".aws" / "credentials"
+
+
+def gravar_perfil(chave, segredo, token):
+    caminho = arquivo_de_credenciais()
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    dados = configparser.RawConfigParser()
+    if caminho.exists():
+        dados.read(caminho, encoding="utf-8")
+    if not dados.has_section(PERFIL):
+        dados.add_section(PERFIL)
+    dados.set(PERFIL, "aws_access_key_id", chave)
+    dados.set(PERFIL, "aws_secret_access_key", segredo)
+    dados.set(PERFIL, "aws_session_token", token)
+    with open(caminho, "w", encoding="utf-8") as saida:
+        dados.write(saida)
+    try:
+        caminho.chmod(0o600)
+    except OSError:
+        pass  # Windows ignora o modo do arquivo; a ACL do perfil ja restringe.
+
+
+def apagar_perfil():
+    caminho = arquivo_de_credenciais()
+    if not caminho.exists():
+        return
+    dados = configparser.RawConfigParser()
+    dados.read(caminho, encoding="utf-8")
+    if dados.remove_section(PERFIL):
+        with open(caminho, "w", encoding="utf-8") as saida:
+            dados.write(saida)
+        diz("perfil " + PERFIL + " removido de " + str(caminho))
+
+
+def perguntar_credencial():
+    diz("Abra o laboratorio no AWS Academy, clique em Details e depois em Show.")
+    diz("Copie os tres valores do bloco de credencial, um de cada vez.")
+    diz("Os dois ultimos sao secretos, entao nao aparecem enquanto voce cola.")
+    diz("Isso e proposital, e e o mesmo comportamento de uma senha no terminal.")
+    print()
+    chave = input("  aws_access_key_id     : ").strip()
+    segredo = getpass.getpass("  aws_secret_access_key : ").strip()
+    token = getpass.getpass("  aws_session_token     : ").strip()
+    if not chave:
+        morre("o aws_access_key_id veio vazio")
+    if not segredo:
+        morre("o aws_secret_access_key veio vazio")
+    if not token:
+        morre("o aws_session_token veio vazio. Ele e obrigatorio, porque a"
+              " credencial do laboratorio e temporaria")
+    gravar_perfil(chave, segredo, token)
+    diz("credencial gravada no perfil " + PERFIL)
+
+
+def sessao():
+    try:
+        import boto3
+    except ImportError:
+        morre("a biblioteca boto3 nao esta instalada. Rode"
+              " 'python -m pip install boto3' e tente de novo")
+    def abrir():
+        return boto3.Session(profile_name=PERFIL, region_name=REGIAO)
+    try:
+        sdk = abrir()
+        sdk.client("sts").get_caller_identity()
+        diz("usando o perfil " + PERFIL + ", que ja estava configurado e ainda vale")
+        return sdk
+    except Exception:
+        titulo("credencial do laboratorio")
+        perguntar_credencial()
+    sdk = abrir()
+    try:
+        sdk.client("sts").get_caller_identity()
+    except Exception as erro:
+        morre("a credencial nao foi aceita pela AWS (" + type(erro).__name__ + ")."
+              " Confira se copiou os tres valores inteiros e se a sessao do"
+              " laboratorio ainda esta ligada")
+    return sdk
+
+
+# ------------------------------------------------------------
+# Etiquetas. Todo recurso nasce com Project e Name, e a limpeza so
+# apaga o que tem as duas. E o que impede o programa de encostar
+# nas duas instancias que o laboratorio ja tem quando voce abre.
+# ------------------------------------------------------------
+def etiquetas(tipo, nome):
+    return [{"ResourceType": tipo, "Tags": [{"Key": "Project", "Value": PROJETO},
+                                            {"Key": "Name", "Value": nome}]}]
+
+
+def filtro_do_projeto():
+    return [{"Name": "tag:Project", "Values": [PROJETO]}]
+
+
+def e_meu(recurso):
+    marcas = {t["Key"]: t["Value"] for t in recurso.get("Tags", [])}
+    return marcas.get("Project") == PROJETO
+
+
+def inventario(ec2):
+    instancias = [i for pagina in ec2.get_paginator("describe_instances").paginate()
+                  for r in pagina["Reservations"] for i in r["Instances"]
+                  if i["State"]["Name"] != "terminated"]
+    return {"instancias": [{"id": i["InstanceId"], "tipo": i["InstanceType"],
+                            "estado": i["State"]["Name"], "minha": e_meu(i)}
+                           for i in instancias],
+            "vpcs": [v["VpcId"] for v in ec2.describe_vpcs()["Vpcs"]]}
+
+
+def guardar(estado):
+    PASTA.mkdir(parents=True, exist_ok=True)
+    temporario = ESTADO.with_suffix(".tmp")
+    temporario.write_text(json.dumps(estado, indent=2), encoding="utf-8")
+    temporario.replace(ESTADO)
+
+
+def meu_ip():
+    try:
+        with urlopen("https://checkip.amazonaws.com", timeout=10) as resposta:
+            return str(ipaddress.IPv4Address(resposta.read().decode().strip())) + "/32"
+    except Exception:
+        morre("nao consegui descobrir o IP publico desta maquina. Rode de novo"
+              " com --ssh-cidr SEU.IP.AQUI/32, consultando o valor em"
+              " https://checkip.amazonaws.com")
+
+
+# ------------------------------------------------------------
+# Criacao
+# ------------------------------------------------------------
+def criar(sdk, ssh_cidr):
+    if ESTADO.exists():
+        morre("ja existe um ambiente desta pratica criado por este programa ("
+              + str(ESTADO) + "). Rode com --apagar antes, para nao ficar com"
+              " duas redes iguais e nenhuma explicacao")
+    ec2 = sdk.client("ec2")
+    conta = sdk.client("sts").get_caller_identity()["Account"]
+
+    titulo("como a sua conta esta agora, antes de criar qualquer coisa")
+    antes = inventario(ec2)
+    diz("instancias ja existentes: " + str(len(antes["instancias"])))
+    diz("VPCs ja existentes: " + str(len(antes["vpcs"])))
+    PASTA.mkdir(parents=True, exist_ok=True)
+    ANTES.write_text(json.dumps(antes, indent=2), encoding="utf-8")
+    diz("foto guardada em " + str(ANTES))
+    if len(antes["instancias"]) + 3 &gt; 9:
+        morre("o Sandbox permite 9 instancias e nao sobra espaco para as tres"
+              " desta pratica. Apague o que voce criou em praticas anteriores")
+    if len(antes["vpcs"]) &gt;= 5:
+        morre("a conta ja esta nas 5 VPCs que a regiao permite. Apague uma rede"
+              " de pratica anterior antes de continuar")
+    if any(i["minha"] for i in antes["instancias"]):
+        morre("ha instancia com a etiqueta " + PROJETO + " nesta conta e nenhum"
+              " arquivo de estado aqui. Apague-a pelo console antes de continuar")
+
+    rede = ipaddress.ip_network(ssh_cidr)
+    if rede.version != 4 or rede.prefixlen != 32:
+        morre("o endereco de SSH precisa ser um IPv4 com /32")
+
+    titulo("escolhendo a imagem e a zona")
+    imagens = ec2.describe_images(Owners=["amazon"], Filters=[
+        {"Name": "name", "Values": ["al2023-ami-2023.*-x86_64"]},
+        {"Name": "state", "Values": ["available"]},
+        {"Name": "root-device-type", "Values": ["ebs"]}])["Images"]
+    if not imagens:
+        morre("nenhuma imagem do Amazon Linux 2023 foi encontrada em " + REGIAO)
+    imagem = max(imagens, key=lambda i: i["CreationDate"])
+    zonas = ec2.describe_availability_zones(
+        Filters=[{"Name": "state", "Values": ["available"]}])["AvailabilityZones"]
+    zona = sorted(z["ZoneName"] for z in zonas if z["ZoneType"] == "availability-zone")[0]
+    diz("imagem " + imagem["ImageId"] + ", zona " + zona)
+
+    estado = {"projeto": PROJETO, "conta": conta, "regiao": REGIAO, "zona": zona,
+              "ami": imagem["ImageId"], "ssh_cidr": ssh_cidr,
+              "criado_em": time.strftime("%Y-%m-%dT%H:%M:%S"), "nos": {}}
+    guardar(estado)
+
+    def lembrar(chave, valor, rotulo):
+        estado[chave] = valor
+        guardar(estado)
+        diz(rotulo + " " + valor)
+        return valor
+
+    titulo("montando a rede")
+    # Cada identificador e gravado assim que nasce. Se a criacao parar no
+    # meio, o --apagar encontra o que ja existe e remove tudo mesmo assim.
+    vpc = lembrar("vpc", ec2.create_vpc(
+        CidrBlock=CIDR_VPC, TagSpecifications=etiquetas("vpc", "sd04-vpc"))["Vpc"]["VpcId"],
+        "VPC criada:")
+    ec2.get_waiter("vpc_available").wait(VpcIds=[vpc])
+    ec2.modify_vpc_attribute(VpcId=vpc, EnableDnsSupport={"Value": True})
+    ec2.modify_vpc_attribute(VpcId=vpc, EnableDnsHostnames={"Value": True})
+    subrede = lembrar("subrede", ec2.create_subnet(
+        VpcId=vpc, CidrBlock=CIDR_SUB, AvailabilityZone=zona,
+        TagSpecifications=etiquetas("subnet", "sd04-subrede"))["Subnet"]["SubnetId"],
+        "sub-rede criada:")
+    gateway = lembrar("gateway", ec2.create_internet_gateway(
+        TagSpecifications=etiquetas("internet-gateway", "sd04-igw")
+        )["InternetGateway"]["InternetGatewayId"], "gateway de internet criado:")
+    ec2.attach_internet_gateway(VpcId=vpc, InternetGatewayId=gateway)
+    rota = lembrar("rota", ec2.create_route_table(
+        VpcId=vpc, TagSpecifications=etiquetas("route-table", "sd04-rotas")
+        )["RouteTable"]["RouteTableId"], "tabela de rotas criada:")
+    ec2.create_route(RouteTableId=rota, DestinationCidrBlock="0.0.0.0/0", GatewayId=gateway)
+    lembrar("associacao", ec2.associate_route_table(
+        RouteTableId=rota, SubnetId=subrede)["AssociationId"], "tabela associada:")
+
+    grupo = lembrar("grupo", ec2.create_security_group(
+        VpcId=vpc, GroupName="sd04-nos",
+        Description="Nos da pratica 04 e SSH do computador do aluno",
+        TagSpecifications=etiquetas("security-group", "sd04-nos"))["GroupId"],
+        "grupo de seguranca criado:")
+    # SSH so do seu endereco. As portas da aplicacao e da fila so aceitam
+    # trafego de quem esta no mesmo grupo, ou seja, dos proprios nos.
+    ec2.authorize_security_group_ingress(GroupId=grupo, IpPermissions=[
+        {"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22,
+         "IpRanges": [{"CidrIp": ssh_cidr, "Description": "SSH do aluno"}]},
+        {"IpProtocol": "tcp", "FromPort": PORTA_FILA, "ToPort": PORTA_FILA,
+         "UserIdGroupPairs": [{"GroupId": grupo}]},
+        {"IpProtocol": "tcp", "FromPort": PORTA_APP, "ToPort": PORTA_APP,
+         "UserIdGroupPairs": [{"GroupId": grupo}]},
+        {"IpProtocol": "udp", "FromPort": PORTA_APP, "ToPort": PORTA_APP,
+         "UserIdGroupPairs": [{"GroupId": grupo}]}])
+    diz("SSH liberado apenas para " + ssh_cidr)
+
+    titulo("subindo os tres nos")
+    user_data = (AQUI / "setup.sh").read_text(encoding="utf-8")
+    for papel in ("B", "A", "C"):
+        resultado = ec2.run_instances(
+            ImageId=imagem["ImageId"], MinCount=1, MaxCount=1,
+            InstanceType=TIPOS[papel], KeyName="vockey",
+            IamInstanceProfile={"Name": "LabInstanceProfile"},
+            # InstanceMetadataTags e o que permite ao setup.sh descobrir o
+            # proprio papel lendo a etiqueta Name. Sem isto, o mesmo texto
+            # nao poderia servir aos tres nos.
+            MetadataOptions={"HttpTokens": "required", "HttpEndpoint": "enabled",
+                             "InstanceMetadataTags": "enabled"},
+            BlockDeviceMappings=[{"DeviceName": imagem["RootDeviceName"],
+                                  "Ebs": {"VolumeSize": 8, "VolumeType": "gp2",
+                                          "DeleteOnTermination": True}}],
+            NetworkInterfaces=[{"DeviceIndex": 0, "SubnetId": subrede, "Groups": [grupo],
+                                "PrivateIpAddress": NOS[papel],
+                                "AssociatePublicIpAddress": True,
+                                "DeleteOnTermination": True}],
+            UserData=user_data,
+            TagSpecifications=etiquetas("instance", "sd04-" + papel)
+                              + etiquetas("volume", "sd04-" + papel + "-disco"))
+        estado["nos"][papel] = {"id": resultado["Instances"][0]["InstanceId"],
+                                "privado": NOS[papel]}
+        guardar(estado)
+        diz("no " + papel + " (" + TIPOS[papel] + ") iniciando em " + NOS[papel])
+
+    identificadores = [no["id"] for no in estado["nos"].values()]
+    diz("esperando as tres maquinas ligarem")
+    ec2.get_waiter("instance_running").wait(
+        InstanceIds=identificadores, WaiterConfig={"Delay": 5, "MaxAttempts": 60})
+    for papel, no in estado["nos"].items():
+        info = ec2.describe_instances(InstanceIds=[no["id"]])["Reservations"][0]["Instances"][0]
+        no["publico"] = info.get("PublicIpAddress")
+    guardar(estado)
+    diz("as tres estao ligadas")
+
+    esperar_software(sdk, estado)
+    ficha(estado)
+
+
+def esperar_software(sdk, estado, limite=420):
+    """Espera o setup.sh terminar, perguntando pelo Systems Manager.
+
+    Uma EC2 em running so afirma que a maquina ligou. O software desta
+    pratica leva mais de um minuto depois disso, e o arquivo PRONTO e o
+    que separa uma coisa da outra. O setup.sh grava FALHOU no lugar dele
+    quando o gerenciador de filas nao sobe, e perguntar pelos dois evita
+    esperar o prazo inteiro por um no que ja desistiu. Se o canal
+    administrativo nao responder, o programa avisa e segue, em vez de
+    travar a pratica.
+    """
+    titulo("esperando o software terminar de instalar")
+    diz("a maquina ligar nao e a mesma coisa que o programa estar instalado")
+    ssm = sdk.client("ssm")
+    faltam = dict(estado["nos"])
+    falharam = []
+    prazo = time.monotonic() + limite
+    while faltam and time.monotonic() &lt; prazo:
+        for papel, no in list(faltam.items()):
+            try:
+                envio = ssm.send_command(
+                    InstanceIds=[no["id"]], DocumentName="AWS-RunShellScript",
+                    TimeoutSeconds=60,
+                    Parameters={"commands": [
+                        "if [ -f /opt/sd/FALHOU ]; then echo SD04_FALHOU;"
+                        " elif [ -f /opt/sd/PRONTO ]; then echo SD04_PRONTO;"
+                        " else echo SD04_ESPERANDO; fi"]})
+            except Exception:
+                continue  # O agente ainda nao se registrou nesta instancia.
+            identificador = envio["Command"]["CommandId"]
+            for _ in range(20):
+                time.sleep(1)
+                try:
+                    saida = ssm.get_command_invocation(
+                        CommandId=identificador, InstanceId=no["id"])
+                except Exception:
+                    continue
+                if saida["Status"] in ("Pending", "InProgress", "Delayed"):
+                    continue
+                if saida["Status"] == "Success":
+                    marca = (saida.get("StandardOutputContent") or "").strip()
+                    if marca == "SD04_PRONTO":
+                        faltam.pop(papel, None)
+                        diz("no " + papel + " pronto")
+                    elif marca == "SD04_FALHOU":
+                        faltam.pop(papel, None)
+                        falharam.append(papel)
+                        diz("no " + papel + " FALHOU na instalacao. Entre nele por"
+                            " SSH e veja /opt/sd/FALHOU e /var/log/sd-setup.log")
+                break
+        if faltam:
+            time.sleep(5)
+    # Um no que falhou sai de "faltam", entao sem esta separacao o programa
+    # anunciaria os tres prontos logo depois de dizer que um deles falhou.
+    if falharam:
+        diz("a instalacao FALHOU em " + ", ".join(sorted(falharam)) + ". O passo 7"
+            " nao vai funcionar assim: apague o ambiente e crie de novo")
+    if faltam:
+        diz("nao consegui confirmar " + ", ".join(sorted(faltam)) + " pelo canal"
+            " administrativo. Entre por SSH e leia /var/log/sd-setup.log")
+    elif not falharam:
+        diz("os tres nos terminaram a instalacao")
+
+
+def ficha(estado):
+    titulo("ficha do ambiente")
+    linhas = ["IP_PUB_%s=%s" % (papel, estado["nos"][papel].get("publico"))
+              for papel in ("A", "B", "C")]
+    (PASTA / "ficha.txt").write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    diz("Copie o bloco abaixo inteiro e cole na ficha do roteiro, no campo")
+    diz("de colar. Ele tambem ficou guardado em " + str(PASTA / "ficha.txt"))
+    print()
+    for linha in linhas:
+        print(linha)
+    print()
+    diz("Os enderecos privados sao sempre os mesmos, entao o roteiro os")
+    diz("escreve direto: A e 10.44.0.10, B e 10.44.0.20 e C e 10.44.0.30.")
+
+
+# ------------------------------------------------------------
+# Limpeza
+# ------------------------------------------------------------
+def apagar(sdk):
+    # Desistir sem tirar a credencial local era o unico ponto em que a limpeza
+    # nao cumpria o que anuncia. O roteiro manda apagar o arquivo de estado
+    # quando a sessao do Sandbox morre no meio, e depois disso todo --apagar
+    # recusava, deixando chave, segredo e token no ~/.aws/credentials de uma
+    # maquina de laboratorio. O perfil sai so aqui, nunca antes do trabalho:
+    # a sessao ja resolveu a credencial, mas remove-la no inicio deixaria a
+    # propria limpeza dependendo de um cache que este programa nao controla.
+    def desiste(mensagem):
+        apagar_perfil()
+        morre(mensagem)
+
+    if not ESTADO.exists():
+        desiste("nao encontrei " + str(ESTADO) + ", entao este programa nao criou"
+                " nada nesta maquina. Se voce criou o ambiente em outro"
+                " computador, apague por la ou pelo console da AWS")
+    estado = json.loads(ESTADO.read_text(encoding="utf-8"))
+    conta = sdk.client("sts").get_caller_identity()["Account"]
+    if estado.get("conta") != conta or estado.get("regiao") != REGIAO:
+        desiste("o ambiente guardado aqui pertence a outra conta ou regiao. Nao"
+                " vou apagar nada. Confira se abriu o laboratorio certo")
+    ec2 = sdk.client("ec2")
+
+    titulo("conferindo o que sera apagado")
+    # Tudo e descoberto pela etiqueta, e nao so pelo arquivo local. Assim a
+    # limpeza alcanca o que ficou de uma criacao interrompida no meio.
+    vpcs = ec2.describe_vpcs(Filters=filtro_do_projeto())["Vpcs"]
+    instancias = [i for r in ec2.describe_instances(
+        Filters=filtro_do_projeto())["Reservations"] for i in r["Instances"]
+        if i["State"]["Name"] != "terminated"]
+    subredes = ec2.describe_subnets(Filters=filtro_do_projeto())["Subnets"]
+    rotas = ec2.describe_route_tables(Filters=filtro_do_projeto())["RouteTables"]
+    grupos = ec2.describe_security_groups(Filters=filtro_do_projeto())["SecurityGroups"]
+    gateways = ec2.describe_internet_gateways(Filters=filtro_do_projeto())["InternetGateways"]
+    if len(vpcs) &gt; 1:
+        morre("achei mais de uma VPC com a etiqueta " + PROJETO + ". Isso nao"
+              " deveria acontecer, e prefiro nao apagar nada sem voce olhar")
+    for recurso in vpcs + instancias + subredes + rotas + grupos + gateways:
+        if not e_meu(recurso):
+            morre("um recurso sem a etiqueta " + PROJETO + " entrou na lista."
+                  " Limpeza recusada")
+    if vpcs:
+        dentro = [i for r in ec2.describe_instances(Filters=[
+            {"Name": "vpc-id", "Values": [vpcs[0]["VpcId"]]}])["Reservations"]
+            for i in r["Instances"] if i["State"]["Name"] != "terminated"]
+        for maquina in dentro:
+            if not e_meu(maquina):
+                morre("ha uma instancia que nao e desta pratica dentro da VPC."
+                      " Limpeza recusada, para nao derrubar o trabalho dela")
+    diz("instancias a terminar: " + str(len(instancias)))
+    diz("redes a apagar: " + str(len(vpcs)))
+
+    titulo("apagando")
+    identificadores = [i["InstanceId"] for i in instancias]
+    if identificadores:
+        ec2.terminate_instances(InstanceIds=identificadores)
+        diz("esperando as instancias terminarem, o que leva cerca de um minuto")
+        ec2.get_waiter("instance_terminated").wait(
+            InstanceIds=identificadores, WaiterConfig={"Delay": 5, "MaxAttempts": 90})
+        diz("instancias terminadas, e os discos delas foram junto")
+    for tabela in rotas:
+        for associacao in tabela["Associations"]:
+            if not associacao["Main"]:
+                ec2.disassociate_route_table(
+                    AssociationId=associacao["RouteTableAssociationId"])
+    for subrede in subredes:
+        ec2.delete_subnet(SubnetId=subrede["SubnetId"])
+        diz("sub-rede apagada: " + subrede["SubnetId"])
+    for tabela in rotas:
+        ec2.delete_route_table(RouteTableId=tabela["RouteTableId"])
+        diz("tabela de rotas apagada: " + tabela["RouteTableId"])
+    for grupo in grupos:
+        ec2.delete_security_group(GroupId=grupo["GroupId"])
+        diz("grupo de seguranca apagado: " + grupo["GroupId"])
+    for gateway in gateways:
+        for ligacao in gateway["Attachments"]:
+            ec2.detach_internet_gateway(
+                InternetGatewayId=gateway["InternetGatewayId"], VpcId=ligacao["VpcId"])
+        ec2.delete_internet_gateway(InternetGatewayId=gateway["InternetGatewayId"])
+        diz("gateway apagado: " + gateway["InternetGatewayId"])
+    for vpc in vpcs:
+        ec2.delete_vpc(VpcId=vpc["VpcId"])
+        diz("VPC apagada: " + vpc["VpcId"])
+
+    titulo("conferindo que nao sobrou nada")
+    sobrou = {
+        "instancias": [i["InstanceId"] for r in ec2.describe_instances(
+            Filters=filtro_do_projeto())["Reservations"] for i in r["Instances"]
+            if i["State"]["Name"] != "terminated"],
+        "volumes": [v["VolumeId"] for v in ec2.describe_volumes(
+            Filters=filtro_do_projeto())["Volumes"]],
+        "grupos": [g["GroupId"] for g in ec2.describe_security_groups(
+            Filters=filtro_do_projeto())["SecurityGroups"]],
+        "vpcs": [v["VpcId"] for v in ec2.describe_vpcs(
+            Filters=filtro_do_projeto())["Vpcs"]],
+    }
+    restante = {chave: valor for chave, valor in sobrou.items() if valor}
+    if restante:
+        morre("sobrou recurso com a etiqueta do projeto: " + json.dumps(restante)
+              + ". Apague pelo console antes de fechar o laboratorio")
+    diz("nenhum recurso desta pratica continua de pe")
+    # A comparacao com a foto do passo 2 e informativa, e por isso nao pode
+    # derrubar o que vem depois dela. Um desligamento no meio da pratica deixa
+    # o antes.txt com o tamanho certo e o conteudo zerado, e foi assim que esta
+    # limpeza morreu uma vez: apagou tudo na AWS e parou antes de tirar a
+    # credencial da maquina. Tirar a credencial e justamente o habito que a
+    # pratica ensina, num laboratorio de computadores compartilhados, entao ele
+    # acontece mesmo quando a conferencia nao sai.
+    try:
+        antes = json.loads(ANTES.read_text(encoding="utf-8")) if ANTES.exists() else {}
+        instancias_antes = antes.get("instancias", [])
+        vpcs_antes = antes.get("vpcs", [])
+        if instancias_antes or vpcs_antes:
+            agora = inventario(ec2)
+            atuais = [j["id"] for j in agora["instancias"]]
+            faltando = ([i["id"] for i in instancias_antes if i["id"] not in atuais]
+                        + [v for v in vpcs_antes if v not in agora["vpcs"]])
+            if faltando:
+                diz("ATENCAO: recurso que ja existia antes sumiu: " + ", ".join(faltando))
+            else:
+                diz("o que ja existia antes da pratica continua igual")
+    except Exception:
+        diz("nao consegui comparar com a foto que o passo 2 guardou em "
+            + str(ANTES) + ", entao pulei essa conferencia. A varredura por"
+            " etiqueta acima ja disse que nada desta pratica ficou de pe")
+
+    # O perfil sai antes de arquivar o estado, porque o trabalho na AWS acabou
+    # e nenhum passo daqui para baixo pode adiar a remocao da credencial.
+    apagar_perfil()
+    ESTADO.replace(PASTA / ("encerrado-" + time.strftime("%Y%m%d-%H%M%S") + ".json"))
+    titulo("pronto")
+    diz("Feche tambem a sessao do laboratorio no AWS Academy.")
+
+
+def main():
+    analisador = argparse.ArgumentParser(description=__doc__)
+    analisador.add_argument("--apagar", action="store_true",
+                            help="apaga tudo o que este programa criou")
+    analisador.add_argument("--ssh-cidr",
+                            help="seu IPv4 com /32, quando a descoberta automatica falhar")
+    argumentos = analisador.parse_args()
+    sdk = sessao()
+    if argumentos.apagar:
+        apagar(sdk)
+    else:
+        criar(sdk, argumentos.ssh_cidr or meu_ip())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())</pre>
+      </div>
+    </details>
+
+    <details class="lab-detalhe">
+      <summary>Ver o que cada nó executa ao nascer</summary>
+      <p>
+        É este o arquivo que o programa envia no campo "User data" das três instâncias. Ele
+        descobre a identidade do nó no serviço de metadados, muda o nome da máquina, instala
+        Python e as duas bibliotecas da prática, grava o programa dos experimentos e instala o
+        atalho <code>sd04</code>. Só no nó B ele sobe o gerenciador de filas.
+      </p>
+      <div class="cmd">
+        <div class="cmd-head">
+          <span class="onde">enviado no campo "User data" pelo preparar-ambiente.py</span>
+          <span class="espaco"></span>
+          <button type="button" class="btn-copiar" data-baixar="setup-sh"
+            data-arquivo="setup.sh">baixar</button>
+          <button type="button" class="btn-copiar" data-copiar="setup-sh">copiar</button>
+        </div>
+        <pre id="setup-sh">#!/bin/bash
+# ============================================================
+# Pratica 04 (Topico 4) - Sistemas Distribuidos - IFSP Salto
+# Script de inicializacao dos tres nos (campo "User data" do EC2).
+# Roda uma unica vez, no primeiro boot da instancia.
+#
+# O MESMO texto sobe nos tres nos. O papel (A, B ou C) nao vem
+# escrito aqui: ele e lido da etiqueta Name da propria instancia,
+# pelo servico de metadados, porque os tres nascem com
+# InstanceMetadataTags=enabled. Assim nao existem tres versoes
+# deste arquivo para manter em acordo.
+#
+# Quem cola este texto no campo User data e o preparar-ambiente.py,
+# que roda no seu computador. Voce nao precisa colar nada a mao.
+#
+# Sem acentos de proposito: o user data executa antes do locale
+# estar definido. Testado em Amazon Linux 2023 (python3 da base).
+# ============================================================
+set -x
+exec &gt; /var/log/sd-setup.log 2&gt;&amp;1
+
+mkdir -p /opt/sd
+
+# ---- Identidade do no, lida do servico de metadados da instancia ----
+# 169.254.169.254 e um endereco de link local: responde apenas dentro
+# da propria instancia e nao consome rota nenhuma da VPC.
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+NOME=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/tags/instance/Name)
+PAPEL=${NOME#sd04-}
+echo "$PAPEL" &gt; /opt/sd/papel
+hostnamectl set-hostname "$NOME"
+
+dnf install -y python3-pip docker
+
+# ---- Ambiente Python isolado, com as duas bibliotecas da pratica ----
+# pika fala AMQP com o gerenciador de filas; protobuf faz o formato
+# binario do experimento de empacotamento. Versoes fixas de proposito,
+# porque uma atualizacao no meio do semestre mudaria a medida da turma.
+python3 -m venv /opt/sd/venv
+/opt/sd/venv/bin/pip install --disable-pip-version-check pika==1.3.2 protobuf==5.29.5
+chmod 755 /opt/sd
+chmod -R a+rX /opt/sd/venv
+
+cat &gt; /opt/sd/experimentos.py &lt;&lt;'PY'
+"""Programas da pratica 04. Rodam nas EC2, sem credencial da AWS.
+
+Um registro de sensor atravessa os quatro experimentos. O que muda de
+um para o outro e o caminho que ele percorre, nunca o dado em si.
+"""
+
+import argparse
+import base64
+import json
+import socket
+import socketserver
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+# Enderecos privados fixados pelo preparar-ambiente.py, para que os
+# comandos do roteiro sejam iguais em todas as maquinas da turma.
+NO_B = "10.44.0.20"
+NO_C = "10.44.0.30"
+PORTA = 9104
+FILA = "sd04-leituras"
+
+# Credencial do gerenciador de filas. Ela e fixa e esta a vista de
+# proposito, porque a porta 5672 so aceita conexao vinda do proprio
+# grupo de seguranca. Quem alcanca o gerenciador ja esta dentro do seu
+# ambiente. Em producao isto seria erro grave, e o roteiro explica por que.
+USUARIO_FILA = "sd"
+SENHA_FILA = "sd-pratica04"
+
+MAX_FRAME = 1024 * 1024
+
+
+def recv_exact(sock, size):
+    parts = bytearray()
+    while len(parts) &lt; size:
+        chunk = sock.recv(size - len(parts))
+        if not chunk:
+            raise EOFError("Conexao encerrada com quadro incompleto")
+        parts.extend(chunk)
+    return bytes(parts)
+
+
+def recv_frame(sock):
+    """Le um quadro precedido de 4 bytes de comprimento.
+
+    O TCP entrega uma sequencia de bytes, nunca mensagens. Sem esta
+    moldura, duas leituras poderiam chegar grudadas numa recv so, ou
+    uma delas partida em duas.
+    """
+    size = int.from_bytes(recv_exact(sock, 4), "big")
+    if size &gt; MAX_FRAME:
+        raise ValueError("Quadro acima de 1 MiB")
+    return recv_exact(sock, size)
+
+
+def send_frame(sock, data):
+    if len(data) &gt; MAX_FRAME:
+        raise ValueError("Quadro acima de 1 MiB")
+    sock.sendall(len(data).to_bytes(4, "big") + data)
+
+
+def message_class(version):
+    """Monta em memoria o esquema Protocol Buffers da versao pedida.
+
+    v1 tem tres campos. v2 acrescenta unidade, e e o caso de campo novo.
+    incompativel reaproveita a etiqueta 3 com outro significado, que e o
+    erro que o formato binario nao tem como perceber.
+    """
+    from google.protobuf import descriptor_pb2, descriptor_pool, message_factory
+    descriptor = descriptor_pb2.FileDescriptorProto(name="sensor.proto", syntax="proto3")
+    message = descriptor.message_type.add(name="Leitura")
+    fields = [("id", 1, 5), ("sensor", 2, 9),
+              ("umidade_mili" if version == "incompativel" else "temperatura_mili", 3, 5)]
+    if version == "v2":
+        fields.append(("unidade", 4, 9))
+    for name, number, kind in fields:
+        message.field.add(name=name, number=number, type=kind, label=1)
+    pool = descriptor_pool.DescriptorPool()
+    pool.Add(descriptor)
+    return message_factory.GetMessageClass(pool.FindMessageTypeByName("Leitura"))
+
+
+def encode(record, fmt="json", version="v1"):
+    if fmt == "json":
+        return json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    cls = message_class(version)
+    names = {field.name for field in cls.DESCRIPTOR.fields}
+    return cls(**{key: value for key, value in record.items() if key in names}).SerializeToString()
+
+
+def decode(data, fmt="json", version="v1"):
+    if fmt == "json":
+        return json.loads(data)
+    message = message_class(version)()
+    message.ParseFromString(data)
+    return {field.name: getattr(message, field.name) for field in message.DESCRIPTOR.fields}
+
+
+def record(number):
+    return {"id": number, "sensor": "sala-1", "temperatura_mili": 23500, "unidade": "C"}
+
+
+def process(envelope, args):
+    envelope = json.loads(envelope)
+    reading = decode(base64.b64decode(envelope["payload"]), envelope["format"], args.schema)
+    print(json.dumps({"recebido": reading}, ensure_ascii=False), flush=True)
+    time.sleep(args.delay)
+    return json.dumps({"processado": reading}, ensure_ascii=False).encode("utf-8")
+
+
+def serve(args):
+    class TCPHandler(socketserver.BaseRequestHandler):
+        def handle(self):
+            self.request.settimeout(10)
+            try:
+                send_frame(self.request, process(recv_frame(self.request), args))
+            except (OSError, EOFError, ValueError) as error:
+                print(json.dumps({"erro": type(error).__name__}), flush=True)
+
+    class UDPHandler(socketserver.BaseRequestHandler):
+        def handle(self):
+            data, sock = self.request
+            try:
+                sock.sendto(process(data, args), self.client_address)
+            except (OSError, ValueError) as error:
+                print(json.dumps({"erro": type(error).__name__}), flush=True)
+
+    base = socketserver.TCPServer if args.protocol == "tcp" else socketserver.UDPServer
+    if args.concurrent:
+        class Server(socketserver.ThreadingMixIn, base):
+            daemon_threads = True
+            allow_reuse_address = True
+    else:
+        class Server(base):
+            allow_reuse_address = True
+    with Server(("0.0.0.0", args.port), TCPHandler if args.protocol == "tcp" else UDPHandler) as server:
+        server.max_packet_size = 65535
+        print(json.dumps({"pronto": True, "protocolo": args.protocol, "porta": args.port}), flush=True)
+        server.serve_forever()
+
+
+def send(args):
+    def one(number):
+        payload = encode(record(number), args.format, args.schema)
+        envelope = json.dumps({"format": args.format,
+                               "payload": base64.b64encode(payload).decode("ascii")}).encode("ascii")
+        start = time.perf_counter()
+        result = {"id": number, "bytes_payload": len(payload)}
+        try:
+            if args.protocol == "tcp":
+                with socket.create_connection((args.host, args.port), timeout=args.timeout) as sock:
+                    send_frame(sock, envelope)
+                    result["resposta"] = json.loads(recv_frame(sock))
+            else:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                    sock.settimeout(args.timeout)
+                    sock.sendto(envelope, (args.host, args.port))
+                    if args.wait:
+                        result["resposta"] = json.loads(sock.recvfrom(65535)[0])
+                    else:
+                        result["submetido_localmente"] = True
+        except (OSError, EOFError) as error:
+            result["erro"] = type(error).__name__
+        result["ms"] = round((time.perf_counter() - start) * 1000, 3)
+        return result
+    start = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=args.clients) as pool:
+        results = list(pool.map(one, range(1, args.count + 1)))
+    print(json.dumps({"resultados": results, "total_ms": round((time.perf_counter()-start)*1000, 3)}))
+    return int(any("erro" in result for result in results))
+
+
+def queue_action(args):
+    import pika
+    connection = pika.BlockingConnection(pika.ConnectionParameters(
+        host=NO_B, credentials=pika.PlainCredentials(USUARIO_FILA, SENHA_FILA),
+        connection_attempts=3, retry_delay=2, socket_timeout=5, blocked_connection_timeout=15))
+    try:
+        channel = connection.channel()
+        # durable=True e a metade do acordo. A outra e delivery_mode=2 em
+        # cada mensagem publicada, mais abaixo. Uma sem a outra nao preserva.
+        status = channel.queue_declare(queue=FILA, durable=True, auto_delete=False)
+        if args.action == "fila":
+            print(json.dumps({"prontas": status.method.message_count,
+                              "consumidores": status.method.consumer_count}))
+        elif args.action == "publicar":
+            channel.confirm_delivery()
+            start = time.perf_counter()
+            ids = list(range(1, args.count + 1))
+            for number in ids:
+                channel.basic_publish(exchange="", routing_key=FILA, mandatory=True,
+                                      body=encode(record(number)),
+                                      properties=pika.BasicProperties(delivery_mode=2, content_type="application/json"))
+            print(json.dumps({"confirmados_pelo_broker": ids,
+                              "ms": round((time.perf_counter()-start)*1000, 3)}))
+        elif args.action == "consumir":
+            ids = []
+            deadline = time.monotonic() + args.timeout
+            while len(ids) &lt; args.count and time.monotonic() &lt; deadline:
+                method, _, body = channel.basic_get(queue=FILA, auto_ack=False)
+                if method is None:
+                    time.sleep(.2)
+                    continue
+                reading = decode(body)
+                ids.append(reading["id"])
+                channel.basic_ack(method.delivery_tag)
+            print(json.dumps({"consumidos_e_confirmados": ids}))
+            return int(len(ids) != args.count)
+    finally:
+        connection.close()
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Programas da pratica 04")
+    parser.add_argument("action", choices=["servir", "enviar", "formatos", "publicar", "consumir", "fila"])
+    parser.add_argument("--host", default=NO_C)
+    parser.add_argument("--port", type=int, default=PORTA)
+    parser.add_argument("--protocol", choices=["tcp", "udp"], default="tcp")
+    parser.add_argument("--format", choices=["json", "protobuf"], default="json")
+    parser.add_argument("--schema", choices=["v1", "v2", "incompativel"], default="v1")
+    parser.add_argument("--delay", type=float, default=0)
+    parser.add_argument("--concurrent", action="store_true")
+    parser.add_argument("--wait", action="store_true")
+    parser.add_argument("--count", type=int, default=5)
+    parser.add_argument("--clients", type=int, default=1)
+    parser.add_argument("--timeout", type=float, default=10)
+    args = parser.parse_args()
+    if args.action == "servir":
+        serve(args)
+    elif args.action == "enviar":
+        return send(args)
+    elif args.action == "formatos":
+        reading = record(7)
+        print(json.dumps({fmt: {"bytes": len(encode(reading, fmt, "v2")),
+                               "leitor_v1": decode(encode(reading, fmt, "v2"), fmt, "v1")}
+                          for fmt in ["json", "protobuf"]}))
+    else:
+        return queue_action(args)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY
+chmod 644 /opt/sd/experimentos.py
+
+# ---- Atalho sd04, para o roteiro nao repetir o caminho do venv ----
+cat &gt; /usr/local/bin/sd04 &lt;&lt;'SH'
+#!/bin/bash
+exec /opt/sd/venv/bin/python /opt/sd/experimentos.py "$@"
+SH
+chmod 755 /usr/local/bin/sd04
+
+# ---- So o no B carrega o gerenciador de filas ----
+# A imagem vai fixada pelo digest, e nao pela etiqueta 4-management: a
+# etiqueta muda de conteudo quando o projeto publica uma versao nova, e
+# a turma passaria a medir coisas diferentes na mesma semana.
+if [ "$PAPEL" = B ]; then
+  systemctl enable --now docker
+  printf 'RABBITMQ_DEFAULT_USER=sd\nRABBITMQ_DEFAULT_PASS=sd-pratica04\n' &gt; /opt/sd/rabbit.env
+  chmod 600 /opt/sd/rabbit.env
+  IMAGEM=rabbitmq@sha256:ffd1b50c522ad20172ffd6716a2f41db375c7269560c8f3fb9a694e210ef0852
+  docker pull "$IMAGEM"
+  # O -p amarra a porta ao IP privado, nunca a 0.0.0.0. Quem sustenta o
+  # docker restart do passo 7.3 sao a fila duravel e a mensagem persistente,
+  # porque a camada gravavel do conteiner sobrevive a parar e iniciar. O
+  # volume nomeado protege outra coisa: recriar o conteiner ou trocar a imagem.
+  docker run -d --name sd04-rabbit --hostname sd04-b --restart unless-stopped \
+    --env-file /opt/sd/rabbit.env -p 10.44.0.20:5672:5672 \
+    -v sd04-rabbit-data:/var/lib/rabbitmq "$IMAGEM"
+  pronto=0
+  for tentativa in {1..90}; do
+    if docker exec sd04-rabbit rabbitmq-diagnostics -q ping; then pronto=1; break; fi
+    sleep 2
+  done
+  # Sem "set -e", um teste solto nao interrompe nada: o script seguiria para
+  # o PRONTO abaixo e anunciaria o no B instalado sem gerenciador de filas,
+  # e a falha so apareceria no passo 7. Por isso o desfecho vai para arquivo.
+  if [ "$pronto" != 1 ]; then
+    echo 'o gerenciador de filas nao respondeu em 180s' &gt; /opt/sd/FALHOU
+    echo 'SD04_SETUP_FALHOU'
+    exit 1
+  fi
+fi
+
+# O arquivo PRONTO e o que o preparar-ambiente.py espera aparecer. EC2 em
+# running so diz que a maquina ligou, nunca que o software terminou de subir.
+touch /opt/sd/PRONTO
+echo 'SD04_SETUP_PRONTO'</pre>
+      </div>
+    </details>
+  </section>
+
+  <footer class="lab-foot">
+    <span>Sistemas Distribuídos · IFSP Campus Salto</span>
+    <span><a href="../../index.html#/topico/04">Voltar ao tópico 04</a></span>
+  </footer>
+
+</div>
+
+
+<script src="../../assets/js/core/store.js"></script>
+<script src="../../assets/js/ui/theme.js"></script>
+<script src="../../content/notas.js"></script>
+<script src="../../assets/js/lab.js"></script>
+<script>SD.lab.init({ id: "pratica-04" });</script>
+</body>
+</html>
